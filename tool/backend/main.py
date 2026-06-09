@@ -24,6 +24,7 @@ from .presets import PRESETS
 from .calculations.geometry import calculate
 from .calculations.kinematics import solve_kinematics
 from .calculations.fit import compute_fit
+from .calculations.battery import compute_battery
 from .io.bcad_io import load_bcad, save_bcad
 from .io.svg_export import render_svg
 from .io.dxf_export import export_dxf
@@ -90,6 +91,16 @@ def render(req: RenderRequest):
         svg  = render_svg(req.bike, calc, req.width, req.height, req.show_dims, fit,
                           suspension=frames, animate_suspension=req.animate_suspension)
         return JSONResponse(content={"svg": svg, "calc": calc.model_dump()})
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post("/api/battery")
+def battery_endpoint(bike: BikeDesign):
+    """Vérifie l'intégration de la batterie dans le triangle avant."""
+    try:
+        calc = calculate(bike)
+        return compute_battery(bike, calc)
     except Exception as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 

@@ -21,6 +21,16 @@ export async function calcAndRender(bike, width = 1400, height = 750, showDims =
   return r.json()  // { svg: string, calc: CalcResult }
 }
 
+export async function fetchBattery(bike) {
+  const r = await fetch(`${BASE}/battery`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(bike),
+  })
+  if (!r.ok) throw new Error(await r.text())
+  return r.json()  // BatteryResult
+}
+
 export async function fetchFit(bike) {
   const r = await fetch(`${BASE}/fit`, {
     method: 'POST',

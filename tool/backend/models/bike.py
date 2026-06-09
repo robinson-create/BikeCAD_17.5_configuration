@@ -357,6 +357,24 @@ class RiderConfig(BaseModel):
     shoulder_roll:   float = Field(0.0)
 
 
+# ─── BATTERIE ──────────────────────────────────────────────────────────────────
+# Batterie e-bike logée dans le triangle avant (le long du tube diagonal).
+# Repère monde : BB=(0,0), x avant +, y haut +, mm.
+
+class BatteryConfig(BaseModel):
+    enabled:    bool  = Field(True,   description="Batterie présente")
+    voltage:    float = Field(52.0,   description="Tension nominale (V)")
+    capacity_wh:float = Field(960.0,  description="Capacité (Wh)")
+    # Encombrement du pack (vue de côté = length × height ; width = transversal)
+    length:     float = Field(380.0,  description="Longueur du pack (mm)")
+    height:     float = Field(90.0,   description="Hauteur du pack (mm)")
+    width:      float = Field(90.0,   description="Largeur transversale (mm)")
+    # Placement le long du tube diagonal (BB → couronne)
+    mount_offset: float = Field(60.0, description="Décalage depuis le BB le long du tube diagonal (mm)")
+    standoff:     float = Field(8.0,  description="Jeu entre tube diagonal et pack (mm)")
+    in_downtube:  bool  = Field(False, description="Intégrée DANS le tube diagonal (sinon externe)")
+
+
 # ─── DESIGN COMPLET ───────────────────────────────────────────────────────────
 
 class BikeDesign(BaseModel):
@@ -377,6 +395,7 @@ class BikeDesign(BaseModel):
     brakes:     BrakeConfig     = Field(default_factory=BrakeConfig)
     drivetrain: DrivetrainConfig= Field(default_factory=DrivetrainConfig)
     suspension: SuspensionConfig= Field(default_factory=SuspensionConfig)
+    battery:    BatteryConfig   = Field(default_factory=BatteryConfig)
     rider:      Optional[RiderConfig] = Field(None, description="Rider (optionnel)")
 
 
@@ -455,6 +474,18 @@ class FitResult(BaseModel):
     elbow:    Optional[KeyPoint] = None
     hand:     Optional[KeyPoint] = None
     head:     Optional[KeyPoint] = None
+
+
+class BatteryResult(BaseModel):
+    ok:              bool
+    enabled:         bool = True
+    fits_triangle:   bool = True      # le pack tient dans le triangle avant
+    clears_motor:    bool = True      # pas de collision avec le carter moteur
+    clears_tubes:    bool = True      # ne traverse pas tube de selle / direction
+    polygon:         list = []        # 4 coins du pack (coords monde)
+    volume_l:        float = 0.0      # volume du pack (litres)
+    est_capacity_wh: float = 0.0      # capacité estimée d'après le volume
+    notes:           list[str] = []
 
 
 class KinematicsResult(BaseModel):

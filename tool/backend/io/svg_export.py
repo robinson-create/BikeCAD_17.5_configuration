@@ -260,6 +260,29 @@ def _draw_drivetrain(bike, calc, sx, sy, ox, oy, scale) -> str:
     return '<g class="drivetrain">' + "".join(parts) + '</g>'
 
 
+def _draw_battery(bike, calc, sx, sy, ox, oy) -> str:
+    """Pack batterie dans le triangle avant (vert si OK, rouge si débordement)."""
+    from ..calculations.battery import battery_polygon_world, compute_battery
+    poly = battery_polygon_world(bike, calc)
+    if poly is None:
+        return ""
+    res = compute_battery(bike, calc)
+    ok = res.fits_triangle and res.clears_motor and res.clears_tubes
+    fill = "#27ae60" if ok else "#c0392b"
+    pts = " ".join(f"{x*sx+ox:.1f},{y*sy+oy:.1f}" for (x, y) in poly)
+    parts = [f'<g class="battery"><polygon points="{pts}" fill="{fill}" '
+             f'fill-opacity="0.45" stroke="{fill}" stroke-width="2" stroke-linejoin="round"/>']
+    # Étiquette au centroïde
+    cx = sum(p[0] for p in poly) / 4 * sx + ox
+    cy = sum(p[1] for p in poly) / 4 * sy + oy
+    label = f"{bike.battery.voltage:.0f}V · {bike.battery.capacity_wh:.0f}Wh"
+    parts.append(f'<text x="{cx:.1f}" y="{cy:.1f}" text-anchor="middle" '
+                 f'dominant-baseline="middle" font-size="13" font-family="sans-serif" '
+                 f'font-weight="bold" fill="#fff">{label}</text>')
+    parts.append("</g>")
+    return "".join(parts)
+
+
 def _draw_brakes(bike, calc, sx, sy, ox, oy) -> str:
     """Disques de frein aux deux axes (si freins à disque)."""
     bk = bike.brakes
@@ -686,6 +709,10 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
 
     # === TRANSMISSION (plateau, courroie, moteur, manivelle) =================
     parts.append(_draw_drivetrain(bike, calc, sx, sy, ox, oy, scale_f))
+
+    # === BATTERIE (pack dans le triangle avant) ==============================
+    if bike.battery.enabled:
+        parts.append(_draw_battery(bike, calc, sx, sy, ox, oy))
 
     # === SUSPENSION (overlay pivots/bielles/amorto, animée ou non) ===========
     if suspension:

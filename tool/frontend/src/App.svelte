@@ -20,6 +20,7 @@
   import Wheels     from './panels/Wheels.svelte'
   import Brakes     from './panels/Brakes.svelte'
   import Suspension from './panels/Suspension.svelte'
+  import Battery    from './panels/Battery.svelte'
   import Rider      from './panels/Rider.svelte'
 
   const PANELS = {
@@ -34,6 +35,7 @@
     wheels:     Wheels,
     brakes:     Brakes,
     suspension: Suspension,
+    battery:    Battery,
     rider:      Rider,
   }
 

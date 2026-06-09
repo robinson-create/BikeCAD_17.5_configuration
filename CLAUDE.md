@@ -34,8 +34,12 @@ cd tool && ./start.sh          # backend :8000 (uvicorn) + frontend :5173 (vite)
 **Backend** (`tool/backend/`)
 - `models/bike.py` — tous les modèles Pydantic v2. `BikeDesign` = design complet
   (frame, fork, headtube, headset, stem, handlebar, saddle, seatpost, cranks,
-  wheel_f, wheel_r, pedals, brakes, drivetrain, suspension, rider?).
-  Résultats : `CalcResult`, `KinematicsResult`, `FitResult`. `GEARBOX_TYPES` = moteurs.
+  wheel_f, wheel_r, pedals, brakes, drivetrain, suspension, battery, rider?).
+  Résultats : `CalcResult`, `KinematicsResult`, `FitResult`, `BatteryResult`. `GEARBOX_TYPES` = moteurs.
+- `calculations/battery.py` — `compute_battery()` : enveloppe du pack dans le triangle
+  avant + test d'intégration (tient dans le triangle ? dégage le carter moteur ?
+  croise un tube ?). Patron de référence pour AJOUTER UN COMPOSANT (modèle →
+  calcul → svg `_draw_battery` → endpoint `/api/battery` → panneau+onglet+store).
 - `calculations/geometry.py` — `calculate()` géométrie exacte (reach, stack, trail, WB…).
 - `calculations/kinematics.py` — **DISPATCHER** `solve_kinematics()` : route par
   `suspension.linkage_type` vers `calculations/layouts/`. Piloté **par la course roue**.

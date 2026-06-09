@@ -29,9 +29,11 @@ def check(cond, msg):
     return cond
 
 
+_NONFINITE = __import__("re").compile(r"\b(nan|inf|-inf|infinity)\b", __import__("re").I)
+
 def svg_finite(svg: str) -> bool:
-    low = svg.lower()
-    if "nan" in low or "inf" in low:
+    # tokens isolés seulement (évite le faux positif "domi-nan-t" / "baseline")
+    if _NONFINITE.search(svg):
         return False
     try:
         ET.fromstring(svg)
@@ -154,9 +156,26 @@ components = {
     "titre":         bike.name,
     "freins/disques":'class="brakes"',
     "pédales":       'class="pedals"',
+    "batterie":      'class="battery"',
 }
 for label, token in components.items():
     check(token in svg, f"composant présent : {label}")
+
+# 3c. Batterie 52V dans le triangle avant : fit + collisions
+print("  -- batterie 52V triangle avant --")
+from backend.calculations.battery import compute_battery
+bk = load_bcad(SRC); cc = calculate(bk)
+br = compute_battery(bk, cc)
+check(br.ok and br.enabled, "batterie : calcul OK")
+check(br.fits_triangle, f"batterie défaut tient dans le triangle ({br.notes})")
+check(br.est_capacity_wh > 0 and br.volume_l > 0, "batterie : volume/capacité estimés")
+# pack volontairement trop gros → doit être détecté hors triangle
+bk.battery.length = 520; bk.battery.height = 140
+br2 = compute_battery(bk, cc)
+check(not br2.fits_triangle, "batterie surdimensionnée détectée hors triangle")
+# désactivée → pas de polygone, ok
+bk.battery.enabled = False
+check(compute_battery(bk, cc).enabled is False, "batterie désactivable")
 
 # 3b. Overlay suspension (statique + animé) sur la vue 2D, pour les 3 topologies
 print("  -- overlay/animation suspension --")
