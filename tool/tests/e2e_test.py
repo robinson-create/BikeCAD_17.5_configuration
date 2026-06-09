@@ -158,6 +158,28 @@ components = {
 for label, token in components.items():
     check(token in svg, f"composant présent : {label}")
 
+# 3b. Overlay suspension (statique + animé) sur la vue 2D, pour les 3 topologies
+print("  -- overlay/animation suspension --")
+for lt, setup in [
+    ("four_bar_horst", lambda s: None),
+    ("four_bar_generic", lambda s: None),
+    ("high_pivot_idler", lambda s: (
+        setattr(s.main_pivot, "x", -20.0), setattr(s.main_pivot, "y", 110.0),
+        setattr(s.idler, "x", -10.0), setattr(s.idler, "y", 90.0),
+        setattr(s.shock_lower, "x", -120.0), setattr(s.shock_lower, "y", 20.0),
+        setattr(s.shock_upper, "x", -10.0), setattr(s.shock_upper, "y", 200.0))),
+]:
+    bk = load_bcad(SRC); bk.suspension.linkage_type = lt; setup(bk.suspension)
+    cc = calculate(bk); kk = solve_kinematics(bk)
+    check(kk.ok and len(kk.frames) >= 10, f"{lt}: frames d'animation produites ({len(kk.frames)})")
+    svg_st = render_svg(bk, cc, 1400, 750, True, None, suspension=kk.frames, animate_suspension=False)
+    svg_an = render_svg(bk, cc, 1400, 750, True, None, suspension=kk.frames, animate_suspension=True)
+    check('class="suspension"' in svg_st, f"{lt}: overlay suspension statique présent")
+    check('<animate' in svg_an and svg_finite(svg_an), f"{lt}: animation SMIL valide")
+    # cohérence frames : course croissante de 0 à ~cible
+    tr = [fr["travel"] for fr in kk.frames]
+    check(tr[0] == 0.0 and tr[-1] > tr[0], f"{lt}: course frames 0 → {tr[-1]}")
+
 # ─── 4. CINÉMATIQUE — TOPOLOGIES ────────────────────────────────────────────
 print("\n=== 4. CINÉMATIQUE — TOPOLOGIES ===")
 
@@ -316,6 +338,175 @@ check("LUG BB" in summ, "résumé lisible")
 # Utilitaires miter
 check(abs(miter_angle(0, 90) - 45.0) < 1e-6, "miter 0/90 = 45°")
 check(saddle_depth(30, 40) > 0, "saddle depth positive")
+
+# 7b. Export .bcad : intégrité + Free-safe (courroie → chaîne sans crash) ────
+print("  -- export .bcad / Free-safe --")
+def _kv(p):
+    return {e.get("key"): (e.text or "") for e in ET.parse(p).findall(".//entry")}
+b = load_bcad(SRC)
+check(b.drivetrain.drive_type == "belt", "modèle interne = courroie")
+orig_keys = set(_kv(SRC))
+# Export full (Pro) : garde la courroie =2, round-trip lossless
+save_bcad(b, "/tmp/e2e_pro.bcad", source_path=SRC, backup=False, free_safe=False)
+pro = _kv("/tmp/e2e_pro.bcad")
+check(pro.get("BELTorCHAIN") == "2", "export full : BELTorCHAIN=2 (courroie)")
+check(set(pro) == orig_keys, "export full : 0 clé perdue/ajoutée")
+# Export Free-safe : rétrograde en chaîne =1 (ne crashe pas BikeCAD Free)
+save_bcad(b, "/tmp/e2e_free.bcad", source_path=SRC, backup=False, free_safe=True)
+free = _kv("/tmp/e2e_free.bcad")
+check(free.get("BELTorCHAIN") == "1", "export Free-safe : BELTorCHAIN=1 (chaîne)")
+check(set(free) == orig_keys, "export Free-safe : 0 clé perdue/ajoutée")
+check(_kv(SRC).get("BELTorCHAIN") == "2", "fichier principal inchangé (=2)")
+
+# ─── 8. BIBLIOTHÈQUE — SAUVE/IMPORT/EXPORT TOUS COMPOSANTS ──────────────────
+print("\n=== 8. BIBLIOTHÈQUE (round-trip tous composants) ===")
+from backend import library as lib
+from backend.presets import high_pivot_m620
+
+SECTIONS = ["frame", "fork", "headtube", "headset", "stem", "handlebar",
+            "saddle", "seatpost", "cranks", "wheel_f", "wheel_r", "pedals",
+            "brakes", "drivetrain", "suspension"]
+
+# Design non trivial : suspension high-pivot + selle A→N + moteur M620 + rider
+b = load_bcad(SRC)
+b.suspension = high_pivot_m620()
+b.drivetrain.motor_key = "bafang_m620"
+b.saddle.a = 12.3; b.saddle.n = 4.5; b.saddle.angle = -2.0
+b.stem.x = 7.0; b.stem.y = -3.0
+b.seatpost.exposed = 173.0
+b.rider = RiderConfig()
+b.name = "E2E Test Lossless"
+
+# Sauvegarde + rechargement bibliothèque
+path = lib.save_bike(b, b.name)
+check(path.exists() and path.suffix == ".json", f"vélo sauvegardé ({path.name})")
+reloaded = lib.load_bike(path.name)
+
+# Tous les composants identiques au round-trip
+orig = b.model_dump()
+back = reloaded.model_dump()
+for sec in SECTIONS:
+    check(orig[sec] == back[sec], f"composant '{sec}' préservé (lossless)")
+check(orig["name"] == back["name"], "nom préservé")
+check(orig["rider"] == back["rider"], "rider préservé")
+# Points sensibles que le .bcad PERD mais que la biblio conserve
+check(back["suspension"]["linkage_type"] == "high_pivot_idler", "suspension topologie préservée")
+check(abs(back["suspension"]["main_pivot"]["y"] - b.suspension.main_pivot.y) < 1e-9, "pivots suspension préservés")
+check(abs(back["saddle"]["a"] - 12.3) < 1e-9, "selle A préservée")
+check(abs(back["stem"]["x"] - 7.0) < 1e-9, "offset potence X préservé")
+check(abs(back["seatpost"]["exposed"] - 173.0) < 1e-9, "tige selle exposée préservée")
+
+# La bibliothèque liste le vélo
+listed = lib.list_bikes()
+check(any(x["name"] == "E2E Test Lossless" for x in listed), "vélo listé en bibliothèque")
+
+# Anti path-traversal
+try:
+    lib.load_bike("../../../etc/passwd")
+    check(False, "path-traversal bloqué")
+except Exception:
+    check(True, "path-traversal bloqué (chemin hors biblio refusé)")
+
+# Documenté : le .bcad PERD la suspension (d'où la biblio JSON)
+import tempfile as _tf
+tmp_bcad = _tf.mktemp(suffix=".bcad")
+save_bcad(b, tmp_bcad, source_path=SRC, backup=False)
+via_bcad = load_bcad(tmp_bcad)
+check(via_bcad.suspension.linkage_type == "four_bar_horst",
+      "(attendu) .bcad NE conserve PAS la suspension → défaut au reload")
+
+# Nettoyage du fichier de test bibliothèque
+path.unlink(missing_ok=True)
+
+# ─── 9. ASSISTANT — OUTILS PILOTANT LE VÉLO (sans clé API) ───────────────────
+print("\n=== 9. ASSISTANT (logique outils) ===")
+from backend import assistant as ASSIST
+
+b = load_bcad(SRC)
+data = b.model_dump()
+acts = []
+# 9a. set_parameters : champ valide, pivot, champ invalide rejeté
+out = ASSIST._exec_tool("set_parameters", {"edits": [
+    {"section": "frame", "field": "head_angle", "value": 63.5},
+    {"section": "suspension", "field": "main_pivot", "axis": "y", "value": 95.0},
+    {"section": "frame", "field": "champ_bidon", "value": 1},
+]}, data, acts)
+check(abs(data["frame"]["head_angle"] - 63.5) < 1e-9, "assistant: édite head_angle")
+check(abs(data["suspension"]["main_pivot"]["y"] - 95.0) < 1e-9, "assistant: édite un pivot {x,y}")
+check("champ inconnu" in out, "assistant: champ invalide rejeté proprement")
+check("frame.head_angle=63.5" in acts, "assistant: action journalisée")
+
+# 9b. apply_preset
+ASSIST._exec_tool("apply_preset", {"name": "high_pivot_m620"}, data, acts)
+check(data["suspension"]["linkage_type"] == "high_pivot_idler", "assistant: preset applique la topologie")
+check(data["drivetrain"]["motor_key"] == "bafang_m620", "assistant: preset bascule le moteur M620")
+
+# 9c. get_state contient géométrie + cinématique
+state = ASSIST._exec_tool("get_state", {}, data, acts)
+check("reach=" in state and "anti_squat_sag" in state, "assistant: get_state résume géométrie+cinématique")
+
+# 9d. outils bien définis (schémas)
+names = {t["name"] for t in ASSIST.TOOLS}
+check({"set_parameters", "apply_preset", "get_state", "list_library",
+       "save_bike", "load_bike"} <= names, f"assistant: outils de base présents ({names})")
+for t in ASSIST.TOOLS:
+    check("input_schema" in t and t["input_schema"]["type"] == "object",
+          f"assistant: schéma valide pour {t['name']}")
+
+# 9e. system prompt mentionne le garde-fou structurel
+sp = ASSIST._system_prompt(ASSIST._state_summary(data))
+check("structurelle" in sp and "bureau d'études" in sp, "assistant: garde-fou structurel dans le system prompt")
+
+# ─── 10. ANALYSE (sag / compression / axes) + BANQUE DE CONNAISSANCES ───────
+print("\n=== 10. ANALYSE + KNOWLEDGE ===")
+from backend.calculations import analysis as AN
+from backend import knowledge as KN
+
+b = load_bcad(SRC)
+# 10a. compute_sag : raideur → sag, et cible → raideur requise (cohérence inverse)
+s1 = AN.compute_sag(b, spring_rate_n_per_mm=500)
+check(s1["ok"] and s1["wheel_sag_mm"] > 0 and 0 < s1["sag_pct"] < 100, f"sag depuis raideur ({s1.get('sag_pct')}%)")
+s2 = AN.compute_sag(b, target_sag_pct=30)
+req = s2["required_spring_rate_N_per_mm"]
+check(req and req > 0, f"raideur requise pour 30% ({req} N/mm)")
+# vérif inverse : appliquer la raideur requise redonne ~30%
+s3 = AN.compute_sag(b, spring_rate_n_per_mm=req)
+check(abs(s3["sag_pct"] - 30) < 0.5, f"inverse sag cohérent ({s3['sag_pct']}% ≈ 30)")
+check(s1["rear_wheel_load_N"] > 0 and s1["shock_force_N"] > s1["rear_wheel_load_N"],
+      "charges : force amorto = force roue × LR > force roue")
+
+# 10b. compression_state : sag, %, mm bornés ; métriques présentes
+cs = AN.compression_state(b, at_sag=True)
+check(cs["ok"] and abs(cs["travel_pct"] - b.suspension.sag_percent) < 0.5, "compression au sag")
+for key in ("leverage", "anti_squat_pct", "belt_growth_mm", "pedal_kickback_deg", "axle", "axle_rearward_mm"):
+    check(key in cs, f"compression_state contient {key}")
+check(AN.compression_state(b, at_mm=99999)["wheel_travel_mm"] <= cs["total_travel_mm"], "compression bornée à la course max")
+
+# 10c. wheel_axles : axes + chemin d'axe
+ax = AN.wheel_axles(b)
+check(ax["rear_axle"][0] < 0 < ax["front_axle"][0], "axes de part et d'autre du BB")
+check(abs(ax["wheelbase"] - (ax["front_axle"][0] - ax["rear_axle"][0])) < 0.5, "empattement = AV-AR")
+check(len(ax.get("rear_axle_path", [])) >= 5, "chemin d'axe AR échantillonné")
+
+# 10d. banque de connaissances : récupération pertinente + catalogue pièces du dépôt
+hits = KN.search("couple moteur M620 chain line", 3)
+check(hits and hits[0]["title"].startswith("Moteur Bafang M620"), f"knowledge: M620 top-hit ({hits[0]['title'] if hits else None})")
+check(KN.search("manivelle crank", 3), "knowledge: trouve les manivelles")
+parts = [e for e in KN.entries() if e["id"].startswith("parts-")]
+check(any("manivelles" in e["title"] for e in parts), "catalogue pièces scanné depuis le dépôt (CRANKS)")
+check(KN.search("zzzznotaword", 2) == [], "knowledge: requête sans match → vide")
+
+# 10e. assistant expose les nouveaux outils + les exécute
+from backend import assistant as ASSIST
+names = {t["name"] for t in ASSIST.TOOLS}
+for t in ("compute_sag", "compression_state", "wheel_axles", "search_knowledge"):
+    check(t in names, f"assistant: outil {t} exposé")
+d2 = b.model_dump(); a2 = []
+import json as _j
+sag_out = _j.loads(ASSIST._exec_tool("compute_sag", {"target_sag_pct": 28}, d2, a2))
+check(sag_out["ok"] and sag_out["required_spring_rate_N_per_mm"] > 0, "assistant: compute_sag exécute")
+kn_out = ASSIST._exec_tool("search_knowledge", {"query": "courroie gates belt growth"}, d2, a2)
+check("Gates" in kn_out or "courroie" in kn_out.lower(), "assistant: search_knowledge exécute")
 
 # ─── RÉSULTAT ────────────────────────────────────────────────────────────────
 print("\n" + "=" * 50)

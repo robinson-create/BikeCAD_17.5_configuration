@@ -11,7 +11,7 @@ Routes :
 
 import os
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Any
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -29,6 +29,7 @@ from .io.svg_export import render_svg
 from .io.dxf_export import export_dxf
 from .lugs.joint_model import build_joints
 from .lugs import export_cad as lugs_export
+from . import library
 
 app = FastAPI(title="DOM Engineering Bike Tool", version="1.0.0")
 
@@ -69,6 +70,8 @@ class RenderRequest(BaseModel):
     height: int = 750
     show_dims: bool = True
     show_rider: bool = False
+    show_suspension: bool = False    # overlay biellette sur la vue 2D
+    animate_suspension: bool = False # animation SMIL de la course
 
 
 @app.post("/api/render/svg")
@@ -79,7 +82,13 @@ def render(req: RenderRequest):
         fit = None
         if req.show_rider and req.bike.rider is not None:
             fit = compute_fit(req.bike, calc)
-        svg  = render_svg(req.bike, calc, req.width, req.height, req.show_dims, fit)
+        frames = None
+        if req.show_suspension and req.bike.suspension.enabled:
+            kin = solve_kinematics(req.bike)
+            if kin.ok:
+                frames = kin.frames
+        svg  = render_svg(req.bike, calc, req.width, req.height, req.show_dims, fit,
+                          suspension=frames, animate_suspension=req.animate_suspension)
         return JSONResponse(content={"svg": svg, "calc": calc.model_dump()})
     except Exception as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -116,14 +125,18 @@ class ExportRequest(BaseModel):
     path: str
     source_path: Optional[str] = None
     backup: bool = True
+    free_safe: bool = True   # par défaut : .bcad ouvrable sans crash dans BikeCAD Free
 
 
 @app.post("/api/export/bcad")
 def export_bcad(req: ExportRequest):
-    """Exporte un BikeDesign vers un fichier .bcad."""
+    """Exporte un BikeDesign vers un fichier .bcad.
+    free_safe=True (défaut) rétrograde la courroie en chaîne pour ne pas faire
+    planter BikeCAD Free (BELTorCHAIN=2). La fidélité totale (courroie/suspension)
+    reste dans la bibliothèque JSON."""
     try:
-        out = save_bcad(req.bike, req.path, req.source_path, req.backup)
-        return {"path": str(out), "ok": True}
+        out = save_bcad(req.bike, req.path, req.source_path, req.backup, req.free_safe)
+        return {"path": str(out), "ok": True, "free_safe": req.free_safe}
     except Exception as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
@@ -159,6 +172,42 @@ def export_dxf_route(req: DxfRequest):
             p.write_text(dxf, encoding="utf-8")
             return {"path": str(p), "ok": True, "bytes": len(dxf)}
         return PlainTextResponse(content=dxf, media_type="application/dxf")
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+class SaveBikeRequest(BaseModel):
+    bike: BikeDesign
+    name: Optional[str] = None
+
+
+@app.post("/api/library/save")
+def library_save(req: SaveBikeRequest):
+    """Sauvegarde LOSSLESS du BikeDesign complet (tous composants) en biblio."""
+    try:
+        p = library.save_bike(req.bike, req.name)
+        return {"ok": True, "path": str(p), "file": p.name, "name": req.bike.name}
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.get("/api/library")
+def library_list():
+    """Liste les vélos de la bibliothèque native (JSON complet)."""
+    return library.list_bikes()
+
+
+class LibraryLoadRequest(BaseModel):
+    name: str          # nom de fichier ou chemin dans la bibliothèque
+
+
+@app.post("/api/library/load")
+def library_load(req: LibraryLoadRequest) -> BikeDesign:
+    """Charge un vélo COMPLET (tous composants, suspension comprise)."""
+    try:
+        return library.load_bike(req.name)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
@@ -221,6 +270,37 @@ def list_bikes():
         for p in sorted(bike_dir.glob("*.bcad"))
         if not p.name.endswith(".bak")
     ]
+
+
+class AssistantRequest(BaseModel):
+    messages: list[dict[str, Any]]   # [{role: "user"|"assistant", content: str}]
+    bike: BikeDesign
+
+
+@app.get("/api/assistant/available")
+def assistant_available():
+    """Indique si l'assistant est utilisable (clé API présente)."""
+    return {"available": bool(os.environ.get("ANTHROPIC_API_KEY"))}
+
+
+@app.post("/api/assistant")
+def assistant_endpoint(req: AssistantRequest):
+    """Pilote le vélo via l'assistant (Claude + tool use). Retourne réponse,
+    vélo mis à jour, et liste des actions effectuées."""
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        raise HTTPException(
+            status_code=503,
+            detail="Assistant indisponible : variable ANTHROPIC_API_KEY non configurée.")
+    try:
+        from .assistant import run_assistant
+        import anthropic
+        return run_assistant(req.messages, req.bike)
+    except anthropic.AuthenticationError as exc:
+        raise HTTPException(status_code=401, detail="Clé API Anthropic invalide.") from exc
+    except anthropic.APIStatusError as exc:
+        raise HTTPException(status_code=502, detail=f"Erreur API Anthropic : {exc}") from exc
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @app.get("/api/health")

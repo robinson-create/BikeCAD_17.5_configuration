@@ -478,3 +478,7 @@ class KinematicsResult(BaseModel):
     motor_collisions: list[str] = []     # noms des hardpoints en collision
     # Points pour tracé du schéma cinématique (positions au sag)
     pivots_world:     dict = {}
+    # Frames d'animation : chaque entrée = géométrie monde de la suspension à un
+    # pas de course. {travel, links:[[[x,y],[x,y]],...], shock:[[x,y],[x,y]],
+    # axle:[x,y], idler:[x,y]|None}. Topout = frames[0].
+    frames:           list[dict] = []

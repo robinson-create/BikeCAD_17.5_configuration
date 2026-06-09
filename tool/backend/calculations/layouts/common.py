@@ -167,6 +167,20 @@ def build_result(bike: BikeDesign, states: list,
     max_travel_geom = curve[-1][0]
     travel_cap = min(s.rear_travel, max_travel_geom)
 
+    # ── Frames d'animation : géométrie monde à ~24 pas de course ─────────────
+    # On choisit l'état réel dont la course est la plus proche de chaque cible
+    # (pas d'interpolation des segments → géométrie exacte par image).
+    frames = []
+    travels = [st["axle"][1] - axle_top[1] for st in states]
+    F = 24
+    for k in range(F + 1):
+        t_target = travel_cap * k / F
+        j = min(range(len(states)), key=lambda i: abs(travels[i] - t_target))
+        draw = states[j].get("draw")
+        if draw is None:
+            continue
+        frames.append({"travel": round(travels[j], 1), **draw})
+
     def interp_metric(t_target, key):
         prev_t, prev_m = curve[0]
         for cur_t, cur_m in curve[1:]:
@@ -258,4 +272,5 @@ def build_result(bike: BikeDesign, states: list,
         shock_stroke_used=round(shock_used, 1),
         shock_stroke_spec=round(s.shock_stroke, 1),
         pivots_world=pivots_world or {},
+        frames=frames,
     )

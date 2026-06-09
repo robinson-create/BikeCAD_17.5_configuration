@@ -311,9 +311,113 @@ def _draw_rider(fit, sx, sy, ox, oy) -> str:
     return '<g class="rider">' + "".join(seg) + '</g>'
 
 
+def _draw_suspension(frames, wheel_r_r, sx, sy, ox, oy, scale,
+                     animate=False, period=4.0) -> str:
+    """Overlay biellette de suspension (pivots, bielles, amortisseur, galet, roue AR).
+
+    `frames` = liste KinematicsResult.frames (géométrie monde par pas de course).
+    Statique → dessine la frame de sag (~30 %). Animé → SMIL ping-pong topout↔talon.
+    """
+    if not frames:
+        return ""
+
+    def P(pt):
+        return (pt[0] * sx + ox, pt[1] * sy + oy)
+
+    def vals(seq):
+        # ping-pong : aller + retour (sans dupliquer les extrémités)
+        full = list(seq) + list(reversed(seq[:-1]))
+        return ";".join(f"{v:.1f}" for v in full)
+
+    acc = "#e84393"   # rose accent (pivots/bielles mobiles)
+    sh  = "#00b894"   # amortisseur
+    parts = ['<g class="suspension">']
+    anim = (f'<animate attributeName="{{a}}" values="{{v}}" '
+            f'dur="{period}s" repeatCount="indefinite" />')
+
+    # Frame de référence pour l'affichage statique : ~sag (30 %)
+    sag_i = max(range(len(frames)), key=lambda i: 0) if False else \
+            min(range(len(frames)), key=lambda i: abs(frames[i]["travel"] -
+                (frames[-1]["travel"] * 0.3)))
+    ref = frames[sag_i]
+
+    n_links = len(ref["links"])
+    # ── Bielles ──────────────────────────────────────────────────────────────
+    for li in range(n_links):
+        if animate:
+            x1 = [P(fr["links"][li][0])[0] for fr in frames]
+            y1 = [P(fr["links"][li][0])[1] for fr in frames]
+            x2 = [P(fr["links"][li][1])[0] for fr in frames]
+            y2 = [P(fr["links"][li][1])[1] for fr in frames]
+            parts.append(
+                f'<line stroke="{acc}" stroke-width="4" stroke-linecap="round" opacity="0.9">'
+                + anim.format(a="x1", v=vals(x1)) + anim.format(a="y1", v=vals(y1))
+                + anim.format(a="x2", v=vals(x2)) + anim.format(a="y2", v=vals(y2))
+                + '</line>')
+        else:
+            a, b = P(ref["links"][li][0]), P(ref["links"][li][1])
+            parts.append(f'<line x1="{a[0]:.1f}" y1="{a[1]:.1f}" x2="{b[0]:.1f}" y2="{b[1]:.1f}" '
+                         f'stroke="{acc}" stroke-width="4" stroke-linecap="round" opacity="0.9"/>')
+
+    # ── Amortisseur ──────────────────────────────────────────────────────────
+    if animate:
+        sx1 = [P(fr["shock"][0])[0] for fr in frames]; sy1 = [P(fr["shock"][0])[1] for fr in frames]
+        sx2 = [P(fr["shock"][1])[0] for fr in frames]; sy2 = [P(fr["shock"][1])[1] for fr in frames]
+        parts.append(
+            f'<line stroke="{sh}" stroke-width="7" stroke-linecap="round" opacity="0.85">'
+            + anim.format(a="x1", v=vals(sx1)) + anim.format(a="y1", v=vals(sy1))
+            + anim.format(a="x2", v=vals(sx2)) + anim.format(a="y2", v=vals(sy2)) + '</line>')
+    else:
+        a, b = P(ref["shock"][0]), P(ref["shock"][1])
+        parts.append(f'<line x1="{a[0]:.1f}" y1="{a[1]:.1f}" x2="{b[0]:.1f}" y2="{b[1]:.1f}" '
+                     f'stroke="{sh}" stroke-width="7" stroke-linecap="round" opacity="0.85"/>')
+
+    # ── Roue arrière fantôme (cercle) + axe ──────────────────────────────────
+    rr = wheel_r_r * abs(sx)
+    if animate:
+        cxs = [P(fr["axle"])[0] for fr in frames]; cys = [P(fr["axle"])[1] for fr in frames]
+        parts.append(
+            f'<circle r="{rr:.1f}" fill="none" stroke="{acc}" stroke-width="2" opacity="0.5">'
+            + anim.format(a="cx", v=vals(cxs)) + anim.format(a="cy", v=vals(cys)) + '</circle>')
+        parts.append(
+            f'<circle r="6" fill="{acc}">'
+            + anim.format(a="cx", v=vals(cxs)) + anim.format(a="cy", v=vals(cys)) + '</circle>')
+    else:
+        ax = P(ref["axle"])
+        parts.append(f'<circle cx="{ax[0]:.1f}" cy="{ax[1]:.1f}" r="{rr:.1f}" '
+                     f'fill="none" stroke="{acc}" stroke-width="2" opacity="0.5"/>')
+        parts.append(f'<circle cx="{ax[0]:.1f}" cy="{ax[1]:.1f}" r="6" fill="{acc}"/>')
+
+    # ── Galet (si présent) ────────────────────────────────────────────────────
+    if ref.get("idler"):
+        if animate and all(fr.get("idler") for fr in frames):
+            ixs = [P(fr["idler"])[0] for fr in frames]; iys = [P(fr["idler"])[1] for fr in frames]
+            parts.append(f'<circle r="5" fill="{sh}" opacity="0.9">'
+                         + anim.format(a="cx", v=vals(ixs)) + anim.format(a="cy", v=vals(iys)) + '</circle>')
+        else:
+            ip = P(ref["idler"])
+            parts.append(f'<circle cx="{ip[0]:.1f}" cy="{ip[1]:.1f}" r="5" fill="{sh}" opacity="0.9"/>')
+
+    # ── Pivots fixes (cadre) : premiers points des bielles à la frame topout ──
+    fixed = []
+    f0 = frames[0]
+    fixed.append(f0["links"][0][0])                 # main pivot (début 1re bielle)
+    if n_links >= 3:
+        fixed.append(f0["links"][2][1])             # rocker/cadre (fin 3e bielle)
+    fixed.append(f0["shock"][1])                     # amorto haut (cadre)
+    for fp in fixed:
+        sp = P(fp)
+        parts.append(f'<circle cx="{sp[0]:.1f}" cy="{sp[1]:.1f}" r="5" '
+                     f'fill="#2d3436" stroke="#fff" stroke-width="1.5"/>')
+
+    parts.append("</g>")
+    return "".join(parts)
+
+
 def render_svg(bike: BikeDesign, calc: CalcResult,
                width: int = 1400, height: int = 750,
-               show_dims: bool = True, fit=None) -> str:
+               show_dims: bool = True, fit=None,
+               suspension=None, animate_suspension=False) -> str:
     f = bike.frame
     fk = bike.fork
 
@@ -582,6 +686,13 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
 
     # === TRANSMISSION (plateau, courroie, moteur, manivelle) =================
     parts.append(_draw_drivetrain(bike, calc, sx, sy, ox, oy, scale_f))
+
+    # === SUSPENSION (overlay pivots/bielles/amorto, animée ou non) ===========
+    if suspension:
+        frames = suspension if isinstance(suspension, list) else getattr(suspension, "frames", None)
+        if frames:
+            parts.append(_draw_suspension(frames, wheel_r_r, sx, sy, ox, oy, scale_f,
+                                          animate=animate_suspension))
 
     # === PILOTE (squelette de fit) ===========================================
     if fit is not None and getattr(fit, "ok", False):

@@ -309,10 +309,18 @@ def save_bcad(
     path: str | Path,
     source_path: Optional[str | Path] = None,
     backup: bool = True,
+    free_safe: bool = False,
 ) -> Path:
     """
     Exporte un BikeDesign vers un fichier .bcad.
     Si source_path est fourni, part du fichier existant (préserve les clés non gérées).
+
+    free_safe : produit un fichier ouvrable SANS crash dans BikeCAD Free.
+      BikeCAD Free plante sur BELTorCHAIN=2 (exception setSelectedIndex) → on
+      rétrograde la transmission en chaîne (=1) dans le fichier exporté UNIQUEMENT.
+      Le modèle interne et la bibliothèque JSON conservent la courroie ; le .bcad
+      n'est qu'un export d'interop. (L'amortisseur / la cinématique restent non
+      rendus par BikeCAD Free : ce sont des features Pro, hors de notre ressort.)
     """
     out = Path(path)
 
@@ -385,10 +393,12 @@ def save_bcad(
     props["USEgearbox"]      = str(dt.use_motor).lower()
     props["Display GEARBOX"] = str(dt.use_motor).lower()
     props["GEARBOXangle"]    = str(dt.motor_angle)
-    props["BELTorCHAIN"]     = "2" if dt.drive_type == "belt" else "1"
+    # BikeCAD Free plante sur BELTorCHAIN=2 → en mode free_safe on force la chaîne.
+    belt_export = (dt.drive_type == "belt") and not free_safe
+    props["BELTorCHAIN"]     = "2" if belt_export else "1"
     if dt.sprockets:
         props["SPROCKETS type"] = dt.sprockets
-    if dt.drive_type == "belt":
+    if belt_export:
         props["BELT_PITCH"]          = str(dt.belt_pitch)
         props["BELT_WIDTH"]          = str(dt.belt_width)
         props["CHAINSTAYASYMMETRIC"] = "true"

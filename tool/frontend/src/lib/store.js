@@ -13,6 +13,8 @@ export const activeTab = writable('frame')  // onglet actif
 export const viewMode  = writable('bike')   // 'bike' | 'kinematics'
 export const showRider = writable(false)    // afficher le pilote sur la vue 2D
 export const showDims  = writable(true)     // afficher les cotes
+export const showSuspension    = writable(false)  // overlay biellette sur la vue 2D
+export const animateSuspension = writable(false)  // animation de la course
 export const baseline  = writable(null)     // snapshot de référence pour comparaison
 
 // Fige le design courant comme référence de comparaison
@@ -41,7 +43,8 @@ async function doRefresh(bikeData) {
   error.set('')
   try {
     const [result, kin, fitRes] = await Promise.all([
-      calcAndRender(bikeData, 1400, 750, get(showDims), get(showRider)),
+      calcAndRender(bikeData, 1400, 750, get(showDims), get(showRider),
+                    get(showSuspension), get(animateSuspension)),
       fetchKinematics(bikeData).catch(() => null),
       bikeData.rider ? fetchFit(bikeData).catch(() => null) : Promise.resolve(null),
     ])

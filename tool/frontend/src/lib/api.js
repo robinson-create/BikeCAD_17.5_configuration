@@ -6,11 +6,16 @@ export async function fetchDefault() {
   return r.json()
 }
 
-export async function calcAndRender(bike, width = 1400, height = 750, showDims = true, showRider = false) {
+export async function calcAndRender(bike, width = 1400, height = 750, showDims = true,
+                                    showRider = false, showSuspension = false, animateSuspension = false) {
   const r = await fetch(`${BASE}/render/svg`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ bike, width, height, show_dims: showDims, show_rider: showRider }),
+    body: JSON.stringify({
+      bike, width, height,
+      show_dims: showDims, show_rider: showRider,
+      show_suspension: showSuspension, animate_suspension: animateSuspension,
+    }),
   })
   if (!r.ok) throw new Error(await r.text())
   return r.json()  // { svg: string, calc: CalcResult }
@@ -36,11 +41,11 @@ export async function loadBcad(path) {
   return r.json()
 }
 
-export async function exportBcad(bike, path, sourcePath = null) {
+export async function exportBcad(bike, path, sourcePath = null, freeSafe = true) {
   const r = await fetch(`${BASE}/export/bcad`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ bike, path, source_path: sourcePath, backup: true }),
+    body: JSON.stringify({ bike, path, source_path: sourcePath, backup: true, free_safe: freeSafe }),
   })
   if (!r.ok) throw new Error(await r.text())
   return r.json()
@@ -105,6 +110,52 @@ export async function listBikes() {
   const r = await fetch(`${BASE}/bikes`)
   if (!r.ok) return []
   return r.json()
+}
+
+// ── Bibliothèque native (JSON complet, lossless) ────────────────────────────
+export async function saveBikeLibrary(bike, name = null) {
+  const r = await fetch(`${BASE}/library/save`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ bike, name }),
+  })
+  if (!r.ok) throw new Error(await r.text())
+  return r.json()
+}
+
+export async function listLibrary() {
+  const r = await fetch(`${BASE}/library`)
+  if (!r.ok) return []
+  return r.json()
+}
+
+export async function loadLibrary(name) {
+  const r = await fetch(`${BASE}/library/load`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  })
+  if (!r.ok) throw new Error(await r.text())
+  return r.json()
+}
+
+// ── Assistant (Claude pilote l'outil) ───────────────────────────────────────
+export async function assistantAvailable() {
+  try {
+    const r = await fetch(`${BASE}/assistant/available`)
+    if (!r.ok) return false
+    return (await r.json()).available === true
+  } catch { return false }
+}
+
+export async function askAssistant(messages, bike) {
+  const r = await fetch(`${BASE}/assistant`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages, bike }),
+  })
+  if (!r.ok) throw new Error(await r.text())
+  return r.json()  // { reply, bike, actions }
 }
 
 export async function listMotors() {

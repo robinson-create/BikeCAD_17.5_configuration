@@ -53,11 +53,11 @@ def solve_high_pivot(bike: BikeDesign):
     r_drive = r_idler if s.use_idler else r_cr
 
     def state_at(phi):
-        """Bras tourné de phi autour de P. Retourne (axle, idler, shock_len)."""
+        """Bras tourné de phi autour de P. Retourne (axle, idler, shock_len, lo)."""
         axle = common.rotate_about(rear_axle0, P, phi)
         lo = common.rotate_about(shock_lo0, P, phi)   # point bas sur le bras
         shock_len = common.dist(lo, shock_up)
-        return axle, idler0, shock_len               # galet fixe (cadre)
+        return axle, idler0, shock_len, lo           # galet fixe (cadre)
 
     # ── Sens de compression : phi qui fait MONTER l'axe ──────────────────────
     step = math.radians(0.25)
@@ -82,7 +82,7 @@ def solve_high_pivot(bike: BikeDesign):
 
     # ── États : IC = pivot principal (single-pivot) ──────────────────────────
     states = []
-    for axle, idler, shock_len in sweep:
+    for axle, idler, shock_len, lo in sweep:
         as_pct = common.anti_squat(
             P, axle, ground_y, drive_pt, r_drive, r_cog, s.cog_height,
             front_axle_x=f.fcd,
@@ -90,6 +90,12 @@ def solve_high_pivot(bike: BikeDesign):
         states.append({
             "axle": axle, "idler": idler,
             "shock_len": shock_len, "anti_squat": as_pct,
+            "draw": {
+                "links": [[list(P), list(axle)]],   # bras rigide pivot→axe
+                "shock": [list(lo), list(shock_up)],
+                "axle": list(axle),
+                "idler": list(idler) if s.use_idler else None,
+            },
         })
 
     pivots_world = {

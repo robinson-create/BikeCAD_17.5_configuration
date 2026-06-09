@@ -1,10 +1,13 @@
 <script>
   import { onMount } from 'svelte'
-  import { activeTab, TABS, bike, scheduleRefresh, viewMode, showDims } from './lib/store.js'
-  import { fetchDefault, loadBcad, exportBcad, exportDxf, exportLugs, listBikes } from './lib/api.js'
+  import { activeTab, TABS, bike, scheduleRefresh, viewMode, showDims,
+           showSuspension, animateSuspension } from './lib/store.js'
+  import { fetchDefault, loadBcad, exportBcad, exportDxf, exportLugs, listBikes,
+           saveBikeLibrary, listLibrary, loadLibrary } from './lib/api.js'
   import BikeRenderer from './BikeRenderer.svelte'
   import Kinematics from './Kinematics.svelte'
   import Compare from './Compare.svelte'
+  import Assistant from './Assistant.svelte'
 
   import Frame      from './panels/Frame.svelte'
   import Fork       from './panels/Fork.svelte'
@@ -35,6 +38,7 @@
   }
 
   let bikes = []
+  let library = []
   let bcadPath = ''
   let status = ''
 
@@ -42,7 +46,34 @@
     const defaultBike = await fetchDefault()
     if (defaultBike) scheduleRefresh(defaultBike)
     bikes = await listBikes()
+    library = await listLibrary()
   })
+
+  async function handleSaveLibrary() {
+    if (!$bike) return
+    const name = prompt('Nom du vélo à sauvegarder :', $bike.name || 'Mon vélo')
+    if (!name) return
+    try {
+      await saveBikeLibrary({ ...$bike, name }, name)
+      library = await listLibrary()
+      status = 'Vélo sauvegardé ✓'
+    } catch {
+      status = 'Erreur sauvegarde'
+    }
+    setTimeout(() => status = '', 2000)
+  }
+
+  async function handleLibrarySelect(e) {
+    const file = e.target.value
+    if (!file) return
+    try {
+      const result = await loadLibrary(file)
+      if (result) { scheduleRefresh(result); status = 'Vélo chargé ✓' }
+    } catch {
+      status = 'Erreur chargement'
+    }
+    setTimeout(() => status = '', 2000)
+  }
 
   async function handleLoadBcad() {
     if (!bcadPath.trim()) return
@@ -55,14 +86,18 @@
   }
 
   async function handleExportBcad() {
-    const defaultOut = 'BIKE/eMTB_DOM_Engineering.bcad'
+    // Export d'interop BikeCAD Free : fichier SÉPARÉ (le fichier principal garde
+    // la courroie). free_safe rétrograde en chaîne pour ne pas crasher Free.
+    const slug = ($bike?.name ?? 'bike').replace(/\s+/g, '_')
+    const out = `BIKE/${slug}_bikecad_free.bcad`
+    const source = 'BIKE/eMTB_DOM_Engineering.bcad'
     try {
-      await exportBcad($bike, defaultOut)
-      status = 'Exporté ✓'
+      await exportBcad($bike, out, source, true)
+      status = `Exporté → ${slug}_bikecad_free.bcad (chaîne, BikeCAD Free)`
     } catch {
       status = 'Erreur export'
     }
-    setTimeout(() => status = '', 2000)
+    setTimeout(() => status = '', 3500)
   }
 
   async function handleExportDxf() {
@@ -98,9 +133,16 @@
   <header class="topbar">
     <div class="brand">DOM Engineering · BikeCAD Tool</div>
     <div class="toolbar">
+      <select on:change={handleLibrarySelect} title="Bibliothèque (vélos complets)">
+        <option value="">📁 Bibliothèque…</option>
+        {#each library as b}
+          <option value={b.file}>{b.name}</option>
+        {/each}
+      </select>
+      <button on:click={handleSaveLibrary} title="Sauvegarde complète (tous composants)">💾 Sauver</button>
       {#if bikes.length > 0}
-        <select on:change={handleBikeSelect}>
-          <option value="">-- Ouvrir un vélo --</option>
+        <select on:change={handleBikeSelect} title="Importer un .bcad BikeCAD">
+          <option value="">-- Importer .bcad --</option>
           {#each bikes as b}
             <option value={b.path}>{b.name}</option>
           {/each}
@@ -116,6 +158,16 @@
         <input type="checkbox" bind:checked={$showDims}
           on:change={() => $bike && scheduleRefresh($bike)} />
         Cotes
+      </label>
+      <label class="check-label">
+        <input type="checkbox" bind:checked={$showSuspension}
+          on:change={() => $bike && scheduleRefresh($bike)} />
+        Suspension
+      </label>
+      <label class="check-label" class:disabled={!$showSuspension}>
+        <input type="checkbox" bind:checked={$animateSuspension} disabled={!$showSuspension}
+          on:change={() => $bike && scheduleRefresh($bike)} />
+        ▶ Animer
       </label>
       {#if status}<span class="status">{status}</span>{/if}
     </div>
@@ -148,14 +200,17 @@
         <button class:active={$viewMode === 'bike'} on:click={() => viewMode.set('bike')}>Vélo 2D</button>
         <button class:active={$viewMode === 'kinematics'} on:click={() => viewMode.set('kinematics')}>Cinématique</button>
         <button class:active={$viewMode === 'compare'} on:click={() => viewMode.set('compare')}>Comparaison</button>
+        <button class:active={$viewMode === 'assistant'} on:click={() => viewMode.set('assistant')}>🤖 Assistant</button>
       </div>
       <div class="view-body">
         {#if $viewMode === 'bike'}
           <BikeRenderer />
         {:else if $viewMode === 'kinematics'}
           <Kinematics />
-        {:else}
+        {:else if $viewMode === 'compare'}
           <Compare />
+        {:else}
+          <Assistant />
         {/if}
       </div>
     </main>

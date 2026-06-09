@@ -78,7 +78,7 @@ def solve_four_bar(bike: BikeDesign):
         else:
             lo = tf(shock_lo0)
         shock_len = common.dist(lo, shock_up)
-        return B, C, axle, idler, shock_len
+        return B, C, axle, idler, shock_len, lo
 
     # ── Cadrage du sens de compression ───────────────────────────────────────
     step = math.radians(0.25)
@@ -120,7 +120,7 @@ def solve_four_bar(bike: BikeDesign):
 
     # ── États : axle / idler / shock_len / anti_squat (IC du four-bar) ───────
     states = []
-    for B, C, axle, idler, shock_len in sweep:
+    for B, C, axle, idler, shock_len, lo in sweep:
         ic = common.line_intersection(A, B, D, C)
         # Brin moteur = dernier segment de courroie : galet→pignon si galet
         # dans le trajet, sinon plateau→pignon (cf. BiKinematics chainline[-2:]).
@@ -133,6 +133,12 @@ def solve_four_bar(bike: BikeDesign):
         states.append({
             "axle": axle, "idler": idler,
             "shock_len": shock_len, "anti_squat": as_pct,
+            "draw": {
+                "links": [[list(A), list(B)], [list(B), list(C)], [list(C), list(D)]],
+                "shock": [list(lo), list(shock_up)],
+                "axle": list(axle),
+                "idler": list(idler) if s.use_idler else None,
+            },
         })
 
     pivots_world = {
