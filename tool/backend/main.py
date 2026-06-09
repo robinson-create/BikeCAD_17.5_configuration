@@ -19,13 +19,16 @@ from pydantic import BaseModel
 
 from fastapi.responses import PlainTextResponse
 
-from .models.bike import BikeDesign, CalcResult, KinematicsResult, FitResult, GEARBOX_TYPES
+from .models.bike import BikeDesign, CalcResult, KinematicsResult, FitResult, GEARBOX_TYPES, SuspensionConfig
+from .presets import PRESETS
 from .calculations.geometry import calculate
 from .calculations.kinematics import solve_kinematics
 from .calculations.fit import compute_fit
 from .io.bcad_io import load_bcad, save_bcad
 from .io.svg_export import render_svg
 from .io.dxf_export import export_dxf
+from .lugs.joint_model import build_joints
+from .lugs import export_cad as lugs_export
 
 app = FastAPI(title="DOM Engineering Bike Tool", version="1.0.0")
 
@@ -156,6 +159,47 @@ def export_dxf_route(req: DxfRequest):
             p.write_text(dxf, encoding="utf-8")
             return {"path": str(p), "ok": True, "bytes": len(dxf)}
         return PlainTextResponse(content=dxf, media_type="application/dxf")
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.get("/api/suspension/preset/{name}")
+def suspension_preset(name: str) -> SuspensionConfig:
+    """Retourne un preset de configuration suspension (ex. high_pivot_m620)."""
+    factory = PRESETS.get(name)
+    if factory is None:
+        raise HTTPException(status_code=404, detail=f"Preset inconnu : {name}")
+    return factory()
+
+
+class LugsRequest(BaseModel):
+    bike: BikeDesign
+    bond_gap: float = 0.4
+    insertion_factor: float = 1.5
+    fmt: str = "json"          # json | csv | summary
+    path: Optional[str] = None  # si fourni : écrit le fichier (csv/summary/json)
+
+
+@app.post("/api/export/lugs")
+def export_lugs(req: LugsRequest):
+    """Calcule les nœuds-lugs (douilles, angles) et exporte JSON/CSV/résumé."""
+    try:
+        calc = calculate(req.bike)
+        nodes = build_joints(req.bike, calc, req.bond_gap, req.insertion_factor)
+        if req.fmt == "csv":
+            content = lugs_export.to_design_table_csv(nodes)
+        elif req.fmt == "summary":
+            content = lugs_export.to_summary(nodes)
+        else:
+            content = lugs_export.to_json(nodes)
+        if req.path:
+            p = Path(req.path)
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(content, encoding="utf-8")
+            return {"path": str(p), "ok": True, "bytes": len(content)}
+        if req.fmt == "json":
+            return JSONResponse(content=lugs_export.to_dict(nodes))
+        return PlainTextResponse(content=content, media_type="text/plain")
     except Exception as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 

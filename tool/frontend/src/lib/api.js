@@ -78,6 +78,29 @@ export async function exportDxf(bike, opts = {}) {
   return { ok: true }
 }
 
+export async function exportLugs(bike, fmt = 'csv') {
+  // Récupère l'export lugs et déclenche un téléchargement client.
+  const r = await fetch(`${BASE}/export/lugs`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ bike, fmt }),
+  })
+  if (!r.ok) throw new Error(await r.text())
+  const ext = fmt === 'json' ? 'json' : (fmt === 'csv' ? 'csv' : 'txt')
+  const mime = fmt === 'json' ? 'application/json' : 'text/plain'
+  const text = fmt === 'json' ? JSON.stringify(await r.json(), null, 2) : await r.text()
+  const blob = new Blob([text], { type: mime })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${(bike?.name ?? 'bike').replace(/\s+/g, '_')}_lugs.${ext}`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+  return { ok: true }
+}
+
 export async function listBikes() {
   const r = await fetch(`${BASE}/bikes`)
   if (!r.ok) return []
@@ -88,4 +111,10 @@ export async function listMotors() {
   const r = await fetch(`${BASE}/motors`)
   if (!r.ok) return []
   return r.json()
+}
+
+export async function fetchSuspensionPreset(name) {
+  const r = await fetch(`${BASE}/suspension/preset/${name}`)
+  if (!r.ok) throw new Error(await r.text())
+  return r.json()  // SuspensionConfig
 }

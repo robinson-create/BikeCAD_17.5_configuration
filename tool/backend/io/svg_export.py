@@ -8,6 +8,7 @@ Le SVG est généré avec un viewBox qui s'adapte automatiquement au vélo.
 
 import math
 from ..models.bike import BikeDesign, CalcResult
+from ..calculations.motor import motor_envelope_world
 
 
 # ─── Palette ──────────────────────────────────────────────────────────────────
@@ -185,15 +186,30 @@ def _draw_drivetrain(bike, calc, sx, sy, ox, oy, scale) -> str:
     r_cr = su.chainring_teeth * pitch / (2 * math.pi)
     r_cog = su.cog_teeth * pitch / (2 * math.pi)
 
-    # Moteur central (carter autour du BB) si assistance
+    # Moteur central : enveloppe réelle du carter si disponible (ex. M620),
+    # sinon rectangle générique. NB : l'enveloppe est en coords MONDE relatives
+    # au BB ; on translate par bb avant projection écran.
     if dt.use_motor:
-        mw, mh = 130.0, 150.0   # encombrement approximatif d'un mid-drive
-        mx, my = bb[0] + dt.motor_x, bb[1] + dt.motor_y
-        x0, y0 = _pt(mx - mw / 2, my + mh / 2, sx, sy, ox, oy)
-        parts.append(
-            f'<rect x="{x0:.1f}" y="{y0:.1f}" width="{mw*scale:.1f}" height="{mh*scale:.1f}" '
-            f'rx="{18*scale:.1f}" fill="{PALETTE["motor"]}" opacity="0.85" />'
-        )
+        env = motor_envelope_world(dt)
+        if env is not None:
+            pts = " ".join(
+                f"{x:.1f},{y:.1f}" for x, y in
+                (_pt(bb[0] + ex, bb[1] + ey, sx, sy, ox, oy) for ex, ey in env)
+            )
+            parts.append(
+                f'<polygon class="motor" points="{pts}" '
+                f'fill="{PALETTE["motor"]}" opacity="0.85" '
+                f'stroke="#1a2530" stroke-width="1.5" />'
+            )
+        else:
+            mw, mh = 130.0, 150.0   # encombrement approximatif d'un mid-drive
+            mx, my = bb[0] + dt.motor_x, bb[1] + dt.motor_y
+            x0, y0 = _pt(mx - mw / 2, my + mh / 2, sx, sy, ox, oy)
+            parts.append(
+                f'<rect class="motor" x="{x0:.1f}" y="{y0:.1f}" width="{mw*scale:.1f}" '
+                f'height="{mh*scale:.1f}" rx="{18*scale:.1f}" '
+                f'fill="{PALETTE["motor"]}" opacity="0.85" />'
+            )
 
     # Manivelle (vers le bas-avant) + axe
     bx, by = _pt(*bb, sx, sy, ox, oy)

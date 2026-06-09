@@ -24,7 +24,12 @@
 
   const W = 440, H = 200, PAD = 34
 
-  // Définition des 3 graphes
+  // Plage anti-squat adaptée aux données (peut largement dépasser 200% sur une
+  // géométrie mal placée — on évite de couper la courbe).
+  $: asMax = samples.length ? Math.max(...samples.map(s => s.anti_squat)) : 200
+  $: asMin = samples.length ? Math.min(...samples.map(s => s.anti_squat)) : -50
+
+  // Définition des graphes
   $: charts = [
     {
       title: 'Ratio de levier', key: 'leverage', color: '#e8851a',
@@ -32,11 +37,17 @@
     },
     {
       title: 'Anti-squat (%)', key: 'anti_squat', color: '#4caf50',
-      yMin: -50, yMax: 200, band: [100, 115], unit: '%',
+      yMin: Math.min(-50, Math.floor((asMin) / 50) * 50),
+      yMax: Math.max(200, Math.ceil((asMax) / 50) * 50),
+      band: [100, 115], unit: '%',
     },
     {
       title: 'Belt growth (mm)', key: 'belt_growth', color: '#5b9bd5',
       yMin: 0, yMax: Math.max(4, Math.ceil((k?.belt_growth_max ?? 2))), band: [0, 2], unit: 'mm',
+    },
+    {
+      title: 'Pedal kickback (°)', key: 'pedal_kickback', color: '#b07bd5',
+      yMin: 0, yMax: Math.max(8, Math.ceil((k?.pedal_kickback_max ?? 4))), band: [0, 8], unit: '°',
     },
   ]
 
@@ -60,8 +71,13 @@
       ok: k.anti_squat_sag >= 100 && k.anti_squat_sag <= 115, target: '100 – 115 %' },
     { label: 'Belt growth max', val: `${k.belt_growth_max} mm`,
       ok: k.belt_growth_max < 2, target: '< 2 mm' },
+    { label: 'Pedal kickback max', val: `${k.pedal_kickback_max}°`,
+      ok: k.pedal_kickback_max < 8, target: '< 8° (manivelle)' },
     { label: 'Recul axe (max)', val: `${k.axle_path_rearward} mm`,
       ok: k.axle_path_rearward > 0, target: '> 0 (rearward)' },
+    { label: 'Dégagement moteur', ok: k.motor_clearance_ok,
+      val: k.motor_clearance_ok ? 'OK' : (k.motor_collisions ?? []).join(', '),
+      target: 'hors carter' },
   ] : []
 </script>
 

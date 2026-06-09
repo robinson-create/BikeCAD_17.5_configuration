@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
 <properties>
-<comment>Created on Tue Jun 09 18:06:39 CEST 2026</comment>
+<comment>Created on Tue Jun 09 20:40:29 CEST 2026</comment>
 <entry key="Width BRAKES">779</entry>
 <entry key="Width PAINT">690</entry>
 <entry key="Show FENDERS">false</entry>
@@ -15,14 +15,14 @@
 <entry key="LocY HEADSET">5</entry>
 <entry key="Width FORK1">465</entry>
 <entry key="Width Open">600</entry>
-<entry key="LocY CABLE_GUIDES">5</entry>
+<entry key="LocY CABLE_GUIDES">25</entry>
 <entry key="Width PUMP">347</entry>
 <entry key="LocY STEM1">5</entry>
 <entry key="Height PRIMARYDIMS">262</entry>
 <entry key="Width ON_SCREEN_NOTES">301</entry>
 <entry key="LocY STEM2">5</entry>
 <entry key="LocY CHAINSTAYS">5</entry>
-<entry key="LocY EXTRA_TUBES">5</entry>
+<entry key="LocY EXTRA_TUBES">25</entry>
 <entry key="Height UCI_REGULATIONS">503</entry>
 <entry key="Show SEATSTAYS2">false</entry>
 <entry key="LocY DISPLAY">5</entry>
@@ -99,7 +99,7 @@
 <entry key="Width PRIMARYDIMS">898</entry>
 <entry key="LocX PAINT">5</entry>
 <entry key="Width NOTES">731</entry>
-<entry key="Height BRAKES">850</entry>
+<entry key="Height BRAKES">790</entry>
 <entry key="Show SEATPOST1">false</entry>
 <entry key="Show FRONTWHEEL1">false</entry>
 <entry key="Height STEM2">360</entry>
@@ -165,7 +165,7 @@
 <entry key="Width FIXTURING">710</entry>
 <entry key="LocX SEATPOST">5</entry>
 <entry key="LocY IMAGE_CONTROLS">5</entry>
-<entry key="LocY BRAKES">5</entry>
+<entry key="LocY BRAKES">25</entry>
 <entry key="Width ANIMATE">258</entry>
 <entry key="Show SEATSTAYS1">false</entry>
 <entry key="Width UCI_REGULATIONS">435</entry>

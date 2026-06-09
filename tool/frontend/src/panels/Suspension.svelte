@@ -1,5 +1,5 @@
 <script>
-  import { bike, updateSection } from '../lib/store.js'
+  import { bike, updateSection, applySuspensionPreset } from '../lib/store.js'
   $: su = $bike?.suspension ?? {}
   const upd = patch => updateSection('suspension', patch)
 
@@ -9,15 +9,21 @@
     upd({ [key]: { ...cur, [axis]: +val } })
   }
 
-  const pivots = [
-    { key: 'main_pivot',        label: 'Pivot principal' },
-    { key: 'horst_pivot',       label: 'Pivot Horst (bases)' },
-    { key: 'upper_frame_pivot', label: 'Rocker / cadre' },
-    { key: 'upper_ss_pivot',    label: 'Rocker / hauban' },
-    { key: 'shock_lower',       label: 'Amorto bas' },
-    { key: 'shock_upper',       label: 'Amorto haut' },
-    { key: 'idler',             label: 'Galet courroie' },
-  ]
+  // Pivots utiles selon la topologie
+  const FOUR_BAR = ['main_pivot', 'horst_pivot', 'upper_frame_pivot',
+                    'upper_ss_pivot', 'shock_lower', 'shock_upper', 'idler']
+  const HIGH_PIVOT = ['main_pivot', 'shock_lower', 'shock_upper', 'idler']
+  const LABELS = {
+    main_pivot:        'Pivot principal',
+    horst_pivot:       'Pivot Horst (bases)',
+    upper_frame_pivot: 'Rocker / cadre',
+    upper_ss_pivot:    'Rocker / hauban',
+    shock_lower:       'Amorto bas',
+    shock_upper:       'Amorto haut',
+    idler:             'Galet courroie',
+  }
+  $: keys = (su.linkage_type === 'high_pivot_idler' ? HIGH_PIVOT : FOUR_BAR)
+  $: pivots = keys.map(key => ({ key, label: LABELS[key] }))
 </script>
 
 <section class="panel">
@@ -30,10 +36,21 @@
         on:change={e => upd({ enabled: e.target.checked })} />
       Cadre tout-suspendu
     </label>
+    <label>Topologie cinématique
+      <select value={su.linkage_type ?? 'four_bar_horst'}
+        on:change={e => upd({ linkage_type: e.target.value })}>
+        <option value="four_bar_horst">Four-bar (Horst Link)</option>
+        <option value="high_pivot_idler">High-pivot + galet (single-pivot)</option>
+        <option value="four_bar_generic">Four-bar (solveur générique)</option>
+      </select>
+    </label>
     <label>Course roue AR cible (mm)
       <input type="number" step="5" value={su.rear_travel ?? 160}
         on:change={e => upd({ rear_travel: +e.target.value })} />
     </label>
+    <button class="preset" on:click={() => applySuspensionPreset('high_pivot_m620')}>
+      ⤓ Charger preset high-pivot M620
+    </button>
   </fieldset>
 
   <fieldset>
@@ -121,4 +138,10 @@
   .pivot-head span:first-child { text-align: left; }
   .pivot-label { font-size: .72rem; color: #9999bb; }
   .pivot-row input { padding: 2px 4px; }
+  .preset {
+    margin-top: 8px; width: 100%; padding: 6px;
+    background: #2e7d32; color: #fff; border: none; border-radius: 4px;
+    font-size: .76rem; cursor: pointer;
+  }
+  .preset:hover { background: #388e3c; }
 </style>

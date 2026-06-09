@@ -247,6 +247,7 @@ class BrakeConfig(BaseModel):
 DriveType = Literal["chain", "belt"]
 
 GEARBOX_TYPES = {
+    "bafang_m620":        "BafangM620",
     "bafang_mm520":       "BafangMM520",
     "bafang_m800":        "BafangM800",
     "bafang_mmg330":      "BafangMMG330250",
@@ -291,7 +292,10 @@ class Pivot(BaseModel):
 
 class SuspensionConfig(BaseModel):
     enabled: bool = Field(True, description="Cadre tout-suspendu (sinon rigide)")
-    linkage_type: str = Field("four_bar_horst", description="Type de cinématique")
+    linkage_type: Literal["four_bar_horst", "high_pivot_idler", "four_bar_generic"] = Field(
+        "four_bar_horst",
+        description="Topologie : four_bar_horst | high_pivot_idler | four_bar_generic (solveur par contraintes)",
+    )
 
     # Pivots (coordonnées monde)
     main_pivot:        Pivot = Field(default_factory=lambda: Pivot(x=-10.0, y=18.0))
@@ -421,6 +425,7 @@ class KinematicSample(BaseModel):
     shock_length:  float  # longueur amortisseur (mm)
     leverage:      float  # ratio de levier d(roue)/d(amorto)
     anti_squat:    float  # anti-squat (%)
+    pedal_kickback:float = 0.0  # recul pédalier cumulé depuis topout (° manivelle)
     belt_growth:   float  # variation longueur courroie vs topout (mm)
     axle_x:        float  # position axe AR x (monde, mm)
     axle_y:        float  # position axe AR y (monde, mm)
@@ -463,9 +468,13 @@ class KinematicsResult(BaseModel):
     leverage_sag:     float = 0.0
     progressivity:    float = 0.0   # (LR_start - LR_end)/LR_start * 100
     anti_squat_sag:   float = 0.0
+    pedal_kickback_max:float = 0.0  # recul pédalier max sur la course (° manivelle)
     belt_growth_max:  float = 0.0
     axle_path_rearward:float = 0.0  # recul max de l'axe (mm)
     shock_stroke_used:float = 0.0   # course amortisseur réelle pour la course roue (mm)
     shock_stroke_spec:float = 0.0   # course amortisseur spécifiée (mm)
+    # Dégagement carter moteur
+    motor_clearance_ok:bool = True       # aucun hardpoint dans le carter moteur
+    motor_collisions: list[str] = []     # noms des hardpoints en collision
     # Points pour tracé du schéma cinématique (positions au sag)
     pivots_world:     dict = {}

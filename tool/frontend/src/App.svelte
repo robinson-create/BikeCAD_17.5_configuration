@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte'
   import { activeTab, TABS, bike, scheduleRefresh, viewMode, showDims } from './lib/store.js'
-  import { fetchDefault, loadBcad, exportBcad, exportDxf, listBikes } from './lib/api.js'
+  import { fetchDefault, loadBcad, exportBcad, exportDxf, exportLugs, listBikes } from './lib/api.js'
   import BikeRenderer from './BikeRenderer.svelte'
   import Kinematics from './Kinematics.svelte'
   import Compare from './Compare.svelte'
@@ -75,6 +75,16 @@
     setTimeout(() => status = '', 2000)
   }
 
+  async function handleExportLugs() {
+    try {
+      await exportLugs($bike, 'csv')
+      status = 'Lugs CSV téléchargé ✓'
+    } catch {
+      status = 'Erreur lugs'
+    }
+    setTimeout(() => status = '', 2000)
+  }
+
   async function handleBikeSelect(e) {
     const path = e.target.value
     if (!path) return
@@ -101,6 +111,7 @@
       <button on:click={handleLoadBcad}>Charger</button>
       <button on:click={handleExportBcad}>Exporter .bcad</button>
       <button on:click={handleExportDxf}>Export DXF</button>
+      <button on:click={handleExportLugs}>Export lugs</button>
       <label class="check-label">
         <input type="checkbox" bind:checked={$showDims}
           on:change={() => $bike && scheduleRefresh($bike)} />

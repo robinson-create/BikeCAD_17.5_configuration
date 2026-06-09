@@ -158,6 +158,165 @@ components = {
 for label, token in components.items():
     check(token in svg, f"composant présent : {label}")
 
+# ─── 4. CINÉMATIQUE — TOPOLOGIES ────────────────────────────────────────────
+print("\n=== 4. CINÉMATIQUE — TOPOLOGIES ===")
+
+# 4a. Four-bar (défaut) résolu + verdicts cohérents
+b = load_bcad(SRC)
+b.suspension.linkage_type = "four_bar_horst"
+r = solve_kinematics(b)
+check(r.ok, f"four-bar résolu ({r.message})")
+check(abs(r.total_travel - b.suspension.rear_travel) <= 10, "four-bar : course ≈ cible")
+check(len(r.samples) >= 5, "four-bar : échantillons présents")
+# pedal kickback cohérent avec belt growth : kick = deg(belt/r_plateau)
+r_cr = b.suspension.chainring_teeth * b.suspension.belt_pitch / (2 * math.pi)
+for smp in r.samples:
+    exp = math.degrees(smp.belt_growth / r_cr)
+    if abs(exp - smp.pedal_kickback) > 0.05:
+        check(False, f"kickback incohérent: {smp.pedal_kickback} vs {exp:.2f}")
+        break
+
+# 4b. High-pivot single-idler résolu
+b = load_bcad(SRC)
+s = b.suspension
+s.linkage_type = "high_pivot_idler"
+s.main_pivot.x, s.main_pivot.y = -20.0, 110.0     # pivot haut
+s.idler.x, s.idler.y = -10.0, 90.0                # galet proche du pivot
+s.shock_lower.x, s.shock_lower.y = -120.0, 20.0
+s.shock_upper.x, s.shock_upper.y = -10.0, 200.0
+r = solve_kinematics(b)
+check(r.ok, f"high-pivot résolu ({r.message})")
+check(abs(r.total_travel - s.rear_travel) <= 10, "high-pivot : course ≈ cible")
+check(r.axle_path_rearward > 0, f"high-pivot : axe recule (rearward {r.axle_path_rearward})")
+
+# 4c. Invariant high-pivot : galet AU pivot → belt growth ≈ 0 et kickback ≈ 0
+s.idler.x, s.idler.y = s.main_pivot.x, s.main_pivot.y
+r0 = solve_kinematics(b)
+check(r0.belt_growth_max < 0.05, f"galet=pivot → belt growth nul ({r0.belt_growth_max})")
+check(r0.pedal_kickback_max < 0.05, f"galet=pivot → kickback nul ({r0.pedal_kickback_max})")
+
+# 4d. Dispatch : topologie inconnue → échec propre (pas de crash)
+b2 = load_bcad(SRC)
+b2.suspension.__dict__["linkage_type"] = "inexistant"  # bypass validation pydantic
+r = solve_kinematics(b2)
+check(not r.ok, "topologie inconnue → ok=False sans crash")
+
+# 4e. Suspension désactivée → échec propre
+b3 = load_bcad(SRC)
+b3.suspension.enabled = False
+r = solve_kinematics(b3)
+check(not r.ok, "suspension désactivée → ok=False")
+
+# ─── 5. ENVELOPPE MOTEUR M620 + DÉGAGEMENT ──────────────────────────────────
+print("\n=== 5. ENVELOPPE MOTEUR M620 + DÉGAGEMENT ===")
+from backend.calculations.motor import motor_envelope_world, point_in_polygon
+from backend.presets import high_pivot_m620
+
+# 5a. Enveloppe disponible pour le M620, absente sinon
+b = load_bcad(SRC)
+b.drivetrain.motor_key = "bafang_m620"
+b.drivetrain.use_motor = True
+env = motor_envelope_world(b.drivetrain)
+check(env is not None and len(env) >= 6, "enveloppe M620 générée")
+check(point_in_polygon((0.0, 0.0), env), "BB (origine) dans le carter M620")
+check(not point_in_polygon((0.0, 300.0), env), "point très haut hors carter")
+
+b.drivetrain.motor_key = "bafang_mm520"
+check(motor_envelope_world(b.drivetrain) is None, "pas d'enveloppe pour MM520 (fallback rect)")
+
+# 5b. Preset high-pivot M620 : résout ET dégage le carter
+b = load_bcad(SRC)
+b.drivetrain.motor_key = "bafang_m620"
+b.suspension = high_pivot_m620()
+r = solve_kinematics(b)
+check(r.ok, f"preset high-pivot M620 résout ({r.message})")
+check(r.motor_clearance_ok, f"preset dégage le carter (collisions: {r.motor_collisions})")
+
+# 5c. Pivot délibérément DANS le carter → collision détectée
+b.suspension.main_pivot.x = 60.0
+b.suspension.main_pivot.y = 0.0     # au cœur du carter M620
+r = solve_kinematics(b)
+check(not r.motor_clearance_ok and "pivot principal" in r.motor_collisions,
+      f"pivot dans le carter → collision signalée ({r.motor_collisions})")
+
+# 5d. Le SVG dessine bien le polygone du carter (class="motor")
+b = load_bcad(SRC)
+b.drivetrain.motor_key = "bafang_m620"
+calc = calculate(b)
+svg = render_svg(b, calc, 1400, 750, True, None)
+check('class="motor"' in svg and "polygon" in svg, "carter M620 dessiné en polygone dans le SVG")
+check(svg_finite(svg), "SVG carter M620 valide")
+
+# ─── 6. SOLVEUR GÉNÉRIQUE PAR CONTRAINTES ───────────────────────────────────
+print("\n=== 6. SOLVEUR GÉNÉRIQUE (Newton-Raphson) ===")
+b = load_bcad(SRC)
+b.suspension.linkage_type = "four_bar_horst"
+rh = solve_kinematics(b)
+b.suspension.linkage_type = "four_bar_generic"
+rg = solve_kinematics(b)
+check(rg.ok, f"solveur générique résout ({rg.message})")
+check(len(rh.samples) == len(rg.samples), "même nombre d'échantillons")
+maxd = 0.0
+for a, c in zip(rh.samples, rg.samples):
+    for key in ("wheel_travel", "shock_stroke", "leverage", "anti_squat",
+                "belt_growth", "axle_x", "axle_y"):
+        maxd = max(maxd, abs(getattr(a, key) - getattr(c, key)))
+check(maxd < 1e-3, f"générique ≡ hardcodé four-bar (écart max {maxd:.2e})")
+
+# Le noyau de contraintes : test unitaire d'un triangle rigide trivial
+from backend.calculations.layouts.generic import solve_constraints
+import math as _m
+pts = {"P": [0.0, 0.0], "Q": [10.0, 0.0], "R": [3.0, 3.0]}
+# R contraint à distance 5 de P et 5 de Q → doit converger vers (5, ±?) ; 5/5/10 colinéaire
+pts2 = {"P": [0.0, 0.0], "Q": [6.0, 0.0], "R": [2.0, 2.0]}
+ok = solve_constraints(pts2, ["R"], [("P", "R", 5.0), ("Q", "R", 5.0)], [])
+dPR = _m.hypot(pts2["R"][0], pts2["R"][1])
+dQR = _m.hypot(pts2["R"][0] - 6, pts2["R"][1])
+check(ok and abs(dPR - 5) < 1e-6 and abs(dQR - 5) < 1e-6,
+      f"noyau contraintes : R à 5/5 de P/Q (got {dPR:.4f}/{dQR:.4f})")
+
+# ─── 7. MODE LUGS — JONCTIONS TUBE↔LUG ──────────────────────────────────────
+print("\n=== 7. MODE LUGS ===")
+from backend.lugs.joint_model import build_joints
+from backend.lugs import export_cad as lx
+from backend.lugs.miter import miter_angle, saddle_depth
+
+b = load_bcad(SRC)
+calc = calculate(b)
+nodes = build_joints(b, calc)
+names = {n.name for n in nodes}
+check(names == {"head_top", "head_bottom", "bb", "seat_cluster", "dropout"},
+      f"5 nœuds-lugs attendus (got {names})")
+
+bb_node = next(n for n in nodes if n.name == "bb")
+check(len(bb_node.sockets) == 3, "lug BB : 3 douilles (down/seat/chainstay)")
+# Tous les alésages > Ø tube (jeu de collage) et profondeurs > 0
+for n in nodes:
+    for s in n.sockets:
+        check(s.bore_dia > s.tube_od and s.depth > 0,
+              f"{n.name}/{s.member}: bore>{s.tube_od} & depth>0")
+
+# Angle seat tube ↔ down tube au BB : doit être plausible (~50–80°)
+ang = bb_node.angles.get("down_tube|seat_tube")
+check(ang is not None and 40 < ang < 110, f"angle BB down|seat plausible ({ang}°)")
+
+# Le triangle arrière (bases/haubans) marqué hors-plan
+cs_oop = any(s.out_of_plane for n in nodes for s in n.sockets if s.member in ("chainstay", "seatstay"))
+check(cs_oop, "bases/haubans marqués out_of_plane (triangle fendu 3D)")
+
+# Exports valides
+import json as _json
+js = lx.to_json(nodes)
+check(_json.loads(js)["nodes"], "export JSON parseable")
+csv = lx.to_design_table_csv(nodes)
+check(csv.startswith("Parameter,Value,Unit") and "bb_seat_tube_axis" in csv, "export CSV SolidWorks")
+summ = lx.to_summary(nodes)
+check("LUG BB" in summ, "résumé lisible")
+
+# Utilitaires miter
+check(abs(miter_angle(0, 90) - 45.0) < 1e-6, "miter 0/90 = 45°")
+check(saddle_depth(30, 40) > 0, "saddle depth positive")
+
 # ─── RÉSULTAT ────────────────────────────────────────────────────────────────
 print("\n" + "=" * 50)
 if fails:
