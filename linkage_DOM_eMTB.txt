@@ -1,0 +1,106 @@
+# ============================================================
+# LINKAGE CINÉMATIQUE — DOM Engineering e-MTB
+# Format : texte structuré pour import manuel dans Linkage X
+# ou équivalent (bike-linkage.com, Bikinator, etc.)
+# ============================================================
+# Référence : BB centre = (0 ; 0), x = avant, y = haut (mm)
+# ============================================================
+
+[FRAME_GEOMETRY]
+Type              = Four-Bar Linkage (Horst Link)
+Rear_travel_mm    = 160
+Front_travel_mm   = 160
+CS_length_mm      = 435
+Head_angle_deg    = 64.0
+BB_drop_mm        = 30
+Wheel_size        = 29er (736 mm ext)
+Rider_weight_kg   = 90
+Motor             = Bafang M620 (150 Nm, axe BB)
+Drivetrain        = Gates CDX belt + 3x3.bike hub (moyeu arrière)
+
+# ============================================================
+# COORDONNÉES DES PIVOTS (mm, référence BB = 0 ; 0)
+# ============================================================
+# OBJECTIF de placement :
+#   - Pivot principal quasi-concentrique au BB
+#     → minimise le chain/belt growth (courroie Gates CDX)
+#   - Anti-squat ≈ 100–110% au sag (contrer 150 Nm moteur)
+#   - Horst link ≈ 50 mm en avant de l'axe AR
+
+[PIVOTS]
+# Pivot principal (main pivot) — sur le cadre principal
+MAIN_PIVOT_X   = +10   # mm, légèrement en avant du BB
+MAIN_PIVOT_Y   = +18   # mm, au-dessus du BB
+
+# Pivot Horst link — sur les bases (chainstay), en avant de l'axe AR
+# CS = 435 mm, angle CS ≈ -3.9° → axe AR à (+433 ; -30)
+# Horst à 50 mm en avant de l'axe AR :
+HORST_PIVOT_X  = +383  # mm depuis BB
+HORST_PIVOT_Y  = -23   # mm (légèrement sous le niveau BB)
+
+# Pivot supérieur de la biellette (rocker) sur le cadre
+UPPER_FRAME_PIVOT_X = -18  # mm, légèrement derrière BB
+UPPER_FRAME_PIVOT_Y = +295  # mm (milieu tube de selle)
+
+# Pivot supérieur de la biellette côté hauban (seat stay)
+UPPER_SS_PIVOT_X  = +62   # mm
+UPPER_SS_PIVOT_Y  = +250  # mm (approximatif — à affiner en simulation)
+
+[SHOCK]
+# Amortisseur : montage boulon (bolt-on) avec flip-chip
+# Position basse (lower mount) — sur les bases (chainstay)
+SHOCK_LOWER_X  = +200   # mm depuis BB le long des bases
+SHOCK_LOWER_Y  = -12    # mm
+
+# Position haute (upper mount) — sur le tube de selle
+SHOCK_UPPER_X  = +8     # mm
+SHOCK_UPPER_Y  = +185   # mm
+
+# Amortisseur cible : 205×60 mm (eye-to-eye × stroke)
+# ou 185×55 mm selon la progressivité souhaitée
+SHOCK_EOE_mm       = 205
+SHOCK_STROKE_mm    = 60
+
+[BELT_GUIDE]
+# Galet de renvoi au point de fente du triangle arrière
+# Position le long du CS (283 mm depuis BB ≈ 65% du CS)
+IDLER_X_mm    = 283
+IDLER_Y_mm    = -18    # approximatif
+IDLER_DIA_mm  = 32     # diamètre conseillé (Gates CDX idler : 24–40 mm)
+
+[LINKAGE_LENGTHS]
+# Longueurs des biellettes à vérifier dans Linkage
+CHAINSTAY_mm          = 435  # BB → Horst pivot = voir chainstay effective
+CHAINSTAY_HORST_mm    = 52   # Horst → axe AR (50 mm + rayon axe ≈ 52 mm)
+UPPER_LINK_mm         = 100  # rocker (à optimiser en simulation)
+SEATSTAY_mm           = 340  # Horst pivot → pivot supérieur hauban (estimé)
+
+[TARGETS_SIMULATION]
+# À vérifier absolument dans Linkage avant fabrication :
+# 1. Anti-squat au sag (25 mm) : cible 100–115%
+#    (contrer la poussée 150 Nm Bafang M620 à l'accélération)
+# 2. Belt/chain growth total sur 160 mm de débattement : < 2 mm
+#    (sinon la courroie Gates CDX décrocha ou surcharge le moyeu)
+# 3. Leverage ratio à sag : ~2.8–3.2 (pour amortisseur 205×60)
+# 4. Progressivité du leverage ratio : 20–30% début → fin course
+#    (éviter le talonage avec la masse totale pilote + engin)
+# 5. Chemin de roue arrière : axe AR doit reculer légèrement
+#    en compression (rearward axle path) — naturel avec Horst link
+
+[TOOLS]
+# Logiciels de simulation cinématique compatibles :
+# - Linkage X (Bionicle Systems, Windows)  → import par coordonnées
+# - bike-linkage.com (web, gratuit)        → saisie manuelle des pivots
+# - Mevea Linkage 3D                       → si SolidWorks indisponible
+# → Référence doc spec (section 6.4) : SolidWorks Simulation, nTopology,
+#   SimScale — pour FEA statique/fatigue après cinématique validée
+
+[NOTES]
+# — Le pivot Horst quasi-concentrique au BB donne un comportement
+#   similaire à un single-pivot dans la première phase de compression,
+#   puis diverge en fin de course grâce au point de pivotement virtuel.
+# — La courroie Gates CDX ne supporte pas de tension rouleau agressif.
+#   L'idler au point de fente est un guide simple (pas de tendeur actif).
+# — Avec un moyeu 3×3.bike, le rapport de transmission varie selon le
+#   rapport engagé ; le chain/belt growth doit être < 2 mm sur TOUS les
+#   rapports pour éviter le sauts de courroie (validation par calcul).

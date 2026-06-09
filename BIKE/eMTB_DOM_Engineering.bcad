@@ -1193,7 +1193,7 @@
 <entry key="FLANGEDIST_DS rear">35.0</entry>
 <entry key="Seat tube length">423.0</entry>
 <entry key="REARBRAKEPX offset">93.0</entry>
-<entry key="BELTorCHAIN">1</entry>
+<entry key="BELTorCHAIN">2</entry>
 <entry key="TEXTSEATTUBE1 color sRGB">-1</entry>
 <entry key="LOWEROUTLINEFRONTWHEEL1 color IMAGEaspectR">true</entry>
 <entry key="TOPTUBECXr3">0.15</entry>
@@ -1877,7 +1877,7 @@
 <entry key="CLAMPC show">false</entry>
 <entry key="DECAL_SPACESEATTUBE2">0.0</entry>
 <entry key="DECAL_SPACESEATTUBE1">0.0</entry>
-<entry key="REARCNTIXD">0</entry>
+<entry key="REARCNTIXD">1</entry>
 <entry key="LOWEROUTLINESEATPOST1 color IMAGEaspectR">true</entry>
 <entry key="SaddleQorQ2">0</entry>
 <entry key="Top tube rear diameter">38.0</entry>
@@ -4968,7 +4968,7 @@
 <entry key="CHEVRONTOPTUBE2SL">-100</entry>
 <entry key="SADDLE_CLAMP_TO_BB_X show">false</entry>
 <entry key="NON_DRIVE_SIDE_SPOKE_LENGTH rear show">false</entry>
-<entry key="Number of chainrings">2</entry>
+<entry key="Number of chainrings">1</entry>
 <entry key="CSAUXCXr3">0.15</entry>
 <entry key="CSAUXCXr2">0.4</entry>
 <entry key="CSAUXCXr1">0.85</entry>
@@ -5256,7 +5256,7 @@
 <entry key="ARCTAN_OF_TRAIL_RADIUS show">false</entry>
 <entry key="FRONTDiscAdaptOnPost">false</entry>
 <entry key="Teeth on chainring 2">22</entry>
-<entry key="Teeth on chainring 0">44</entry>
+<entry key="Teeth on chainring 0">36</entry>
 <entry key="Teeth on chainring 1">32</entry>
 <entry key="nCSOFFSET offsetX">0.0</entry>
 <entry key="nCHAINSTAY_G offset">0.0</entry>
@@ -5497,7 +5497,7 @@
 <entry key="SPOKE_PHASE_SHIFT front">100</entry>
 <entry key="DOWNTUBE2SnSlength show">false</entry>
 <entry key="AXLE_ADJ show">false</entry>
-<entry key="CHAINSTAYASYMMETRIC">false</entry>
+<entry key="CHAINSTAYASYMMETRIC">true</entry>
 <entry key="TOPTUBELENGTHeffective offset">0.0</entry>
 <entry key="STEMMIN_LENGTH offsetX">0.0</entry>
 <entry key="BEAD_SEAT_DIA rear show">false</entry>
