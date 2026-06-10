@@ -12,27 +12,37 @@ from ..calculations.motor import motor_envelope_world
 
 
 # ─── Palette ──────────────────────────────────────────────────────────────────
+# Look « catalogue moderne » : cadre ardoise foncé avec liseré, fourche métal,
+# fond clair neutre. Contours sur chaque pièce pour la lisibilité.
 PALETTE = {
-    "frame":      "#1a1a2e",   # tubes cadre
-    "fork":       "#16213e",   # fourche
-    "crown":      "#0f3460",   # couronnes + BB
-    "wheel_rim":  "#2d3436",   # jante
-    "tire":       "#1e1e1e",   # pneu
-    "spoke":      "#636e72",   # rayons
-    "seatpost":   "#2d3436",
-    "saddle":     "#4a4a6a",
-    "stem":       "#2d3436",
-    "handlebar":  "#1a1a2e",
-    "ground":     "#dfe6e9",   # sol
-    "dim_line":   "#0984e3",   # cotes
-    "dim_text":   "#0984e3",
+    "frame":      "#2b3442",   # tubes cadre
+    "frame_edge": "#161c25",   # liseré tubes
+    "fork":       "#6b7686",   # fourche (métal)
+    "fork_edge":  "#3f4754",
+    "crown":      "#3a4452",   # couronnes + BB
+    "wheel_rim":  "#3a4049",   # jante
+    "rim_hi":     "#5b6470",   # reflet jante
+    "tire":       "#1b1e22",   # pneu
+    "spoke":      "#aeb6c0",   # rayons (clairs = visibles)
+    "hub":        "#4a525d",
+    "seatpost":   "#3a4452",
+    "saddle":     "#15181d",   # selle (noir)
+    "saddle_hi":  "#2c323b",
+    "stem":       "#2f3845",
+    "handlebar":  "#22272e",
+    "grip":       "#1b1e22",
+    "ground":     "#d6dde6",   # sol
+    "dim_line":   "#2f6df0",   # cotes
+    "dim_text":   "#2f6df0",
     "dim_bg":     "white",
-    "bg":         "#f8f9fa",
-    "belt":       "#e8851a",   # courroie / chaîne
-    "cog":        "#2d3436",   # plateau / pignon
-    "motor":      "#34495e",   # carter moteur
-    "crank":      "#1a1a2e",   # manivelle
-    "rotor":      "#74b9ff",   # disque de frein
+    "bg":         "#eef1f6",   # fond
+    "belt":       "#f0a51f",   # courroie / chaîne
+    "belt_edge":  "#b87a10",
+    "cog":        "#3a4452",   # plateau / pignon
+    "motor":      "#3d4757",   # carter moteur
+    "motor_edge": "#262d38",
+    "crank":      "#262d38",   # manivelle
+    "rotor":      "#9fc2e8",   # disque de frein
 }
 
 # ─── Helpers géométrie ────────────────────────────────────────────────────────
@@ -86,56 +96,52 @@ def _pt(x: float, y: float, sx: float, sy: float, ox: float, oy: float):
 def _draw_wheel(cx: float, cy: float, r_tire: float, r_rim: float,
                 n_spokes: int, sx: float, sy: float, ox: float, oy: float) -> str:
     scx, scy, sr_tire = _circle(cx, cy, r_tire, sx, sy, ox, oy)
-    _,   _,   sr_rim  = _circle(cx, cy, r_rim,  sx, sy, ox, oy)
-    _, _, sr_hub = _circle(cx, cy, 10.0, sx, sy, ox, oy)  # 10mm hub radius
+    _, _, sr_rim = _circle(cx, cy, r_rim, sx, sy, ox, oy)
+    _, _, sr_hub = _circle(cx, cy, 22.0, sx, sy, ox, oy)
+    tire_w = max(3.0, sr_tire - sr_rim)          # épaisseur pneu
+    rim_w  = max(2.5, tire_w * 0.45)             # épaisseur jante
 
-    lines = []
-    # Pneu
-    lines.append(
-        f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{sr_tire:.1f}" '
-        f'fill="{PALETTE["tire"]}" />'
-    )
-    # Jante (anneau)
-    lines.append(
-        f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{sr_rim:.1f}" '
-        f'fill="{PALETTE["bg"]}" />'
-    )
-    lines.append(
-        f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{sr_rim:.1f}" '
-        f'fill="none" stroke="{PALETTE["wheel_rim"]}" stroke-width="{sr_tire - sr_rim:.1f}" />'
-    )
-    # Rayons
+    L = [f'<g class="wheel">']
+    # Pneu (anneau sombre) + flanc subtil
+    L.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{sr_tire:.1f}" fill="{PALETTE["tire"]}"/>')
+    L.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{sr_tire-tire_w/2:.1f}" '
+             f'fill="none" stroke="#2a2e34" stroke-width="1"/>')
+    # Ouverture (fond) entre jante et moyeu
+    L.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{sr_rim:.1f}" fill="{PALETTE["bg"]}"/>')
+    # Rayons (mid-grey, visibles sur fond clair)
     for i in range(n_spokes):
-        angle = 2 * math.pi * i / n_spokes
-        rx = cx + r_rim * 0.95 * math.cos(angle)
-        ry = cy + r_rim * 0.95 * math.sin(angle)
-        srx, sry = _pt(rx, ry, sx, sy, ox, oy)
-        lines.append(
-            f'<line x1="{scx:.1f}" y1="{scy:.1f}" '
-            f'x2="{srx:.1f}" y2="{sry:.1f}" '
-            f'stroke="{PALETTE["spoke"]}" stroke-width="0.8" />'
-        )
+        a = 2 * math.pi * i / n_spokes
+        rx, ry = _pt(cx + r_rim * 0.97 * math.cos(a), cy + r_rim * 0.97 * math.sin(a), sx, sy, ox, oy)
+        L.append(f'<line x1="{scx:.1f}" y1="{scy:.1f}" x2="{rx:.1f}" y2="{ry:.1f}" '
+                 f'stroke="{PALETTE["spoke"]}" stroke-width="0.7"/>')
+    # Jante (anneau) + reflet
+    L.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{sr_rim:.1f}" fill="none" '
+             f'stroke="{PALETTE["wheel_rim"]}" stroke-width="{rim_w:.1f}"/>')
+    L.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{sr_rim-rim_w*0.35:.1f}" fill="none" '
+             f'stroke="{PALETTE["rim_hi"]}" stroke-width="1" opacity="0.6"/>')
     # Moyeu
-    lines.append(
-        f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{sr_hub:.1f}" '
-        f'fill="{PALETTE["crown"]}" />'
-    )
-    return "\n".join(lines)
+    L.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{sr_hub:.1f}" fill="{PALETTE["hub"]}" '
+             f'stroke="#222" stroke-width="1"/>')
+    L.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{sr_hub*0.35:.1f}" fill="#222"/>')
+    L.append('</g>')
+    return "\n".join(L)
 
 
-def _draw_tube(x1, y1, x2, y2, d, color, sx, sy, ox, oy, scale, cap_r=0.0) -> str:
+def _draw_tube(x1, y1, x2, y2, d, color, sx, sy, ox, oy, scale, cap_r=0.0,
+               edge="rgba(0,0,0,0.38)") -> str:
+    """Tube = polygone rempli + liseré sombre (lisibilité) + chapeaux arrondis."""
     pts = _tube_polygon(x1, y1, x2, y2, d, sx, sy, ox, oy, scale)
     if not pts:
         return ""
-    lines = [f'<polygon points="{pts}" fill="{color}" />']
-    # Chapeaux arrondis (cercles aux extrémités)
+    ew = max(0.8, d * scale * 0.06)
+    lines = [f'<polygon points="{pts}" fill="{color}" stroke="{edge}" '
+             f'stroke-width="{ew:.1f}" stroke-linejoin="round"/>']
     if cap_r > 0:
         r_px = cap_r * abs(sx)
         for (xc, yc) in [(x1, y1), (x2, y2)]:
             sc_x, sc_y = _pt(xc, yc, sx, sy, ox, oy)
-            lines.append(
-                f'<circle cx="{sc_x:.1f}" cy="{sc_y:.1f}" r="{r_px:.1f}" fill="{color}" />'
-            )
+            lines.append(f'<circle cx="{sc_x:.1f}" cy="{sc_y:.1f}" r="{r_px:.1f}" '
+                         f'fill="{color}"/>')
     return "\n".join(lines)
 
 
@@ -605,59 +611,65 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
         f'fill="{PALETTE["crown"]}" />'
     )
 
+    # Helper monde → SVG (px)
+    def W(x, y):
+        return (x * sx + ox, y * sy + oy)
+
     # === TIGE DE SELLE ========================================================
     sta = math.radians(f.seat_angle)
-    std_x = -math.cos(sta)
-    std_y =  math.sin(sta)
+    std_x = -math.cos(sta); std_y = math.sin(sta)
     sp_end_x = stt.x + bike.seatpost.exposed * std_x
     sp_end_y = stt.y + bike.seatpost.exposed * std_y
     parts.append(_draw_tube(stt.x, stt.y, sp_end_x, sp_end_y, bike.seatpost.diameter,
-                            PALETTE["seatpost"], sx, sy, ox, oy, scale_f))
+                            PALETTE["seatpost"], sx, sy, ox, oy, scale_f, cap_r=bike.seatpost.diameter/2))
 
-    # === SELLE ================================================================
-    # Représentation simplifiée : arc + rail
-    sdl_w   = bike.saddle.length
-    sdl_d   = bike.saddle.thickness
-    s_back_x = sdl_tip.x - sdl_w * 0.12
-    s_back_y = sdl_tip.y
-    s_nose_x = sdl_mid.x + sdl_w * 0.45
-    s_nose_y = sdl_mid.y - 8
-    # Rail et forme
+    # === SELLE (silhouette posée sur la tige) ================================
+    L_sdl = max(240.0, bike.saddle.length)
+    thk = max(28.0, bike.saddle.thickness)
+    cx_s = sp_end_x - L_sdl * 0.12          # centre un peu en arrière de la tige
+    top = sp_end_y + thk * 0.35             # coque juste au-dessus de la tige
+    tail = W(cx_s - L_sdl * 0.46, top)
+    tail_dn = W(cx_s - L_sdl * 0.46, top - thk * 0.7)
+    nose = W(cx_s + L_sdl * 0.55, top - thk * 0.15)
+    midtop = W(cx_s + L_sdl * 0.05, top + thk * 0.25)
+    midbot = W(cx_s + L_sdl * 0.05, top - thk * 0.55)
     parts.append(
-        f'<path d="M {sdl_tip.x * sx + ox:.0f},{sdl_tip.y * sy + oy:.0f} '
-        f'Q {sdl_mid.x * sx + ox:.0f},{(sdl_mid.y + 12) * sy + oy:.0f} '
-        f'{s_nose_x * sx + ox:.0f},{s_nose_y * sy + oy:.0f}" '
-        f'stroke="{PALETTE["saddle"]}" stroke-width="{sdl_d * scale_f:.1f}" '
-        f'fill="none" stroke-linecap="round" />'
+        f'<path d="M {tail[0]:.0f},{tail[1]:.0f} '
+        f'Q {midtop[0]:.0f},{midtop[1]:.0f} {nose[0]:.0f},{nose[1]:.0f} '
+        f'Q {midbot[0]:.0f},{midbot[1]:.0f} {tail_dn[0]:.0f},{tail_dn[1]:.0f} Z" '
+        f'fill="{PALETTE["saddle"]}" stroke="#000" stroke-width="0.8"/>'
+    )
+    # reflet sur la coque
+    parts.append(
+        f'<path d="M {W(cx_s-L_sdl*0.4, top)[0]:.0f},{W(cx_s-L_sdl*0.4, top)[1]:.0f} '
+        f'Q {W(cx_s,top+thk*0.18)[0]:.0f},{W(cx_s,top+thk*0.18)[1]:.0f} '
+        f'{W(cx_s+L_sdl*0.5,top-thk*0.12)[0]:.0f},{W(cx_s+L_sdl*0.5,top-thk*0.12)[1]:.0f}" '
+        f'stroke="{PALETTE["saddle_hi"]}" stroke-width="2" fill="none" opacity="0.7"/>'
     )
 
-    # === POTENCE ==============================================================
-    parts.append(_draw_tube(sb.x, sb.y, stip.x, stip.y, 22.0,
-                            PALETTE["stem"], sx, sy, ox, oy, scale_f, cap_r=11.0))
+    # === POTENCE (corps + collier + faceplate) ===============================
+    parts.append(_draw_tube(sb.x, sb.y, stip.x, stip.y, 26.0,
+                            PALETTE["stem"], sx, sy, ox, oy, scale_f, cap_r=13.0))
+    cmx, cmy = W(sb.x, sb.y)
+    parts.append(f'<circle cx="{cmx:.1f}" cy="{cmy:.1f}" r="{18*scale_f:.1f}" '
+                 f'fill="{PALETTE["stem"]}" stroke="#111" stroke-width="1"/>')
 
-    # === CINTRE ===============================================================
-    hb_half_w = bike.handlebar.width / 2
-    hta_rad = math.radians(f.head_angle)
-    # Cintre MTB flat : barre horizontale perpendiculaire à la vue
-    hb_rise   = bike.handlebar.rise
-    hb_sweep  = math.radians(bike.handlebar.sweep)
-    # Représentation 2D : segment centré sur stem_tip + rise
-    hb_cx = stip.x
-    hb_cy = stip.y + hb_rise
-    # Extrémités du cintre en vue de profil (point + ombre)
-    hb_ext_x = hb_cx + hb_half_w * math.cos(hb_sweep) * 0.3  # perspective légère
-    hb_ext_y = hb_cy - hb_half_w * math.sin(hb_sweep) * 0.15
-    parts.append(
-        f'<circle cx="{hb_cx * sx + ox:.1f}" cy="{hb_cy * sy + oy:.1f}" '
-        f'r="{hb_half_w * 0.12 * scale_f:.1f}" '  # représentation perspective côté
-        f'fill="{PALETTE["handlebar"]}" stroke="none" />'
-    )
-    # Barre cintre (vue de face projetée)
-    parts.append(
-        f'<circle cx="{hb_cx * sx + ox:.1f}" cy="{hb_cy * sy + oy:.1f}" '
-        f'r="{bike.handlebar.diameter / 2 * scale_f:.1f}" '
-        f'fill="{PALETTE["handlebar"]}" />'
-    )
+    # === CINTRE (riser MTB : montant + grip vers le pilote) ==================
+    rise = max(15.0, bike.handlebar.rise)
+    bar_cx, bar_cy = stip.x, stip.y + rise
+    grip_len = 95.0 + bike.handlebar.extend
+    grip_x = bar_cx - grip_len                 # vers l'arrière (pilote)
+    grip_y = bar_cy + 14.0                      # léger sweep/rise
+    bw = max(26.0, bike.handlebar.diameter + 4)
+    # montant (du collier de potence vers la barre)
+    parts.append(_draw_tube(stip.x, stip.y, bar_cx, bar_cy, bw * 0.85,
+                            PALETTE["handlebar"], sx, sy, ox, oy, scale_f, cap_r=bw*0.42))
+    # grip vers le pilote
+    parts.append(_draw_tube(bar_cx, bar_cy, grip_x, grip_y, bw,
+                            PALETTE["handlebar"], sx, sy, ox, oy, scale_f, cap_r=bw/2))
+    gx, gy = W(grip_x, grip_y)
+    parts.append(f'<circle cx="{gx:.1f}" cy="{gy:.1f}" r="{bw*0.62*scale_f:.1f}" '
+                 f'fill="{PALETTE["grip"]}" stroke="#000" stroke-width="0.8"/>')
 
     # === COTES (dimensions) ==================================================
     if show_dims:

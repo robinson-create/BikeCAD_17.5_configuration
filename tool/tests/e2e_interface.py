@@ -113,12 +113,21 @@ ok_b, why = svg_bounds_ok(svg)
 check(ok_b, f"graphique : rien hors-canvas, XML valide, sans NaN ({why})")
 
 # Présence de TOUS les composants graphiques
+import importlib.util as _ilu, pathlib as _pl
+_spec = _ilu.spec_from_file_location(
+    "svg_palette", _pl.Path(__file__).resolve().parents[1] / "backend/io/svg_export.py")
+# import léger de la PALETTE sans démarrer tout le backend
+try:
+    from backend.io.svg_export import PALETTE
+except Exception:
+    PALETTE = {"fork": "#6b7686", "belt": "#f0a51f", "motor": "#3d4757", "dim_line": "#2f6df0"}
+
 COMPONENTS = {
-    "cadre (tubes)": "<polygon", "roues": '#1e1e1e', "fourche": '#16213e',
-    "transmission": 'class="drivetrain"', "courroie": '#e8851a', "moteur": '#34495e',
+    "cadre (tubes)": "<polygon", "roues": 'class="wheel"', "fourche": PALETTE["fork"],
+    "transmission": 'class="drivetrain"', "courroie": PALETTE["belt"], "moteur": PALETTE["motor"],
     "freins": 'class="brakes"', "pédales": 'class="pedals"',
     "batterie": 'class="battery"', "suspension": 'class="suspension"',
-    "pilote": 'class="rider"', "animation": "<animate", "cotes": '#0984e3',
+    "pilote": 'class="rider"', "animation": "<animate", "cotes": PALETTE["dim_line"],
 }
 for name, token in COMPONENTS.items():
     check(token in svg, f"composant affiché : {name}")

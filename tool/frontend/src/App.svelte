@@ -137,43 +137,43 @@
   <header class="topbar">
     <div class="brand">DOM Engineering · BikeCAD Tool</div>
     <div class="toolbar">
-      <div class="model-select"><CatalogSelect category="bike" label="🚲 Modèle" /></div>
-      <select on:change={handleLibrarySelect} title="Bibliothèque (vélos complets)">
-        <option value="">📁 Bibliothèque…</option>
-        {#each library as b}
-          <option value={b.file}>{b.name}</option>
-        {/each}
-      </select>
-      <button on:click={handleSaveLibrary} title="Sauvegarde complète (tous composants)">💾 Sauver</button>
-      {#if bikes.length > 0}
-        <select on:change={handleBikeSelect} title="Importer un .bcad BikeCAD">
-          <option value="">-- Importer .bcad --</option>
-          {#each bikes as b}
-            <option value={b.path}>{b.name}</option>
-          {/each}
+      <!-- Groupe : design / fichiers -->
+      <div class="tgroup">
+        <div class="model-select"><CatalogSelect category="bike" label="🚲 Modèle" /></div>
+        <select class="tb-select" on:change={handleLibrarySelect} title="Bibliothèque (vélos complets)">
+          <option value="">📁 Bibliothèque…</option>
+          {#each library as b}<option value={b.file}>{b.name}</option>{/each}
         </select>
-      {/if}
-      <input class="path-input" type="text" placeholder="chemin/vers/fichier.bcad"
-        bind:value={bcadPath} on:keydown={e => e.key === 'Enter' && handleLoadBcad()} />
-      <button on:click={handleLoadBcad}>Charger</button>
-      <button on:click={handleExportBcad}>Exporter .bcad</button>
-      <button on:click={handleExportDxf}>Export DXF</button>
-      <button on:click={handleExportLugs}>Export lugs</button>
-      <label class="check-label">
-        <input type="checkbox" bind:checked={$showDims}
-          on:change={() => $bike && scheduleRefresh($bike)} />
-        Cotes
-      </label>
-      <label class="check-label">
-        <input type="checkbox" bind:checked={$showSuspension}
-          on:change={() => $bike && scheduleRefresh($bike)} />
-        Suspension
-      </label>
-      <label class="check-label" class:disabled={!$showSuspension}>
-        <input type="checkbox" bind:checked={$animateSuspension} disabled={!$showSuspension}
-          on:change={() => $bike && scheduleRefresh($bike)} />
-        ▶ Animer
-      </label>
+        <button class="btn" on:click={handleSaveLibrary} title="Sauvegarde complète JSON (tous composants)">💾 Sauver</button>
+        {#if bikes.length > 0}
+          <select class="tb-select" on:change={handleBikeSelect} title="Importer un .bcad BikeCAD">
+            <option value="">📥 Importer .bcad…</option>
+            {#each bikes as b}<option value={b.path}>{b.name}</option>{/each}
+          </select>
+        {/if}
+      </div>
+
+      <!-- Groupe : exports -->
+      <div class="tgroup">
+        <span class="tlabel">Export</span>
+        <button class="btn" on:click={handleExportBcad} title="Fichier .bcad (Free-safe par défaut)">.bcad</button>
+        <button class="btn" on:click={handleExportDxf} title="DXF 2D pour SolidWorks">DXF</button>
+        <button class="btn" on:click={handleExportLugs} title="Table de conception des lugs">Lugs</button>
+      </div>
+
+      <!-- Groupe : affichage (toggles segmentés) -->
+      <div class="tgroup">
+        <span class="tlabel">Affichage</span>
+        <div class="toggles">
+          <button class="tg" class:on={$showDims}
+            on:click={() => { $showDims = !$showDims; $bike && scheduleRefresh($bike) }}>Cotes</button>
+          <button class="tg" class:on={$showSuspension}
+            on:click={() => { $showSuspension = !$showSuspension; $bike && scheduleRefresh($bike) }}>Suspension</button>
+          <button class="tg" class:on={$animateSuspension} disabled={!$showSuspension}
+            on:click={() => { $animateSuspension = !$animateSuspension; $bike && scheduleRefresh($bike) }}>▶ Animer</button>
+        </div>
+      </div>
+
       {#if status}<span class="status">{status}</span>{/if}
     </div>
   </header>
@@ -247,9 +247,10 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 16px;
     padding: 8px 16px;
-    background: #16213e;
-    border-bottom: 1px solid #2a2a4a;
+    background: linear-gradient(180deg, #1b2740, #15203a);
+    border-bottom: 1px solid #2a3654;
     flex-shrink: 0;
   }
   .brand {
@@ -257,33 +258,57 @@
     font-size: .9rem;
     color: #e8851a;
     letter-spacing: .02em;
+    white-space: nowrap;
   }
   .toolbar {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    flex: 1;
   }
-  .toolbar button {
-    padding: 4px 10px;
-    border-radius: 3px;
-    border: 1px solid #444;
-    background: #1e3a5f;
-    color: #cce;
+  /* groupes logiques séparés par un filet */
+  .tgroup {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-right: 10px;
+    border-right: 1px solid #2a3654;
+  }
+  .tgroup:last-of-type { border-right: none; padding-right: 0; }
+  .tlabel {
+    font-size: .62rem; text-transform: uppercase; letter-spacing: .08em;
+    color: #6b7a9a; margin-right: 2px;
+  }
+  /* boutons d'action */
+  .btn {
+    padding: 5px 11px;
+    border-radius: 6px;
+    border: 1px solid #34406a;
+    background: #22304f;
+    color: #dce6f7;
     cursor: pointer;
-    font-size: .8rem;
+    font-size: .78rem;
+    transition: background .12s, border-color .12s;
   }
-  .toolbar button:hover { background: #2a4a7f; }
-  .path-input {
-    width: 240px;
-    padding: 4px 8px;
-    border-radius: 3px;
-    border: 1px solid #444;
-    background: #111;
-    color: #ddf;
-    font-size: .8rem;
+  .btn:hover { background: #2d4170; border-color: #4358a0; }
+  .tb-select {
+    padding: 5px 8px; border-radius: 6px; border: 1px solid #34406a;
+    background: #1a2440; color: #cdd8ee; font-size: .78rem; cursor: pointer;
+    max-width: 170px;
   }
-  .check-label { display: flex; align-items: center; gap: 4px; font-size: .8rem; }
-  .status { font-size: .8rem; color: #4caf50; }
+  /* toggles segmentés */
+  .toggles { display: inline-flex; border: 1px solid #34406a; border-radius: 6px; overflow: hidden; }
+  .tg {
+    padding: 5px 10px; border: none; border-right: 1px solid #34406a;
+    background: #1a2440; color: #93a3c4; cursor: pointer; font-size: .76rem;
+  }
+  .tg:last-child { border-right: none; }
+  .tg:hover:not(:disabled) { background: #243358; color: #cdd8ee; }
+  .tg.on { background: #e8851a; color: #1a1a2e; font-weight: 600; }
+  .tg:disabled { opacity: .4; cursor: not-allowed; }
+  .status { font-size: .76rem; color: #4caf50; white-space: nowrap; }
 
   /* Main layout */
   .main {

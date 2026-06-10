@@ -143,16 +143,17 @@ calc = calculate(bike)
 fit = compute_fit(bike, calc)
 svg = render_svg(bike, calc, 1400, 750, True, fit)
 
+from backend.io.svg_export import PALETTE
 components = {
-    "fond":          'fill="#f8f9fa"',
+    "fond":          f'fill="{PALETTE["bg"]}"',
     "transmission":  'class="drivetrain"',
     "pilote":        'class="rider"',
-    "courroie":      '#e8851a',          # couleur belt
-    "moteur":        '#34495e',
-    "roues (tire)":  '#1e1e1e',
-    "fourche":       '#16213e',
-    "couronne/BB":   '#0f3460',
-    "cotes":         '#0984e3',
+    "courroie":      PALETTE["belt"],
+    "moteur":        PALETTE["motor"],
+    "roues":         'class="wheel"',
+    "fourche":       PALETTE["fork"],
+    "couronne/BB":   PALETTE["crown"],
+    "cotes":         PALETTE["dim_line"],
     "titre":         bike.name,
     "freins/disques":'class="brakes"',
     "pédales":       'class="pedals"',
