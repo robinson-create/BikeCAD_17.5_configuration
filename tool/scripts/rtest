@@ -1,0 +1,4 @@
+#!/bin/bash
+HERE="$(cd "$(dirname "$0")/../.." && pwd)"
+export DYLD_LIBRARY_PATH="/opt/homebrew/lib:${DYLD_LIBRARY_PATH}"
+exec env PYTHONPATH="$HERE/tool" "$HERE/tool/.venv/bin/python" "$HERE/tool/scripts/render_test.py" "$@"

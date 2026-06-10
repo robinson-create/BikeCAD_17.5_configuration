@@ -1,0 +1,5 @@
+#!/bin/bash
+# Wrapper : svg_part_tool avec le venv + libcairo (cairosvg) sur le PATH dyld.
+HERE="$(cd "$(dirname "$0")/../.." && pwd)"
+export DYLD_LIBRARY_PATH="/opt/homebrew/lib:${DYLD_LIBRARY_PATH}"
+exec "$HERE/tool/.venv/bin/python" "$HERE/tool/scripts/svg_part_tool.py" "$@"

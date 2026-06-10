@@ -219,6 +219,20 @@ def _svg_header(W, H, style="stroke:none"):
             f'style="{style}">\n')
 
 
+def _rasterize(svg_path, png_path, width=1100):
+    """Rasterise un SVG en PNG via cairosvg (respecte exactement le viewBox)."""
+    try:
+        import cairosvg
+    except Exception as e:
+        return {'png': None, 'error': f'cairosvg indisponible: {e}'}
+    cairosvg.svg2png(url=svg_path, write_to=png_path, output_width=width)
+    return {'png': png_path}
+
+
+def cmd_raster(svg, out, width=1100):
+    print(json.dumps(_rasterize(svg, out, width)))
+
+
 def cmd_render(svg, idxstr, out, pad=20.0):
     """SVG autonome avec seulement les paths choisis, dans le repère écran (matrice de base)."""
     root = ET.parse(svg).getroot()
@@ -246,7 +260,8 @@ def cmd_render(svg, idxstr, out, pad=20.0):
         parts.append(f'<path d="{it["_d"]}" fill="{fill}" stroke="black" stroke-width="0.5"/>')
     parts.append('</g></svg>')
     open(out, 'w').write('\n'.join(parts))
-    print(json.dumps({'out': out, 'selected': [it['i'] for it in sel], 'screen_bbox': [minx, miny, maxx, maxy]}))
+    r = _rasterize(out, out.replace('.svg', '.png'), width=min(1200, int(W) + 40))
+    print(json.dumps({'out': out, 'png': r.get('png'), 'selected': [it['i'] for it in sel], 'screen_bbox': [minx, miny, maxx, maxy]}))
 
 
 def cmd_context(svg, idxstr, out):
@@ -268,7 +283,8 @@ def cmd_context(svg, idxstr, out):
             parts.append(f'<path d="{it["_d"]}" fill="rgb(225,225,225)" stroke="rgb(180,180,180)" stroke-width="0.4"/>')
     parts.append('</g></svg>')
     open(out, 'w').write('\n'.join(parts))
-    print(json.dumps({'out': out, 'selected': sorted(selset)}))
+    r = _rasterize(out, out.replace('.svg', '.png'), width=1200)
+    print(json.dumps({'out': out, 'png': r.get('png'), 'selected': sorted(selset)}))
 
 
 def cmd_extract(svg, idxstr, out, anchor=None):
@@ -336,7 +352,8 @@ def cmd_extract(svg, idxstr, out, anchor=None):
         pv.append(f'<path d="{sp["d"]}" fill="{fill}" stroke="black" stroke-width="0.4"/>')
     pv.append('</g></svg>')
     open(out, 'w').write('\n'.join(pv))
-    print(json.dumps({'out': out, 'manifest': out.replace('.svg', '.json'),
+    _rasterize(out, out.replace('.svg', '.png'), width=min(900, int(w) + 40))
+    print(json.dumps({'out': out, 'png': out.replace('.svg', '.png'), 'manifest': out.replace('.svg', '.json'),
                       'size': manifest['size'], 'bbox_local': bbox_local, 'npaths': len(sprite_paths) if False else len(sprite_paths)}))
 
 
@@ -370,6 +387,11 @@ def main():
     cmd = sys.argv[1]
     if cmd == 'paths':
         cmd_paths(sys.argv[2], show_dims=('--dims' in sys.argv))
+    elif cmd == 'raster':
+        width = 1100
+        if '--w' in sys.argv:
+            width = int(sys.argv[sys.argv.index('--w') + 1])
+        cmd_raster(sys.argv[2], sys.argv[3], width)
     elif cmd == 'render':
         pad = 20.0
         if '--pad' in sys.argv:

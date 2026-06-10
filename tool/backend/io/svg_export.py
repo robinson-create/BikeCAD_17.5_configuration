@@ -22,7 +22,7 @@ PALETTE = {
     "crown":      "#2b2f36",   # couronnes + BB
     "rim":        "#c2c7cf",   # jante (argent)
     "rim_dark":   "#8b9099",
-    "tire":       "#191a1d",   # pneu
+    "tire":       "#0e0f11",   # pneu (noir uni)
     "tread":      "#34373c",   # crampons/sculpture
     "spoke":      "#9298a1",   # rayons
     "hub":        "#7a808a",
@@ -36,8 +36,10 @@ PALETTE = {
     "dim_line":   "#2f6df0",   # cotes
     "dim_text":   "#2f6df0",
     "dim_bg":     "white",
-    "bg":         "#ffffff",   # fond blanc (comme BikeCAD)
-    "belt":       "#f0a51f",   # courroie / chaîne
+    "bg":         "#cccccc",   # fond gris BikeCAD (« objet posé sur fond uni »)
+    "wheel_gap":  "#cccccc",   # creux de jante (= fond → roue ajourée)
+    "belt":       "#101114",   # courroie (noir cranté — vélo DOM Gates)
+    "chain":      "#cfd3d8",   # chaîne (acier)
     "cog":        "#aeb4bd",   # plateau / pignon (argent)
     "cog_dark":   "#6c727b",
     "motor":      "#33373d",   # carter moteur
@@ -108,47 +110,35 @@ def _draw_wheel(cx: float, cy: float, r_tire: float, r_rim: float,
                 cassette=False) -> str:
     scx, scy, sr_tire = _circle(cx, cy, r_tire, sx, sy, ox, oy)
     _, _, sr_rim = _circle(cx, cy, r_rim, sx, sy, ox, oy)
-    _, _, sr_hub = _circle(cx, cy, 26.0, sx, sy, ox, oy)
-    _, _, sr_fl  = _circle(cx, cy, 30.0, sx, sy, ox, oy)   # rayon flasque
+    sr_hub = 18.0 * abs(sx)               # corps moyeu
+    sr_fl  = 22.0 * abs(sx)               # flasque (réduit)
     tire_w = max(4.0, sr_tire - sr_rim)
-    rim_w  = max(2.2, tire_w * 0.34)
+    rim_w  = max(2.0, tire_w * 0.12)      # jante fine (un seul liseré)
     r_bed  = sr_rim - rim_w               # lit de jante (intérieur)
 
     L = [f'<g class="wheel">']
-    # Pneu : bande sombre + sculpture (petits crampons) + flancs
-    L.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{sr_tire:.1f}" fill="{PALETTE["tire"]}"/>')
-    n_tread = 72
-    for i in range(n_tread):
-        a = 2 * math.pi * i / n_tread
-        r0, r1 = sr_tire - tire_w * 0.18, sr_tire - tire_w * 0.02
-        x0, y0 = scx + r0 * math.cos(a), scy + r0 * math.sin(a)
-        x1t, y1t = scx + r1 * math.cos(a), scy + r1 * math.sin(a)
-        L.append(f'<line x1="{x0:.1f}" y1="{y0:.1f}" x2="{x1t:.1f}" y2="{y1t:.1f}" '
-                 f'stroke="{PALETTE["tread"]}" stroke-width="1.4"/>')
-    # Ouverture (fond) jusqu'au lit de jante
-    L.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{r_bed:.1f}" fill="{PALETTE["bg"]}"/>')
-    # Rayons (depuis les flasques du moyeu vers le lit de jante), 2 nappes croisées
+    # Pneu : anneau noir UNI (pas de sculpture) + liseré BikeCAD
+    L.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{sr_tire:.1f}" fill="{PALETTE["tire"]}" '
+             f'stroke="#333333" stroke-width="1.0"/>')
+    # Creux (entre les rayons) = couleur de fond → roue ajourée comme BikeCAD
+    L.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{r_bed:.1f}" fill="{PALETTE["wheel_gap"]}"/>')
+    # Rayons droits, fins (une nappe, radiaux du moyeu au lit de jante)
     for i in range(n_spokes):
         a = 2 * math.pi * i / n_spokes
-        hubr = sr_fl
-        hx, hy = scx + hubr * math.cos(a + 0.12), scy + hubr * math.sin(a + 0.12)
+        hx, hy = scx + sr_fl * math.cos(a), scy + sr_fl * math.sin(a)
         rx, ry = scx + r_bed * 0.99 * math.cos(a), scy + r_bed * 0.99 * math.sin(a)
         L.append(f'<line x1="{hx:.1f}" y1="{hy:.1f}" x2="{rx:.1f}" y2="{ry:.1f}" '
-                 f'stroke="{PALETTE["spoke"]}" stroke-width="0.8"/>')
-    # Jante argent (anneau) + double liseré
+                 f'stroke="{PALETTE["spoke"]}" stroke-width="0.5"/>')
+    # Jante : un seul anneau argent fin
     L.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{sr_rim-rim_w/2:.1f}" fill="none" '
              f'stroke="{PALETTE["rim"]}" stroke-width="{rim_w:.1f}"/>')
-    L.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{sr_rim-rim_w*0.1:.1f}" fill="none" '
-             f'stroke="{PALETTE["rim_dark"]}" stroke-width="0.8"/>')
-    L.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{r_bed:.1f}" fill="none" '
-             f'stroke="{PALETTE["rim_dark"]}" stroke-width="0.8"/>')
-    # Cassette (roue AR) : disques concentriques argentés
+    # Cassette (roue AR) : 2 cercles discrets intégrés
     if cassette:
-        for k, rr in enumerate((46, 38, 31)):
+        for rr in (40, 30):
             _, _, scr = _circle(cx, cy, rr, sx, sy, ox, oy)
             L.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{scr:.1f}" fill="none" '
-                     f'stroke="{PALETTE["cog_dark"]}" stroke-width="1.4"/>')
-    # Moyeu : flasque + corps + axe
+                     f'stroke="{PALETTE["cog_dark"]}" stroke-width="1.0"/>')
+    # Moyeu : flasque + corps + axe (compact)
     L.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{sr_fl:.1f}" fill="{PALETTE["hub"]}" '
              f'stroke="#222" stroke-width="0.8"/>')
     L.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{sr_hub*0.5:.1f}" fill="#2a2d33"/>')
@@ -161,13 +151,30 @@ _TUBE_ID = [0]   # compteur d'identifiants de dégradés (réinitialisé par ren
 
 
 def _draw_tube(x1, y1, x2, y2, d, color, sx, sy, ox, oy, scale, cap_r=0.0,
-               edge=None, fill=None) -> str:
+               edge=None, fill=None, outline_only=False) -> str:
     """Tube peint. Si `fill` est fourni (ex. dégradé GLOBAL du cadre façon BikeCAD),
-    on l'utilise tel quel ; sinon ombrage cylindrique par tube."""
+    on l'utilise tel quel ; sinon ombrage cylindrique par tube.
+
+    `outline_only` (cadre) : ne trace QUE les 2 grands côtés (#333) — les bouts sont
+    fondus aux jonctions par les cercles de fillet → liseré BikeCAD sans coutures."""
     pts = _tube_polygon(x1, y1, x2, y2, d, sx, sy, ox, oy, scale)
     if not pts:
         return ""
     if fill is not None:
+        dx, dy = x2 - x1, y2 - y1
+        L = math.hypot(dx, dy) or 1.0
+        hw = d / 2
+        nx, ny = -dy / L * hw, dx / L * hw
+        A = _pt(x1 + nx, y1 + ny, sx, sy, ox, oy)
+        B = _pt(x1 - nx, y1 - ny, sx, sy, ox, oy)
+        C = _pt(x2 - nx, y2 - ny, sx, sy, ox, oy)
+        D = _pt(x2 + nx, y2 + ny, sx, sy, ox, oy)
+        if outline_only:
+            ec = edge or "#333333"
+            return (f'<line x1="{A[0]:.1f}" y1="{A[1]:.1f}" x2="{D[0]:.1f}" y2="{D[1]:.1f}" '
+                    f'stroke="{ec}" stroke-width="0.8" stroke-linecap="round"/>'
+                    f'<line x1="{B[0]:.1f}" y1="{B[1]:.1f}" x2="{C[0]:.1f}" y2="{C[1]:.1f}" '
+                    f'stroke="{ec}" stroke-width="0.8" stroke-linecap="round"/>')
         out = [f'<polygon points="{pts}" fill="{fill}"/>']
         if cap_r > 0:
             r_px = cap_r * abs(sx)
@@ -247,7 +254,7 @@ def _sprocket(cx, cy, r_pitch, teeth, sx, sy, ox, oy,
     """Plateau/pignon réaliste : silhouette dentée + corps + bras d'araignée."""
     scx, scy = _pt(cx, cy, sx, sy, ox, oy)
     r = max(3.0, r_pitch * abs(sx))
-    th = max(1.2, r * 0.085)                 # hauteur de dent
+    th = max(1.0, r * 0.045)                 # hauteur de dent (fine, régulière)
     N = max(8, int(teeth))
     pts = []
     for i in range(N):
@@ -263,7 +270,7 @@ def _sprocket(cx, cy, r_pitch, teeth, sx, sy, ox, oy,
             a = 2 * math.pi * k / 5
             ex, ey = scx + r * 0.6 * math.cos(a), scy + r * 0.6 * math.sin(a)
             out.append(f'<line x1="{scx:.1f}" y1="{scy:.1f}" x2="{ex:.1f}" y2="{ey:.1f}" '
-                       f'stroke="{_shade(fill,0.72)}" stroke-width="{max(2,r*0.13):.1f}" stroke-linecap="round"/>')
+                       f'stroke="{_shade(fill,0.72)}" stroke-width="{max(1.5,r*0.07):.1f}" stroke-linecap="round"/>')
     out.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{r*0.2:.1f}" fill="{_shade(fill,0.6)}" '
                f'stroke="{edge}" stroke-width="0.6"/>')
     return "".join(out)
@@ -334,6 +341,73 @@ def _draw_motor_bikecad(dt, calc, sx, sy, ox, oy) -> str | None:
     if det:
         out.append(f'<path d="{_xform_path(det, P)}" fill="none" '
                    f'stroke="{_shade(base,1.7)}" stroke-width="0.8" opacity="0.5"/>')
+    out.append("</g>")
+    return "".join(out)
+
+
+_PARTS_DIR = _os.path.join(_os.path.dirname(__file__), "..", "..", "refs", "bikecad_parts")
+
+
+def _load_part(name):
+    try:
+        return _json.load(open(_os.path.join(_PARTS_DIR, name + ".json"), encoding="utf-8"))
+    except Exception:
+        return None
+
+
+# Sprites de formes RÉELLES extraites des exports BikeCAD (paths en mm, y-haut,
+# ancre à l'origine). Voir tool/scripts/svg_part_tool.py + tool/refs/bikecad_parts/.
+# Les sprites *_norm = ré-orientés (PCA) en repère canonique (cf. normalize_parts.py) :
+# fork/rear_shock = axe vertical ancre basse ; battery = axe horizontal ancre centre.
+_PART_NAMES = ("fork", "rear_shock", "derailleur", "belt", "battery",
+               "fork_norm", "rear_shock_norm", "battery_norm")
+_PARTS = {n: _load_part(n) for n in _PART_NAMES}
+
+
+def _draw_sprite(name, ax, ay, sx, sy, ox, oy, *, scale=1.0, angle_deg=0.0,
+                 mirror=False, fill_override=None, stroke_override=None,
+                 empty_fill="#9aa0a8", opacity=1.0, klass="sprite") -> str:
+    """Place un sprite BikeCAD dans le monde.
+
+    Le sprite est une liste de paths en mm (y vers le haut), ancre à l'origine.
+    ax,ay = position MONDE de l'ancre ; scale = facteur de taille ;
+    angle_deg = rotation (sens trigo, repère monde y-haut) ; mirror = miroir
+    horizontal local. Les couleurs d'origine BikeCAD sont conservées.
+
+    Cas des fills : un fill explicite (rgb/black…) est gardé ; `fill=""` = forme
+    DEVANT être pleine mais dont BikeCAD avait omis la couleur (héritée) → on
+    applique `empty_fill` ; `fill="none"` = simple contour (garde son stroke).
+    """
+    part = _PARTS.get(name)
+    if not part or not part.get("paths"):
+        return ""
+    ang = math.radians(angle_deg)
+    ca, sa = math.cos(ang), math.sin(ang)
+    mx = -1.0 if mirror else 1.0
+
+    def P(lx, ly):
+        lx2 = lx * scale * mx
+        ly2 = ly * scale
+        wx = ax + lx2 * ca - ly2 * sa
+        wy = ay + lx2 * sa + ly2 * ca
+        return wx * sx + ox, wy * sy + oy
+
+    out = [f'<g class="{klass}" opacity="{opacity}">']
+    for sp in part["paths"]:
+        d = _xform_path(sp["d"], P)
+        f0 = (sp.get("fill") or "").strip()
+        if fill_override:
+            fill = fill_override
+        elif f0 == "":
+            fill = empty_fill
+        else:
+            fill = f0                      # "none" ou couleur explicite
+        stroke = stroke_override if stroke_override else (sp.get("stroke") or "none")
+        if not stroke:
+            stroke = "none"
+        sw = 0.7 if stroke != "none" else 0.0
+        out.append(f'<path d="{d}" fill="{fill}" stroke="{stroke}" '
+                   f'stroke-width="{sw}" stroke-linejoin="round"/>')
     out.append("</g>")
     return "".join(out)
 
@@ -428,34 +502,88 @@ def _draw_drivetrain(bike, calc, sx, sy, ox, oy, scale) -> str:
     else:
         segs += tangents(bb, r_cr, axle, r_cog)
 
+    # Brin = BANDE épaisse texturée (jamais un fil) : courroie noire crantée (Gates)
+    # ou chaîne grise à rouleaux. Couleur/texture selon dt.drive_type.
+    is_belt = dt.drive_type == "belt"
+    strand_col = PALETTE["belt"] if is_belt else PALETTE["chain"]
+    w_mm = (dt.belt_width if is_belt else 7.5)
+    w_px = max(3.0, w_mm * abs(sx))
     for a, b in segs:
         ax, ay = _pt(*a, sx, sy, ox, oy); bx2, by2 = _pt(*b, sx, sy, ox, oy)
+        seg_len = math.hypot(bx2 - ax, by2 - ay)
+        if seg_len < 1:
+            continue
+        ux, uy = (bx2 - ax) / seg_len, (by2 - ay) / seg_len
+        px, py = -uy, ux
+        # bande principale
         parts.append(f'<line x1="{ax:.1f}" y1="{ay:.1f}" x2="{bx2:.1f}" y2="{by2:.1f}" '
-                     f'stroke="{PALETTE["belt"]}" stroke-width="{max(1.5, 4*scale):.1f}" '
-                     f'opacity="0.9" />')
+                     f'stroke="{strand_col}" stroke-width="{w_px:.1f}" stroke-linecap="butt"/>')
+        step = max(4.0, pitch * abs(sx))
+        n = int(seg_len / step)
+        if is_belt:
+            # dents Gates : stries transversales fines plus claires
+            for k in range(n + 1):
+                t = k * step
+                mxk, myk = ax + ux * t, ay + uy * t
+                parts.append(f'<line x1="{mxk-px*w_px*0.46:.1f}" y1="{myk-py*w_px*0.46:.1f}" '
+                             f'x2="{mxk+px*w_px*0.46:.1f}" y2="{myk+py*w_px*0.46:.1f}" '
+                             f'stroke="#3a4048" stroke-width="1.0"/>')
+        else:
+            # chaîne : 2 plaques sombres + rouleaux clairs
+            for s in (+1, -1):
+                parts.append(f'<line x1="{ax+px*s*w_px*0.42:.1f}" y1="{ay+py*s*w_px*0.42:.1f}" '
+                             f'x2="{bx2+px*s*w_px*0.42:.1f}" y2="{by2+py*s*w_px*0.42:.1f}" '
+                             f'stroke="#333333" stroke-width="0.6"/>')
+            for k in range(n + 1):
+                t = k * step
+                mxk, myk = ax + ux * t, ay + uy * t
+                parts.append(f'<circle cx="{mxk:.1f}" cy="{myk:.1f}" r="{w_px*0.26:.1f}" '
+                             f'fill="#aab0b8" stroke="#333333" stroke-width="0.4"/>')
 
     return '<g class="drivetrain">' + "".join(parts) + '</g>'
 
 
 def _draw_battery(bike, calc, sx, sy, ox, oy) -> str:
-    """Pack batterie dans le triangle avant (vert si OK, rouge si débordement)."""
+    """Pack batterie dans le tube diagonal : forme RÉELLE BikeCAD (sprite normalisé)
+    placée le long du tube, + liseré vert (OK) / rouge (débordement) = indicateur de fit."""
     from ..calculations.battery import battery_polygon_world, compute_battery
     poly = battery_polygon_world(bike, calc)
     if poly is None:
         return ""
     res = compute_battery(bike, calc)
     ok = res.fits_triangle and res.clears_motor and res.clears_tubes
-    fill = "#27ae60" if ok else "#c0392b"
-    pts = " ".join(f"{x*sx+ox:.1f},{y*sy+oy:.1f}" for (x, y) in poly)
-    parts = [f'<g class="battery"><polygon points="{pts}" fill="{fill}" '
-             f'fill-opacity="0.45" stroke="{fill}" stroke-width="2" stroke-linejoin="round"/>']
-    # Étiquette au centroïde
-    cx = sum(p[0] for p in poly) / 4 * sx + ox
-    cy = sum(p[1] for p in poly) / 4 * sy + oy
+    edge = "#27ae60" if ok else "#c0392b"
+
+    parts = ['<g class="battery">']
+    part = _PARTS.get("battery_norm")
+    if part and part.get("paths"):
+        # axe = bord « base » du pack (coin 0 → coin 1, le long du tube diagonal)
+        p0, p1 = poly[0], poly[1]
+        axis_ang = math.degrees(math.atan2(p1[1] - p0[1], p1[0] - p0[0]))
+        along = math.hypot(p1[0] - p0[0], p1[1] - p0[1])  # = bat.length
+        cx = sum(p[0] for p in poly) / 4
+        cy = sum(p[1] for p in poly) / 4
+        norm_len = part.get("size", [424.7, 110])[0] or 424.7
+        bscale = along / norm_len if norm_len else 1.0
+        parts.append(_draw_sprite("battery_norm", cx, cy, sx, sy, ox, oy,
+                                  scale=bscale, angle_deg=axis_ang, klass="battery"))
+        # liseré de fit autour du pack réel
+        pts = " ".join(f"{x*sx+ox:.1f},{y*sy+oy:.1f}" for (x, y) in poly)
+        parts.append(f'<polygon points="{pts}" fill="none" stroke="{edge}" '
+                     f'stroke-width="2.5" stroke-linejoin="round" opacity="0.9"/>')
+    else:
+        fill = "#27ae60" if ok else "#c0392b"
+        pts = " ".join(f"{x*sx+ox:.1f},{y*sy+oy:.1f}" for (x, y) in poly)
+        parts.append(f'<polygon points="{pts}" fill="{fill}" fill-opacity="0.45" '
+                     f'stroke="{fill}" stroke-width="2" stroke-linejoin="round"/>')
+    # Étiquette V·Wh au centroïde
+    cxl = sum(p[0] for p in poly) / 4 * sx + ox
+    cyl = sum(p[1] for p in poly) / 4 * sy + oy
     label = f"{bike.battery.voltage:.0f}V · {bike.battery.capacity_wh:.0f}Wh"
-    parts.append(f'<text x="{cx:.1f}" y="{cy:.1f}" text-anchor="middle" '
-                 f'dominant-baseline="middle" font-size="13" font-family="sans-serif" '
-                 f'font-weight="bold" fill="#fff">{label}</text>')
+    parts.append(f'<text x="{cxl:.1f}" y="{cyl:.1f}" text-anchor="middle" '
+                 f'dominant-baseline="middle" font-size="12" font-family="sans-serif" '
+                 f'font-weight="bold" fill="#fff" stroke="#000" stroke-width="0.4" '
+                 f'paint-order="stroke">{label}</text>')
     parts.append("</g>")
     return "".join(parts)
 
@@ -497,14 +625,22 @@ def _draw_brakes(bike, calc, sx, sy, ox, oy) -> str:
     parts = []
     for axle, rotor in ((calc.front_axle, bk.rotor_front), (calc.rear_axle, bk.rotor_rear)):
         scx, scy, sr = _circle(axle.x, axle.y, rotor / 2, sx, sy, ox, oy)
+        # disque plein argent (piste de freinage) + anneau intérieur (zone ajourée)
         parts.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{sr:.1f}" '
-                     f'fill="none" stroke="{PALETTE["rotor"]}" stroke-width="1.6" opacity="0.85" />')
-        # quelques perçages pour le style
-        for i in range(8):
-            a = 2 * math.pi * i / 8
-            hx, hy = _pt(axle.x + rotor / 2 * 0.8 * math.cos(a),
-                         axle.y + rotor / 2 * 0.8 * math.sin(a), sx, sy, ox, oy)
-            parts.append(f'<circle cx="{hx:.1f}" cy="{hy:.1f}" r="1.6" fill="{PALETTE["rotor"]}" opacity="0.6" />')
+                     f'fill="{PALETTE["rotor"]}" stroke="{PALETTE["rim_dark"]}" '
+                     f'stroke-width="1.0" opacity="0.92" />')
+        parts.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{sr*0.74:.1f}" '
+                     f'fill="none" stroke="{_shade(PALETTE["rotor"],0.8)}" stroke-width="1.0" opacity="0.8" />')
+        # perçages de la piste
+        for i in range(10):
+            a = 2 * math.pi * i / 10
+            hx, hy = _pt(axle.x + rotor / 2 * 0.87 * math.cos(a),
+                         axle.y + rotor / 2 * 0.87 * math.sin(a), sx, sy, ox, oy)
+            parts.append(f'<circle cx="{hx:.1f}" cy="{hy:.1f}" r="2.0" fill="{PALETTE["bg"]}" '
+                         f'stroke="{PALETTE["rim_dark"]}" stroke-width="0.4" />')
+        # araignée centrale (carrier) sombre
+        parts.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{sr*0.34:.1f}" '
+                     f'fill="{_shade(PALETTE["rotor"],0.7)}" stroke="{PALETTE["rim_dark"]}" stroke-width="0.6" />')
     return '<g class="brakes">' + "".join(parts) + '</g>'
 
 
@@ -610,20 +746,32 @@ def _draw_suspension(frames, wheel_r_r, sx, sy, ox, oy, scale,
     for li in range(n_links):
         aline(lambda fr, li=li: fr["links"][li], LINK_COL[li], 6)
 
-    # ── Amortisseur : corps + tige + œillets (se comprime) ───────────────────
-    up0, lo0 = ref["shock"][1], ref["shock"][0]
-    body_len = 0.5 * math.hypot(frames[0]["shock"][0][0] - frames[0]["shock"][1][0],
-                                frames[0]["shock"][0][1] - frames[0]["shock"][1][1])
+    # ── Amortisseur ──────────────────────────────────────────────────────────
+    up0, lo0 = ref["shock"][1], ref["shock"][0]   # œillet haut (fixe) / bas (mobile)
+    shock_part = _PARTS.get("rear_shock_norm")
+    if (not animate) and shock_part and shock_part.get("paths"):
+        # Vue statique : FORME RÉELLE BikeCAD, ancrée à l'œillet bas, axe vers le haut.
+        sang = math.degrees(math.atan2(up0[1] - lo0[1], up0[0] - lo0[0]))
+        eye = math.hypot(up0[0] - lo0[0], up0[1] - lo0[1])
+        ax_len = shock_part.get("axis_len", 182.0) or 182.0
+        parts.append(_draw_sprite("rear_shock_norm", lo0[0], lo0[1], sx, sy, ox, oy,
+                                  scale=eye / ax_len, angle_deg=sang - 90.0,
+                                  empty_fill="#8a929c", klass="shock"))
+        adot(lambda fr: fr["shock"][0], 4, "#0e6b57")                  # œillet bas
+        adot(lambda fr: fr["shock"][1], 4, "#0e6b57")                  # œillet haut
+    else:
+        # Animation : glyphe paramétrique (corps fixe + tige coulissante = compression).
+        body_len = 0.5 * math.hypot(frames[0]["shock"][0][0] - frames[0]["shock"][1][0],
+                                    frames[0]["shock"][0][1] - frames[0]["shock"][1][1])
 
-    def body_end(fr):
-        up, lo = fr["shock"][1], fr["shock"][0]
-        d = math.hypot(lo[0] - up[0], lo[1] - up[1]) or 1.0
-        u = ((lo[0] - up[0]) / d, (lo[1] - up[1]) / d)
-        return (up[0] + u[0] * body_len, up[1] + u[1] * body_len)
-    # tige (fine) : corps→œillet bas ; corps (épais) : œillet haut→corps
-    aline(lambda fr: (body_end(fr), fr["shock"][0]), "#cfd6df", 4)      # tige argent
-    aline(lambda fr: (fr["shock"][1], body_end(fr)), "#16a085", 11)     # corps amorto
-    adot(lambda fr: fr["shock"][0], 5, "#0e6b57")                       # œillet bas (mobile)
+        def body_end(fr):
+            up, lo = fr["shock"][1], fr["shock"][0]
+            d = math.hypot(lo[0] - up[0], lo[1] - up[1]) or 1.0
+            u = ((lo[0] - up[0]) / d, (lo[1] - up[1]) / d)
+            return (up[0] + u[0] * body_len, up[1] + u[1] * body_len)
+        aline(lambda fr: (body_end(fr), fr["shock"][0]), "#cfd6df", 4)   # tige argent
+        aline(lambda fr: (fr["shock"][1], body_end(fr)), "#16a085", 11)  # corps amorto
+        adot(lambda fr: fr["shock"][0], 5, "#0e6b57")                    # œillet bas (mobile)
 
     # ── Galet (si présent) ───────────────────────────────────────────────────
     if ref.get("idler"):
@@ -653,7 +801,8 @@ def _draw_suspension(frames, wheel_r_r, sx, sy, ox, oy, scale,
 def render_svg(bike: BikeDesign, calc: CalcResult,
                width: int = 1400, height: int = 750,
                show_dims: bool = True, fit=None,
-               suspension=None, animate_suspension=False, lugs=None) -> str:
+               suspension=None, animate_suspension=False, lugs=None,
+               show_ground: bool = False) -> str:
     _TUBE_ID[0] = 0
     f = bike.frame
     fk = bike.fork
@@ -678,19 +827,19 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
     bb  = calc.bb
     gl  = calc.ground_level  # Y sol en coords monde
 
-    # ── Bounding box en coords monde ────────────────────────────────────────
-    world_min_x = ra.x - wheel_r_r - 40
-    world_max_x = fa.x + wheel_r_f + 40
-    world_min_y = gl - 20
-    world_max_y = max(hbc.y, sdl_mid.y) + 80
+    # ── Bounding box en coords monde (cadrage plein-cadre façon BikeCAD) ──────
+    world_min_x = ra.x - wheel_r_r - 12
+    world_max_x = fa.x + wheel_r_f + 12
+    world_min_y = gl - 8
+    world_max_y = max(hbc.y, sdl_mid.y) + 30
     # Étendre la bbox pour inclure le pilote (tête haute)
     if fit is not None and getattr(fit, "ok", False) and fit.head is not None:
-        world_max_y = max(world_max_y, fit.head.y + 60)
+        world_max_y = max(world_max_y, fit.head.y + 40)
 
     world_w = world_max_x - world_min_x
     world_h = world_max_y - world_min_y
 
-    margin = 60
+    margin = 18
     avail_w = width  - 2 * margin
     avail_h = height - 2 * margin
     scale_f = min(avail_w / world_w, avail_h / world_h)
@@ -698,8 +847,9 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
     # Transformée : SVG_x = x*scale_f + ox, SVG_y = y*(-scale_f) + oy
     sx =  scale_f
     sy = -scale_f   # Y inversé (SVG Y pointe vers le bas)
-    ox = margin - world_min_x * sx
-    oy = margin - world_max_y * sy   # assure que world_max_y → margin en SVG
+    # Recentrage dans le canvas (sinon liseré asymétrique quand les ratios diffèrent)
+    ox = (width  - world_w * scale_f) / 2 - world_min_x * sx
+    oy = (height - world_h * scale_f) / 2 - world_max_y * sy
 
     # ── Sol ─────────────────────────────────────────────────────────────────
     gsy = gl * sy + oy
@@ -717,38 +867,42 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
     parts.append(f'<rect width="{width}" height="{height}" fill="{PALETTE["bg"]}" />')
 
     # === DÉGRADÉ GLOBAL DU CADRE (technique BikeCAD) =========================
-    # Un SEUL dégradé pour TOUS les tubes : peinture (haut, lumière) → gris foncé
-    # (bas, ombre), orienté haut→bas sur la bbox du cadre. Donne l'aspect « objet
-    # peint unique » de BikeCAD (vs un dégradé par tube).
+    # Un SEUL dégradé userSpaceOnUse pour TOUS les tubes : 2 stops LINÉAIRES
+    # (peinture pure → #333) comme BikeCAD. Axe incliné ~73° (légèrement vers
+    # l'avant) et ALLONGÉ d'une hauteur de cadre sous le bas → le BB est à ~50 %
+    # du mélange (la base reste saturée, pas lavée en gris).
     fr_xs = [bb.x, ra.x, stt.x, ht.x, cr.x]
     fr_ys = [bb.y, stt.y, ht.y, cr.y]
-    gx1, gy1 = _pt((min(fr_xs)+max(fr_xs))/2, max(fr_ys), sx, sy, ox, oy)  # haut
-    gx2, gy2 = _pt((min(fr_xs)+max(fr_xs))/2, min(bb.y, ra.y), sx, sy, ox, oy)  # bas
+    cx_g = (min(fr_xs) + max(fr_xs)) / 2
+    top_y = max(fr_ys)
+    bot_frame = min(bb.y, ra.y)
+    frame_h = max(1.0, top_y - bot_frame)
+    gx1, gy1 = _pt(cx_g - 0.12 * frame_h, top_y, sx, sy, ox, oy)              # haut-arrière
+    gx2, gy2 = _pt(cx_g + 0.42 * frame_h, bot_frame - frame_h, sx, sy, ox, oy)  # bas-avant, prolongé
     paint = PALETTE["frame"]
     parts.append(
         f'<linearGradient id="frameGrad" gradientUnits="userSpaceOnUse" '
         f'x1="{gx1:.1f}" y1="{gy1:.1f}" x2="{gx2:.1f}" y2="{gy2:.1f}">'
-        f'<stop offset="0%" stop-color="{_shade(paint,1.25)}"/>'
-        f'<stop offset="45%" stop-color="{paint}"/>'
+        f'<stop offset="0%" stop-color="{paint}"/>'
         f'<stop offset="100%" stop-color="#333333"/></linearGradient>'
     )
     FRAME_FILL = "url(#frameGrad)"
 
-    # === SOL =================================================================
-    parts.append(
-        f'<rect x="0" y="{ground_y:.1f}" width="{width}" height="{height - ground_y:.1f}" '
-        f'fill="{PALETTE["ground"]}" opacity="0.35" />'
-    )
-    parts.append(
-        f'<line x1="0" y1="{ground_y:.1f}" x2="{width}" y2="{ground_y:.1f}" '
-        f'stroke="#b2bec3" stroke-width="1.5" />'
-    )
-    # Ombres elliptiques sous les roues
-    for (wsx, sr) in [(rear_sx, sr_r), (front_sx, sr_f)]:
+    # === SOL (désactivé par défaut — absent des exports BikeCAD) =============
+    if show_ground:
         parts.append(
-            f'<ellipse cx="{wsx:.0f}" cy="{ground_y + 4:.0f}" '
-            f'rx="{sr * 0.6:.0f}" ry="6" fill="#2d3436" opacity="0.12" />'
+            f'<rect x="0" y="{ground_y:.1f}" width="{width}" height="{height - ground_y:.1f}" '
+            f'fill="{PALETTE["ground"]}" opacity="0.35" />'
         )
+        parts.append(
+            f'<line x1="0" y1="{ground_y:.1f}" x2="{width}" y2="{ground_y:.1f}" '
+            f'stroke="#b2bec3" stroke-width="1.5" />'
+        )
+        for (wsx, sr) in [(rear_sx, sr_r), (front_sx, sr_f)]:
+            parts.append(
+                f'<ellipse cx="{wsx:.0f}" cy="{ground_y + 4:.0f}" '
+                f'rx="{sr * 0.6:.0f}" ry="6" fill="#2d3436" opacity="0.12" />'
+            )
 
     # === ROUES ===============================================================
     # Dessinées en premier (derrière le cadre)
@@ -758,55 +912,64 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
     # === FREINS (disques) ====================================================
     parts.append(_draw_brakes(bike, calc, sx, sy, ox, oy))
 
-    # === BASES (chainstays) ==================================================
-    parts.append(_draw_tube(bb.x, bb.y, ra.x, ra.y, f.chainstay_d,
-                            PALETTE["frame"], sx, sy, ox, oy, scale_f, cap_r=f.chainstay_d/2, fill=FRAME_FILL))
+    # === CADRE (technique BikeCAD : remplissages groupés → fillets aux nœuds →
+    #     liseré #333 en dernière passe → silhouette « objet peint » sans coutures)
+    # bases, haubans, tube de selle, top tube, down tube, tube de direction
+    frame_tubes = [
+        (bb.x, bb.y, ra.x, ra.y, f.chainstay_d),
+        (ra.x, ra.y, stt.x, stt.y, f.seatstay_d),
+        (bb.x, bb.y, stt.x, stt.y, f.seat_tube_fd),
+        (stt.x, stt.y, ht.x, ht.y, f.top_tube_d),
+        (bb.x, bb.y, cr.x, cr.y, f.down_tube_d),
+        (cr.x, cr.y, ht.x, ht.y, f.head_tube_d),
+    ]
+    # Pass 1 : remplissages (dégradé global, pas de stroke) + caps ronds
+    for (ax_, ay_, bx_, by_, dia_) in frame_tubes:
+        parts.append(_draw_tube(ax_, ay_, bx_, by_, dia_, PALETTE["frame"],
+                                sx, sy, ox, oy, scale_f, cap_r=dia_ / 2, fill=FRAME_FILL))
+    # Pass 2 : liseré #333 (uniquement les grands côtés)
+    for (ax_, ay_, bx_, by_, dia_) in frame_tubes:
+        parts.append(_draw_tube(ax_, ay_, bx_, by_, dia_, PALETTE["frame"],
+                                sx, sy, ox, oy, scale_f, fill=FRAME_FILL,
+                                edge="#333333", outline_only=True))
+    # Pass 3 : cercles de fillet aux nœuds EN DERNIER (même fill, sans stroke) →
+    # masque les croisements de liseré internes et fond les jonctions (façon BikeCAD)
+    for (nx_, ny_), dd in [((bb.x, bb.y), f.down_tube_d), ((stt.x, stt.y), f.top_tube_d),
+                           ((ht.x, ht.y), f.head_tube_d), ((cr.x, cr.y), f.head_tube_d)]:
+        ncx, ncy, _ = _circle(nx_, ny_, dd / 2, sx, sy, ox, oy)
+        parts.append(f'<circle cx="{ncx:.1f}" cy="{ncy:.1f}" r="{dd/2*abs(sx):.1f}" fill="{FRAME_FILL}"/>')
 
-    # === HAUBANS (seatstays) =================================================
-    # Relient axe AR au jonction TT/ST
-    parts.append(_draw_tube(ra.x, ra.y, stt.x, stt.y, f.seatstay_d,
-                            PALETTE["frame"], sx, sy, ox, oy, scale_f, cap_r=f.seatstay_d/2, fill=FRAME_FILL))
-
-    # === TUBE DE SELLE ========================================================
-    parts.append(_draw_tube(bb.x, bb.y, stt.x, stt.y, f.seat_tube_fd,
-                            PALETTE["frame"], sx, sy, ox, oy, scale_f, cap_r=f.seat_tube_fd/2, fill=FRAME_FILL))
-
-    # === TUBE HORIZONTAL (top tube) ==========================================
-    parts.append(_draw_tube(stt.x, stt.y, ht.x, ht.y, f.top_tube_d,
-                            PALETTE["frame"], sx, sy, ox, oy, scale_f, cap_r=f.top_tube_d/2, fill=FRAME_FILL))
-
-    # === TUBE DIAGONAL (down tube) ===========================================
-    parts.append(_draw_tube(bb.x, bb.y, cr.x, cr.y, f.down_tube_d,
-                            PALETTE["frame"], sx, sy, ox, oy, scale_f, cap_r=f.down_tube_d/2, fill=FRAME_FILL))
-
-    # === TUBE DE DIRECTION ===================================================
-    parts.append(_draw_tube(cr.x, cr.y, ht.x, ht.y, f.head_tube_d,
-                            PALETTE["frame"], sx, sy, ox, oy, scale_f, cap_r=f.head_tube_d/2, fill=FRAME_FILL))
-
-    # === FOURCHE (silhouette UNIQUE, vue de profil — comme BikeCAD) ==========
+    # === FOURCHE ============================================================
+    # Forme RÉELLE BikeCAD (sprite normalisé) si dispo, sinon silhouette tubulaire.
     hta = math.radians(f.head_angle)
-    # direction transversale à l'axe de direction (pour dessiner les couronnes)
     perp_x, perp_y = math.sin(hta), math.cos(hta)
-    cw = 60.0                       # largeur de couronne (vue de profil)
+    cw = 60.0
     blade = fk.blade_width
-    stan  = blade * 0.66            # plongeur plus fin que le fourreau
+    stan  = blade * 0.66
 
     def _crown_block(c):
         parts.append(_draw_tube(c.x - perp_x * cw / 2, c.y - perp_y * cw / 2,
                                 c.x + perp_x * cw / 2, c.y + perp_y * cw / 2, 24.0,
                                 PALETTE["crown"], sx, sy, ox, oy, scale_f, cap_r=12.0))
 
-    if fk.dual_crown:
-        # plongeurs (argent) entre couronne haute (ht) et basse (cr)
+    fork_part = _PARTS.get("fork_norm")
+    if fork_part and fork_part.get("paths"):
+        # direction axe de roue → couronne (axe de direction, monde)
+        dir_ang = math.degrees(math.atan2(cr.y - fa.y, cr.x - fa.x))
+        a2c = math.hypot(cr.x - fa.x, cr.y - fa.y)
+        axis_len = fork_part.get("axis_len", 683.0) or 683.0
+        # ~74 % de la fourche (patte→couronne) couvre l'A2C ; le reste = pivot/té au-dessus
+        fscale = (a2c / (axis_len * 0.74)) if axis_len else 1.0
+        parts.append(_draw_sprite("fork_norm", fa.x, fa.y, sx, sy, ox, oy,
+                                  scale=fscale, angle_deg=dir_ang - 90.0,
+                                  empty_fill=PALETTE["stanchion"], klass="fork"))
+    elif fk.dual_crown:
         parts.append(_draw_tube(ht.x, ht.y, cr.x, cr.y, stan,
                                 PALETTE["stanchion"], sx, sy, ox, oy, scale_f))
-        # fourreau (noir) de la couronne basse à l'axe
         parts.append(_draw_tube(cr.x, cr.y, fa.x, fa.y, blade,
                                 PALETTE["fork_low"], sx, sy, ox, oy, scale_f, cap_r=blade/2))
         _crown_block(ht); _crown_block(cr)
     else:
-        # simple couronne : plongeur (haut, argent) + fourreau (bas, noir),
-        # split à ~42 % de la longueur couronne→axe.
         mfx = cr.x + (fa.x - cr.x) * 0.42
         mfy = cr.y + (fa.y - cr.y) * 0.42
         parts.append(_draw_tube(cr.x, cr.y, mfx, mfy, stan,
@@ -879,7 +1042,7 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
     parts.append(_draw_tube(bar_cx, bar_cy, grip_x, grip_y, bw,
                             PALETTE["handlebar"], sx, sy, ox, oy, scale_f, cap_r=bw/2))
     gx, gy = W(grip_x, grip_y)
-    parts.append(f'<circle cx="{gx:.1f}" cy="{gy:.1f}" r="{bw*0.62*scale_f:.1f}" '
+    parts.append(f'<circle cx="{gx:.1f}" cy="{gy:.1f}" r="{bw*0.42*scale_f:.1f}" '
                  f'fill="{PALETTE["grip"]}" stroke="#000" stroke-width="0.8"/>')
 
     # === COTES (dimensions) ==================================================
@@ -932,6 +1095,11 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
 
     # === TRANSMISSION (plateau, courroie, moteur, manivelle) =================
     parts.append(_draw_drivetrain(bike, calc, sx, sy, ox, oy, scale_f))
+
+    # === DÉRAILLEUR ARRIÈRE (forme réelle BikeCAD, sous l'axe AR) =============
+    if bike.drivetrain.drive_type != "belt":   # courroie = mono-vitesse, pas de dérailleur
+        parts.append(_draw_sprite("derailleur", ra.x, ra.y, sx, sy, ox, oy,
+                                  scale=1.0, klass="derailleur"))
 
     # === LUGS (jonctions CNC lug-and-bond) ===================================
     if lugs:
