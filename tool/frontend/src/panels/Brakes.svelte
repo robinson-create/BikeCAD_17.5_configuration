@@ -1,5 +1,6 @@
 <script>
   import { bike, updateSection } from '../lib/store.js'
+  import Diagram from '../lib/Diagram.svelte'
   $: bk = $bike?.brakes ?? {}
   const upd = patch => updateSection('brakes', patch)
 
@@ -15,6 +16,7 @@
 
 <section class="panel">
   <h3>Freins</h3>
+  <Diagram src="DISC_ROTOR.png" caption="Disque de frein" />
 
   <fieldset>
     <legend>Type</legend>

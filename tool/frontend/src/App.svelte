@@ -334,7 +334,7 @@
   .sidebar {
     display: flex;
     flex-direction: column;
-    width: 280px;
+    width: 340px;
     flex-shrink: 0;
     border-right: 1px solid #2a2a4a;
     background: #131324;

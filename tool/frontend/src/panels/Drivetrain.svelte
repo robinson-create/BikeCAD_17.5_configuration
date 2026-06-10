@@ -1,5 +1,6 @@
 <script>
   import { bike, updateSection } from '../lib/store.js'
+  import Diagram from '../lib/Diagram.svelte'
   import { listMotors } from '../lib/api.js'
   import { onMount } from 'svelte'
 
@@ -14,6 +15,7 @@
 
 <section class="panel">
   <h3>Transmission</h3>
+  <Diagram src="BELT_WIDTH.png" caption="Courroie / chaîne" />
 
   <fieldset>
     <legend>Moteur</legend>

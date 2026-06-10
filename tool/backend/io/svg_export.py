@@ -161,12 +161,20 @@ _TUBE_ID = [0]   # compteur d'identifiants de dégradés (réinitialisé par ren
 
 
 def _draw_tube(x1, y1, x2, y2, d, color, sx, sy, ox, oy, scale, cap_r=0.0,
-               edge=None) -> str:
-    """Tube peint à l'ombrage CYLINDRIQUE (clair en haut → sombre en bas),
-    comme BikeCAD. Dégradé linéaire perpendiculaire à l'axe du tube."""
+               edge=None, fill=None) -> str:
+    """Tube peint. Si `fill` est fourni (ex. dégradé GLOBAL du cadre façon BikeCAD),
+    on l'utilise tel quel ; sinon ombrage cylindrique par tube."""
     pts = _tube_polygon(x1, y1, x2, y2, d, sx, sy, ox, oy, scale)
     if not pts:
         return ""
+    if fill is not None:
+        out = [f'<polygon points="{pts}" fill="{fill}"/>']
+        if cap_r > 0:
+            r_px = cap_r * abs(sx)
+            for (xc, yc) in [(x1, y1), (x2, y2)]:
+                cxp, cyp = _pt(xc, yc, sx, sy, ox, oy)
+                out.append(f'<circle cx="{cxp:.1f}" cy="{cyp:.1f}" r="{r_px:.1f}" fill="{fill}"/>')
+        return "".join(out)
     # perpendiculaire en coords MONDE, orientée vers le haut (world +y)
     dx, dy = x2 - x1, y2 - y1
     L = math.hypot(dx, dy) or 1.0
@@ -708,6 +716,24 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
     # === FOND ================================================================
     parts.append(f'<rect width="{width}" height="{height}" fill="{PALETTE["bg"]}" />')
 
+    # === DÉGRADÉ GLOBAL DU CADRE (technique BikeCAD) =========================
+    # Un SEUL dégradé pour TOUS les tubes : peinture (haut, lumière) → gris foncé
+    # (bas, ombre), orienté haut→bas sur la bbox du cadre. Donne l'aspect « objet
+    # peint unique » de BikeCAD (vs un dégradé par tube).
+    fr_xs = [bb.x, ra.x, stt.x, ht.x, cr.x]
+    fr_ys = [bb.y, stt.y, ht.y, cr.y]
+    gx1, gy1 = _pt((min(fr_xs)+max(fr_xs))/2, max(fr_ys), sx, sy, ox, oy)  # haut
+    gx2, gy2 = _pt((min(fr_xs)+max(fr_xs))/2, min(bb.y, ra.y), sx, sy, ox, oy)  # bas
+    paint = PALETTE["frame"]
+    parts.append(
+        f'<linearGradient id="frameGrad" gradientUnits="userSpaceOnUse" '
+        f'x1="{gx1:.1f}" y1="{gy1:.1f}" x2="{gx2:.1f}" y2="{gy2:.1f}">'
+        f'<stop offset="0%" stop-color="{_shade(paint,1.25)}"/>'
+        f'<stop offset="45%" stop-color="{paint}"/>'
+        f'<stop offset="100%" stop-color="#333333"/></linearGradient>'
+    )
+    FRAME_FILL = "url(#frameGrad)"
+
     # === SOL =================================================================
     parts.append(
         f'<rect x="0" y="{ground_y:.1f}" width="{width}" height="{height - ground_y:.1f}" '
@@ -734,28 +760,28 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
 
     # === BASES (chainstays) ==================================================
     parts.append(_draw_tube(bb.x, bb.y, ra.x, ra.y, f.chainstay_d,
-                            PALETTE["frame"], sx, sy, ox, oy, scale_f, cap_r=f.chainstay_d/2))
+                            PALETTE["frame"], sx, sy, ox, oy, scale_f, cap_r=f.chainstay_d/2, fill=FRAME_FILL))
 
     # === HAUBANS (seatstays) =================================================
     # Relient axe AR au jonction TT/ST
     parts.append(_draw_tube(ra.x, ra.y, stt.x, stt.y, f.seatstay_d,
-                            PALETTE["frame"], sx, sy, ox, oy, scale_f, cap_r=f.seatstay_d/2))
+                            PALETTE["frame"], sx, sy, ox, oy, scale_f, cap_r=f.seatstay_d/2, fill=FRAME_FILL))
 
     # === TUBE DE SELLE ========================================================
     parts.append(_draw_tube(bb.x, bb.y, stt.x, stt.y, f.seat_tube_fd,
-                            PALETTE["frame"], sx, sy, ox, oy, scale_f, cap_r=f.seat_tube_fd/2))
+                            PALETTE["frame"], sx, sy, ox, oy, scale_f, cap_r=f.seat_tube_fd/2, fill=FRAME_FILL))
 
     # === TUBE HORIZONTAL (top tube) ==========================================
     parts.append(_draw_tube(stt.x, stt.y, ht.x, ht.y, f.top_tube_d,
-                            PALETTE["frame"], sx, sy, ox, oy, scale_f, cap_r=f.top_tube_d/2))
+                            PALETTE["frame"], sx, sy, ox, oy, scale_f, cap_r=f.top_tube_d/2, fill=FRAME_FILL))
 
     # === TUBE DIAGONAL (down tube) ===========================================
     parts.append(_draw_tube(bb.x, bb.y, cr.x, cr.y, f.down_tube_d,
-                            PALETTE["frame"], sx, sy, ox, oy, scale_f, cap_r=f.down_tube_d/2))
+                            PALETTE["frame"], sx, sy, ox, oy, scale_f, cap_r=f.down_tube_d/2, fill=FRAME_FILL))
 
     # === TUBE DE DIRECTION ===================================================
     parts.append(_draw_tube(cr.x, cr.y, ht.x, ht.y, f.head_tube_d,
-                            PALETTE["crown"], sx, sy, ox, oy, scale_f, cap_r=f.head_tube_d/2))
+                            PALETTE["frame"], sx, sy, ox, oy, scale_f, cap_r=f.head_tube_d/2, fill=FRAME_FILL))
 
     # === FOURCHE (silhouette UNIQUE, vue de profil — comme BikeCAD) ==========
     hta = math.radians(f.head_angle)

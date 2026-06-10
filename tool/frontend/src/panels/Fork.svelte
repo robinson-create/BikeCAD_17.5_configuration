@@ -1,5 +1,6 @@
 <script>
   import { bike, updateSection } from '../lib/store.js'
+  import Diagram from '../lib/Diagram.svelte'
   import CatalogSelect from '../lib/CatalogSelect.svelte'
   $: fk = $bike?.fork ?? {}
   const upd = patch => updateSection('fork', patch)
@@ -7,6 +8,7 @@
 
 <section class="panel">
   <h3>Fourche</h3>
+  <Diagram src="forkLAC.png" caption="Longueur / axe / couronne" />
   <CatalogSelect category="fork" />
 
   <fieldset>

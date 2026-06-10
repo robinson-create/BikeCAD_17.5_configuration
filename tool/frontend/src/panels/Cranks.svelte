@@ -1,5 +1,6 @@
 <script>
   import { bike, updateSection } from '../lib/store.js'
+  import Diagram from '../lib/Diagram.svelte'
   import CatalogSelect from '../lib/CatalogSelect.svelte'
   $: cr = $bike?.cranks ?? {}
   const upd = patch => updateSection('cranks', patch)
@@ -7,6 +8,7 @@
 
 <section class="panel">
   <h3>Pédalier</h3>
+  <Diagram src="CRANKDIMS.png" caption="Cotes pédalier (A,B,C,D…)" />
   <CatalogSelect category="cranks" />
 
   <fieldset>

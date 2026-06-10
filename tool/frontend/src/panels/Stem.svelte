@@ -1,5 +1,6 @@
 <script>
   import { bike, updateSection } from '../lib/store.js'
+  import Diagram from '../lib/Diagram.svelte'
   import CatalogSelect from '../lib/CatalogSelect.svelte'
   $: st = $bike?.stem ?? {}
   const upd = patch => updateSection('stem', patch)
@@ -7,6 +8,7 @@
 
 <section class="panel">
   <h3>Potence</h3>
+  <Diagram src="stemconst.png" caption="Géométrie potence" />
   <CatalogSelect category="stem" />
   <CatalogSelect category="headset" label="📚 Jeu de direction" />
 

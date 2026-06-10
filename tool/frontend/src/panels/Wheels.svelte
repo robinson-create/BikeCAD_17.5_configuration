@@ -1,5 +1,6 @@
 <script>
   import { bike, updateSection } from '../lib/store.js'
+  import Diagram from '../lib/Diagram.svelte'
   import CatalogSelect from '../lib/CatalogSelect.svelte'
   $: wf = $bike?.wheel_f ?? {}
   $: wr = $bike?.wheel_r ?? {}
@@ -20,6 +21,7 @@
 
 <section class="panel">
   <h3>Roues</h3>
+  <Diagram src="RIMCS1.png" caption="Jante / rayons / moyeu" />
   <CatalogSelect category="wheel" />
 
   {#each [['wheel_f', wf, 'Roue avant'], ['wheel_r', wr, 'Roue arrière']] as [sec, w, title]}
