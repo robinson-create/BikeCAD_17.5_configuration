@@ -1,5 +1,6 @@
 <script>
   import { bike, updateSection } from '../lib/store.js'
+  import CatalogSelect from '../lib/CatalogSelect.svelte'
   $: hb = $bike?.handlebar ?? {}
   const upd = patch => updateSection('handlebar', patch)
 
@@ -17,6 +18,7 @@
 
 <section class="panel">
   <h3>Cintre</h3>
+  <CatalogSelect category="handlebar" />
 
   <fieldset>
     <legend>Type</legend>

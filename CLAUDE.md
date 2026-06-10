@@ -26,7 +26,10 @@ cd tool && ./start.sh          # backend :8000 (uvicorn) + frontend :5173 (vite)
 - venv Python : `tool/.venv` (fastapi, uvicorn, pydantic, pyyaml, **anthropic**)
 - Frontend : `cd tool/frontend && npm run dev` (ou `npm run build` pour vérifier la compilation)
 - App : http://localhost:5173 — API docs : http://localhost:8000/docs
-- **Tests E2E** (9 sections, sans serveur) : `cd tool && PYTHONPATH=. .venv/bin/python tests/e2e_test.py`
+- **Tests E2E** (11 sections, sans serveur) : `cd tool && PYTHONPATH=. .venv/bin/python tests/e2e_test.py`
+- **Tests E2E « parcours interface »** (HTTP, backend en route) : `.venv/bin/python tests/e2e_interface.py`
+  — construit le vélo aux specs projet via les mêmes endpoints que le frontend, vérifie
+  fonctionnel + graphique (13 composants, rien hors-canvas, pas de NaN, cotes).
 - **Assistant** : nécessite `ANTHROPIC_API_KEY` dans l'environnement (sinon l'endpoint renvoie 503 et l'onglet affiche une notice). Modèle `claude-opus-4-8`.
 
 ## Architecture `tool/`
@@ -66,6 +69,15 @@ cd tool && ./start.sh          # backend :8000 (uvicorn) + frontend :5173 (vite)
   CSV table de conception SolidWorks / résumé).
 - `library.py` — bibliothèque LOSSLESS : sauve/charge le BikeDesign COMPLET (suspension
   comprise) en JSON dans `tool/bikes/*.bike.json`. Anti path-traversal.
+- `catalog.py` — catalogue EXHAUSTIF fusionnant TOUTES les configs BikeCAD de $HOME
+  (Pro 16.0 + Free 17.5, surchargeable via `BIKECAD_CONFIG_DIR`). Union des pièces par
+  fichier, taguées par version (`sources`). Catégories mappables : fork, saddle, wheel,
+  headset, headtube, cranks, stem, handlebar, seatpost, pedals + `bike` (presets de design
+  complet). Chaque pièce parsée via `load_bcad` (zéro nouvelle table de clés). Référence
+  des réglages : `setting_keys(q)` = union de ~6900 clés BikeCAD sur les vélos de réf.
+  Endpoints `/api/catalog`, `/api/catalog/keys`, `/api/catalog/{cat}`, `/api/catalog/{cat}/load`.
+  Frontend : `lib/CatalogSelect.svelte` (sélecteur réutilisable, gère aussi `__full__` =
+  preset vélo), `Settings.svelte` (vue « Réglages (réf.) » cherchable).
 - `assistant.py` — assistant Claude (`claude-opus-4-8`, SDK `anthropic`, boucle tool-use
   manuelle côté serveur). Outils : `set_parameters`, `apply_preset`, `get_state`, `compute_sag`,
   `compression_state`, `wheel_axles`, `search_knowledge`, `save_bike`/`load_bike`/`list_library`.

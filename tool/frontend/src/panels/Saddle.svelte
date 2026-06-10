@@ -1,5 +1,6 @@
 <script>
   import { bike, updateSection } from '../lib/store.js'
+  import CatalogSelect from '../lib/CatalogSelect.svelte'
   $: sd = $bike?.saddle ?? {}
   const upd = patch => updateSection('saddle', patch)
 
@@ -9,6 +10,7 @@
 
 <section class="panel">
   <h3>Selle</h3>
+  <CatalogSelect category="saddle" />
 
   <fieldset>
     <legend>Référence</legend>

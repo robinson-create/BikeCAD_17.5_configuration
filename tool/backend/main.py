@@ -31,6 +31,7 @@ from .io.dxf_export import export_dxf
 from .lugs.joint_model import build_joints
 from .lugs import export_cad as lugs_export
 from . import library
+from . import catalog
 
 app = FastAPI(title="DOM Engineering Bike Tool", version="1.0.0")
 
@@ -93,6 +94,37 @@ def render(req: RenderRequest):
         return JSONResponse(content={"svg": svg, "calc": calc.model_dump()})
     except Exception as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.get("/api/catalog")
+def catalog_overview():
+    """Racines BikeCAD détectées + nb de pièces par catégorie + total réglages."""
+    return catalog.overview()
+
+
+@app.get("/api/catalog/keys")
+def catalog_keys(q: str = "", limit: int = 300):
+    """Référence exhaustive des réglages BikeCAD (union), filtrée par sous-chaîne."""
+    return catalog.setting_keys(q, limit)
+
+
+@app.get("/api/catalog/{category}")
+def catalog_list(category: str):
+    """Liste (union multi-versions) des composants d'une catégorie."""
+    return catalog.list_parts(category)
+
+
+class CatalogLoadRequest(BaseModel):
+    file: str
+
+
+@app.post("/api/catalog/{category}/load")
+def catalog_load(category: str, req: CatalogLoadRequest):
+    """Retourne {section: patch} pour appliquer un composant catalogue."""
+    part = catalog.load_part(category, req.file)
+    if part is None:
+        raise HTTPException(status_code=404, detail="Composant introuvable.")
+    return part
 
 
 @app.post("/api/battery")

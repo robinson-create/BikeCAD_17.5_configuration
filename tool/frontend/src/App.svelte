@@ -5,8 +5,10 @@
   import { fetchDefault, loadBcad, exportBcad, exportDxf, exportLugs, listBikes,
            saveBikeLibrary, listLibrary, loadLibrary } from './lib/api.js'
   import BikeRenderer from './BikeRenderer.svelte'
+  import CatalogSelect from './lib/CatalogSelect.svelte'
   import Kinematics from './Kinematics.svelte'
   import Compare from './Compare.svelte'
+  import Settings from './Settings.svelte'
   import Assistant from './Assistant.svelte'
 
   import Frame      from './panels/Frame.svelte'
@@ -135,6 +137,7 @@
   <header class="topbar">
     <div class="brand">DOM Engineering · BikeCAD Tool</div>
     <div class="toolbar">
+      <div class="model-select"><CatalogSelect category="bike" label="🚲 Modèle" /></div>
       <select on:change={handleLibrarySelect} title="Bibliothèque (vélos complets)">
         <option value="">📁 Bibliothèque…</option>
         {#each library as b}
@@ -202,6 +205,7 @@
         <button class:active={$viewMode === 'bike'} on:click={() => viewMode.set('bike')}>Vélo 2D</button>
         <button class:active={$viewMode === 'kinematics'} on:click={() => viewMode.set('kinematics')}>Cinématique</button>
         <button class:active={$viewMode === 'compare'} on:click={() => viewMode.set('compare')}>Comparaison</button>
+        <button class:active={$viewMode === 'settings'} on:click={() => viewMode.set('settings')}>Réglages (réf.)</button>
         <button class:active={$viewMode === 'assistant'} on:click={() => viewMode.set('assistant')}>🤖 Assistant</button>
       </div>
       <div class="view-body">
@@ -211,6 +215,8 @@
           <Kinematics />
         {:else if $viewMode === 'compare'}
           <Compare />
+        {:else if $viewMode === 'settings'}
+          <Settings />
         {:else}
           <Assistant />
         {/if}

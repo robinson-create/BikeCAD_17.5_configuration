@@ -1,11 +1,14 @@
 <script>
   import { bike, updateSection } from '../lib/store.js'
+  import CatalogSelect from '../lib/CatalogSelect.svelte'
   $: st = $bike?.stem ?? {}
   const upd = patch => updateSection('stem', patch)
 </script>
 
 <section class="panel">
   <h3>Potence</h3>
+  <CatalogSelect category="stem" />
+  <CatalogSelect category="headset" label="📚 Jeu de direction" />
 
   <fieldset>
     <legend>Dimensions (mm / °)</legend>

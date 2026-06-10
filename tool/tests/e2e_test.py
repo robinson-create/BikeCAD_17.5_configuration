@@ -527,6 +527,41 @@ check(sag_out["ok"] and sag_out["required_spring_rate_N_per_mm"] > 0, "assistant
 kn_out = ASSIST._exec_tool("search_knowledge", {"query": "courroie gates belt growth"}, d2, a2)
 check("Gates" in kn_out or "courroie" in kn_out.lower(), "assistant: search_knowledge exécute")
 
+# ─── 11. CATALOGUE DE COMPOSANTS (bibliothèques BikeCAD) ────────────────────
+print("\n=== 11. CATALOGUE ===")
+from backend import catalog
+ov = catalog.overview()
+if not ov["roots"]:
+    print("  ○ aucune config BikeCAD détectée — catalogue ignoré (non bloquant)")
+else:
+    check(ov["categories"].get("fork", 0) > 0, f"catalogue forks présents ({ov['categories']})")
+    # toutes les catégories mappables exposées
+    for cat in ("fork", "saddle", "wheel", "headset", "headtube", "cranks",
+                "stem", "handlebar", "seatpost", "pedals", "bike"):
+        check(cat in ov["categories"], f"catalogue : catégorie {cat} présente")
+    forks = catalog.list_parts("fork")
+    check(all({"name", "file", "sources"} <= set(p) for p in forks),
+          "catalogue : entrées {name,file,sources}")
+    # charger une fourche → patch applicable {fork:{...}}
+    part = catalog.load_part("fork", forks[0]["file"])
+    check(part and "fork" in part and part["fork"]["a2c"] > 0, "catalogue : fork chargé (A2C>0)")
+    # roue → patch sur wheel_f ET wheel_r
+    wheels = catalog.list_parts("wheel")
+    wp = catalog.load_part("wheel", wheels[0]["file"])
+    check("wheel_f" in wp and "wheel_r" in wp, "catalogue : roue patche wheel_f+wheel_r")
+    # preset de vélo complet
+    bikes_cat = catalog.list_parts("bike")
+    check(len(bikes_cat) >= 5, f"catalogue : presets vélo ({len(bikes_cat)})")
+    full = catalog.load_part("bike", bikes_cat[0]["file"])
+    check(full and "__full__" in full and "frame" in full["__full__"],
+          "catalogue : preset vélo = design complet")
+    # référence exhaustive des réglages + recherche
+    check(ov["total_settings"] > 6000, f"réglages : union exhaustive ({ov['total_settings']})")
+    ks = catalog.setting_keys("head angle")
+    check(any(r["key"] == "Head angle" for r in ks["rows"]), "réglages : recherche 'head angle'")
+    # garde-fou path-traversal
+    check(catalog.load_part("fork", "../../etc/passwd") is None, "catalogue : anti path-traversal")
+
 # ─── RÉSULTAT ────────────────────────────────────────────────────────────────
 print("\n" + "=" * 50)
 if fails:

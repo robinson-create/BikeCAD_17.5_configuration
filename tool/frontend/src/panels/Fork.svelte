@@ -1,11 +1,13 @@
 <script>
   import { bike, updateSection } from '../lib/store.js'
+  import CatalogSelect from '../lib/CatalogSelect.svelte'
   $: fk = $bike?.fork ?? {}
   const upd = patch => updateSection('fork', patch)
 </script>
 
 <section class="panel">
   <h3>Fourche</h3>
+  <CatalogSelect category="fork" />
 
   <fieldset>
     <legend>Suspension</legend>

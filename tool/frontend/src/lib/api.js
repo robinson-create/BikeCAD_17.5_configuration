@@ -21,6 +21,34 @@ export async function calcAndRender(bike, width = 1400, height = 750, showDims =
   return r.json()  // { svg: string, calc: CalcResult }
 }
 
+export async function fetchCatalog(category) {
+  const r = await fetch(`${BASE}/catalog/${category}`)
+  if (!r.ok) return []
+  return r.json()  // [{name, file}]
+}
+
+export async function searchSettings(q = '', limit = 300) {
+  const r = await fetch(`${BASE}/catalog/keys?q=${encodeURIComponent(q)}&limit=${limit}`)
+  if (!r.ok) return { total: 0, matched: 0, rows: [] }
+  return r.json()
+}
+
+export async function catalogOverview() {
+  const r = await fetch(`${BASE}/catalog`)
+  if (!r.ok) return null
+  return r.json()
+}
+
+export async function loadCatalogPart(category, file) {
+  const r = await fetch(`${BASE}/catalog/${category}/load`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ file }),
+  })
+  if (!r.ok) throw new Error(await r.text())
+  return r.json()  // { section: patch, ... }
+}
+
 export async function fetchBattery(bike) {
   const r = await fetch(`${BASE}/battery`, {
     method: 'POST',
