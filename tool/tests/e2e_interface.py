@@ -120,10 +120,10 @@ _spec = _ilu.spec_from_file_location(
 try:
     from backend.io.svg_export import PALETTE
 except Exception:
-    PALETTE = {"fork": "#6b7686", "belt": "#f0a51f", "motor": "#3d4757", "dim_line": "#2f6df0"}
+    PALETTE = {"fork_low": "#1c1f24", "belt": "#f0a51f", "motor": "#33373d", "dim_line": "#2f6df0"}
 
 COMPONENTS = {
-    "cadre (tubes)": "<polygon", "roues": 'class="wheel"', "fourche": PALETTE["fork"],
+    "cadre (tubes)": "<polygon", "roues": 'class="wheel"', "fourche": PALETTE["fork_low"],
     "transmission": 'class="drivetrain"', "courroie": PALETTE["belt"], "moteur": PALETTE["motor"],
     "freins": 'class="brakes"', "pédales": 'class="pedals"',
     "batterie": 'class="battery"', "suspension": 'class="suspension"',

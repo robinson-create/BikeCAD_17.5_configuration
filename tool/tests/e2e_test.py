@@ -151,7 +151,7 @@ components = {
     "courroie":      PALETTE["belt"],
     "moteur":        PALETTE["motor"],
     "roues":         'class="wheel"',
-    "fourche":       PALETTE["fork"],
+    "fourche":       PALETTE["fork_low"],
     "couronne/BB":   PALETTE["crown"],
     "cotes":         PALETTE["dim_line"],
     "titre":         bike.name,
@@ -341,6 +341,19 @@ for n in nodes:
 # Angle seat tube ↔ down tube au BB : doit être plausible (~50–80°)
 ang = bb_node.angles.get("down_tube|seat_tube")
 check(ang is not None and 40 < ang < 110, f"angle BB down|seat plausible ({ang}°)")
+
+# Overlay lugs sur la vue 2D (rendu graphique)
+from backend.io.svg_export import render_svg as _rsvg
+svg_lugs = _rsvg(b, calc, 1400, 750, True, None, lugs=nodes)
+check('class="lugs"' in svg_lugs and svg_finite(svg_lugs), "overlay lugs dessiné sur la vue 2D")
+
+# Plan technique d'ingénierie (cotation + axes + visserie + cartouche)
+from backend.io.drawing_export import render_drawing_svg
+plan = render_drawing_svg(b, calc, nodes, date="2026-06-10")
+check(svg_finite(plan), "plan technique : SVG valide")
+for tok in ("Empattement", "Reach", "HTA", "Axe AR", "Pivot principal",
+            "POINTS CLÉS", "DOM ENGINEERING", "BB (0,0)", "LUG "):
+    check(tok in plan, f"plan technique contient : {tok}")
 
 # Le triangle arrière (bases/haubans) marqué hors-plan
 cs_oop = any(s.out_of_plane for n in nodes for s in n.sockets if s.member in ("chainstay", "seatstay"))

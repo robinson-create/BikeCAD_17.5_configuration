@@ -16,6 +16,7 @@ export const showRider = writable(false)    // afficher le pilote sur la vue 2D
 export const showDims  = writable(true)     // afficher les cotes
 export const showSuspension    = writable(false)  // overlay biellette sur la vue 2D
 export const animateSuspension = writable(false)  // animation de la course
+export const showLugs          = writable(false)  // lugs CNC aux jonctions
 export const baseline  = writable(null)     // snapshot de référence pour comparaison
 
 // Fige le design courant comme référence de comparaison
@@ -45,7 +46,7 @@ async function doRefresh(bikeData) {
   try {
     const [result, kin, fitRes, batRes] = await Promise.all([
       calcAndRender(bikeData, 1400, 750, get(showDims), get(showRider),
-                    get(showSuspension), get(animateSuspension)),
+                    get(showSuspension), get(animateSuspension), get(showLugs)),
       fetchKinematics(bikeData).catch(() => null),
       bikeData.rider ? fetchFit(bikeData).catch(() => null) : Promise.resolve(null),
       bikeData.battery?.enabled ? fetchBattery(bikeData).catch(() => null) : Promise.resolve(null),

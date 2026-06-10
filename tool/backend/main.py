@@ -28,6 +28,7 @@ from .calculations.battery import compute_battery
 from .io.bcad_io import load_bcad, save_bcad
 from .io.svg_export import render_svg
 from .io.dxf_export import export_dxf
+from .io.drawing_export import render_drawing_svg
 from .lugs.joint_model import build_joints
 from .lugs import export_cad as lugs_export
 from . import library
@@ -74,6 +75,7 @@ class RenderRequest(BaseModel):
     show_rider: bool = False
     show_suspension: bool = False    # overlay biellette sur la vue 2D
     animate_suspension: bool = False # animation SMIL de la course
+    show_lugs: bool = False          # afficher les lugs CNC aux jonctions
 
 
 @app.post("/api/render/svg")
@@ -89,8 +91,10 @@ def render(req: RenderRequest):
             kin = solve_kinematics(req.bike)
             if kin.ok:
                 frames = kin.frames
+        lug_nodes = build_joints(req.bike, calc) if req.show_lugs else None
         svg  = render_svg(req.bike, calc, req.width, req.height, req.show_dims, fit,
-                          suspension=frames, animate_suspension=req.animate_suspension)
+                          suspension=frames, animate_suspension=req.animate_suspension,
+                          lugs=lug_nodes)
         return JSONResponse(content={"svg": svg, "calc": calc.model_dump()})
     except Exception as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -215,6 +219,33 @@ def export_dxf_route(req: DxfRequest):
             p.write_text(dxf, encoding="utf-8")
             return {"path": str(p), "ok": True, "bytes": len(dxf)}
         return PlainTextResponse(content=dxf, media_type="application/dxf")
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+class DrawingRequest(BaseModel):
+    bike: BikeDesign
+    designer: str = "Robinson Joubert"
+    path: Optional[str] = None
+
+
+@app.post("/api/export/drawing")
+def export_drawing_route(req: DrawingRequest):
+    """Plan technique d'ingénierie (SVG vectoriel) : cotation, axes, visserie,
+    lugs, table de coordonnées, cartouche. Téléchargement client ou écriture disque."""
+    from datetime import date as _date
+    try:
+        calc = calculate(req.bike)
+        nodes = build_joints(req.bike, calc)
+        svg = render_drawing_svg(req.bike, calc, nodes,
+                                 project=req.bike.name, designer=req.designer,
+                                 date=_date.today().isoformat())
+        if req.path:
+            p = Path(req.path)
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(svg, encoding="utf-8")
+            return {"path": str(p), "ok": True, "bytes": len(svg)}
+        return PlainTextResponse(content=svg, media_type="image/svg+xml")
     except Exception as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 

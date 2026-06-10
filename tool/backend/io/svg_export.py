@@ -12,38 +12,48 @@ from ..calculations.motor import motor_envelope_world
 
 
 # ─── Palette ──────────────────────────────────────────────────────────────────
-# Look « catalogue moderne » : cadre ardoise foncé avec liseré, fourche métal,
-# fond clair neutre. Contours sur chaque pièce pour la lisibilité.
+# Style BikeCAD : cadre PEINT avec ombrage cylindrique (clair en haut, sombre en
+# bas), jonctions lisses, roues détaillées (jante argent + rayons + moyeu), fond
+# blanc. Les tubes sont remplis d'un dégradé perpendiculaire (cf. _draw_tube).
 PALETTE = {
-    "frame":      "#2b3442",   # tubes cadre
-    "frame_edge": "#161c25",   # liseré tubes
-    "fork":       "#6b7686",   # fourche (métal)
-    "fork_edge":  "#3f4754",
-    "crown":      "#3a4452",   # couronnes + BB
-    "wheel_rim":  "#3a4049",   # jante
-    "rim_hi":     "#5b6470",   # reflet jante
-    "tire":       "#1b1e22",   # pneu
-    "spoke":      "#aeb6c0",   # rayons (clairs = visibles)
-    "hub":        "#4a525d",
-    "seatpost":   "#3a4452",
-    "saddle":     "#15181d",   # selle (noir)
-    "saddle_hi":  "#2c323b",
-    "stem":       "#2f3845",
-    "handlebar":  "#22272e",
-    "grip":       "#1b1e22",
-    "ground":     "#d6dde6",   # sol
+    "frame":      "#2f7dc4",   # peinture cadre (bleu) — base du dégradé
+    "fork_low":   "#1c1f24",   # fourreaux fourche (noir)
+    "stanchion":  "#c9ced6",   # plongeurs (chrome/argent)
+    "crown":      "#2b2f36",   # couronnes + BB
+    "rim":        "#c2c7cf",   # jante (argent)
+    "rim_dark":   "#8b9099",
+    "tire":       "#191a1d",   # pneu
+    "tread":      "#34373c",   # crampons/sculpture
+    "spoke":      "#9298a1",   # rayons
+    "hub":        "#7a808a",
+    "seatpost":   "#26292f",
+    "saddle":     "#141517",   # selle (noir)
+    "saddle_hi":  "#3a3d44",
+    "stem":       "#1c1f24",
+    "handlebar":  "#1c1f24",
+    "grip":       "#0f1012",
+    "ground":     "#e4e8ee",   # sol
     "dim_line":   "#2f6df0",   # cotes
     "dim_text":   "#2f6df0",
     "dim_bg":     "white",
-    "bg":         "#eef1f6",   # fond
+    "bg":         "#ffffff",   # fond blanc (comme BikeCAD)
     "belt":       "#f0a51f",   # courroie / chaîne
-    "belt_edge":  "#b87a10",
-    "cog":        "#3a4452",   # plateau / pignon
-    "motor":      "#3d4757",   # carter moteur
-    "motor_edge": "#262d38",
-    "crank":      "#262d38",   # manivelle
-    "rotor":      "#9fc2e8",   # disque de frein
+    "cog":        "#aeb4bd",   # plateau / pignon (argent)
+    "cog_dark":   "#6c727b",
+    "motor":      "#33373d",   # carter moteur
+    "rotor":      "#b9c4d2",   # disque de frein (argent)
+    "crank":      "#1c1f24",   # manivelle / pédale
+    "lug":        "#b9bfc7",   # lug CNC (alu/titane usiné)
+    "lug_edge":   "#5d636b",
 }
+
+
+def _shade(hexc: str, factor: float) -> str:
+    """Éclaircit (factor>1) ou assombrit (factor<1) une couleur #rrggbb."""
+    hexc = hexc.lstrip("#")
+    r, g, b = int(hexc[0:2], 16), int(hexc[2:4], 16), int(hexc[4:6], 16)
+    f = lambda v: max(0, min(255, int(v * factor)))
+    return f"#{f(r):02x}{f(g):02x}{f(b):02x}"
 
 # ─── Helpers géométrie ────────────────────────────────────────────────────────
 
@@ -94,55 +104,101 @@ def _pt(x: float, y: float, sx: float, sy: float, ox: float, oy: float):
 # ─── Composants visuels ───────────────────────────────────────────────────────
 
 def _draw_wheel(cx: float, cy: float, r_tire: float, r_rim: float,
-                n_spokes: int, sx: float, sy: float, ox: float, oy: float) -> str:
+                n_spokes: int, sx: float, sy: float, ox: float, oy: float,
+                cassette=False) -> str:
     scx, scy, sr_tire = _circle(cx, cy, r_tire, sx, sy, ox, oy)
     _, _, sr_rim = _circle(cx, cy, r_rim, sx, sy, ox, oy)
-    _, _, sr_hub = _circle(cx, cy, 22.0, sx, sy, ox, oy)
-    tire_w = max(3.0, sr_tire - sr_rim)          # épaisseur pneu
-    rim_w  = max(2.5, tire_w * 0.45)             # épaisseur jante
+    _, _, sr_hub = _circle(cx, cy, 26.0, sx, sy, ox, oy)
+    _, _, sr_fl  = _circle(cx, cy, 30.0, sx, sy, ox, oy)   # rayon flasque
+    tire_w = max(4.0, sr_tire - sr_rim)
+    rim_w  = max(2.2, tire_w * 0.34)
+    r_bed  = sr_rim - rim_w               # lit de jante (intérieur)
 
     L = [f'<g class="wheel">']
-    # Pneu (anneau sombre) + flanc subtil
+    # Pneu : bande sombre + sculpture (petits crampons) + flancs
     L.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{sr_tire:.1f}" fill="{PALETTE["tire"]}"/>')
-    L.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{sr_tire-tire_w/2:.1f}" '
-             f'fill="none" stroke="#2a2e34" stroke-width="1"/>')
-    # Ouverture (fond) entre jante et moyeu
-    L.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{sr_rim:.1f}" fill="{PALETTE["bg"]}"/>')
-    # Rayons (mid-grey, visibles sur fond clair)
+    n_tread = 72
+    for i in range(n_tread):
+        a = 2 * math.pi * i / n_tread
+        r0, r1 = sr_tire - tire_w * 0.18, sr_tire - tire_w * 0.02
+        x0, y0 = scx + r0 * math.cos(a), scy + r0 * math.sin(a)
+        x1t, y1t = scx + r1 * math.cos(a), scy + r1 * math.sin(a)
+        L.append(f'<line x1="{x0:.1f}" y1="{y0:.1f}" x2="{x1t:.1f}" y2="{y1t:.1f}" '
+                 f'stroke="{PALETTE["tread"]}" stroke-width="1.4"/>')
+    # Ouverture (fond) jusqu'au lit de jante
+    L.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{r_bed:.1f}" fill="{PALETTE["bg"]}"/>')
+    # Rayons (depuis les flasques du moyeu vers le lit de jante), 2 nappes croisées
     for i in range(n_spokes):
         a = 2 * math.pi * i / n_spokes
-        rx, ry = _pt(cx + r_rim * 0.97 * math.cos(a), cy + r_rim * 0.97 * math.sin(a), sx, sy, ox, oy)
-        L.append(f'<line x1="{scx:.1f}" y1="{scy:.1f}" x2="{rx:.1f}" y2="{ry:.1f}" '
-                 f'stroke="{PALETTE["spoke"]}" stroke-width="0.7"/>')
-    # Jante (anneau) + reflet
-    L.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{sr_rim:.1f}" fill="none" '
-             f'stroke="{PALETTE["wheel_rim"]}" stroke-width="{rim_w:.1f}"/>')
-    L.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{sr_rim-rim_w*0.35:.1f}" fill="none" '
-             f'stroke="{PALETTE["rim_hi"]}" stroke-width="1" opacity="0.6"/>')
-    # Moyeu
-    L.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{sr_hub:.1f}" fill="{PALETTE["hub"]}" '
-             f'stroke="#222" stroke-width="1"/>')
-    L.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{sr_hub*0.35:.1f}" fill="#222"/>')
+        hubr = sr_fl
+        hx, hy = scx + hubr * math.cos(a + 0.12), scy + hubr * math.sin(a + 0.12)
+        rx, ry = scx + r_bed * 0.99 * math.cos(a), scy + r_bed * 0.99 * math.sin(a)
+        L.append(f'<line x1="{hx:.1f}" y1="{hy:.1f}" x2="{rx:.1f}" y2="{ry:.1f}" '
+                 f'stroke="{PALETTE["spoke"]}" stroke-width="0.8"/>')
+    # Jante argent (anneau) + double liseré
+    L.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{sr_rim-rim_w/2:.1f}" fill="none" '
+             f'stroke="{PALETTE["rim"]}" stroke-width="{rim_w:.1f}"/>')
+    L.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{sr_rim-rim_w*0.1:.1f}" fill="none" '
+             f'stroke="{PALETTE["rim_dark"]}" stroke-width="0.8"/>')
+    L.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{r_bed:.1f}" fill="none" '
+             f'stroke="{PALETTE["rim_dark"]}" stroke-width="0.8"/>')
+    # Cassette (roue AR) : disques concentriques argentés
+    if cassette:
+        for k, rr in enumerate((46, 38, 31)):
+            _, _, scr = _circle(cx, cy, rr, sx, sy, ox, oy)
+            L.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{scr:.1f}" fill="none" '
+                     f'stroke="{PALETTE["cog_dark"]}" stroke-width="1.4"/>')
+    # Moyeu : flasque + corps + axe
+    L.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{sr_fl:.1f}" fill="{PALETTE["hub"]}" '
+             f'stroke="#222" stroke-width="0.8"/>')
+    L.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{sr_hub*0.5:.1f}" fill="#2a2d33"/>')
+    L.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{sr_hub*0.18:.1f}" fill="#101114"/>')
     L.append('</g>')
     return "\n".join(L)
 
 
+_TUBE_ID = [0]   # compteur d'identifiants de dégradés (réinitialisé par render_svg)
+
+
 def _draw_tube(x1, y1, x2, y2, d, color, sx, sy, ox, oy, scale, cap_r=0.0,
-               edge="rgba(0,0,0,0.38)") -> str:
-    """Tube = polygone rempli + liseré sombre (lisibilité) + chapeaux arrondis."""
+               edge=None) -> str:
+    """Tube peint à l'ombrage CYLINDRIQUE (clair en haut → sombre en bas),
+    comme BikeCAD. Dégradé linéaire perpendiculaire à l'axe du tube."""
     pts = _tube_polygon(x1, y1, x2, y2, d, sx, sy, ox, oy, scale)
     if not pts:
         return ""
-    ew = max(0.8, d * scale * 0.06)
-    lines = [f'<polygon points="{pts}" fill="{color}" stroke="{edge}" '
-             f'stroke-width="{ew:.1f}" stroke-linejoin="round"/>']
+    # perpendiculaire en coords MONDE, orientée vers le haut (world +y)
+    dx, dy = x2 - x1, y2 - y1
+    L = math.hypot(dx, dy) or 1.0
+    px, py = -dy / L, dx / L
+    if py < 0:
+        px, py = -px, -py
+    mx, my = (x1 + x2) / 2, (y1 + y2) / 2
+    top = _pt(mx + px * d / 2, my + py * d / 2, sx, sy, ox, oy)   # bord éclairé
+    bot = _pt(mx - px * d / 2, my - py * d / 2, sx, sy, ox, oy)   # bord ombré
+
+    _TUBE_ID[0] += 1
+    gid = f"tg{_TUBE_ID[0]}"
+    hi   = _shade(color, 1.55)
+    base = color
+    sh   = _shade(color, 0.55)
+    grad = (
+        f'<linearGradient id="{gid}" gradientUnits="userSpaceOnUse" '
+        f'x1="{top[0]:.1f}" y1="{top[1]:.1f}" x2="{bot[0]:.1f}" y2="{bot[1]:.1f}">'
+        f'<stop offset="0%" stop-color="{hi}"/>'
+        f'<stop offset="18%" stop-color="{_shade(color,1.25)}"/>'
+        f'<stop offset="52%" stop-color="{base}"/>'
+        f'<stop offset="100%" stop-color="{sh}"/>'
+        f'</linearGradient>'
+    )
+    stroke = f' stroke="{edge}" stroke-width="0.6"' if edge else ''
+    out = [grad, f'<polygon points="{pts}" fill="url(#{gid})"{stroke} stroke-linejoin="round"/>']
     if cap_r > 0:
         r_px = cap_r * abs(sx)
         for (xc, yc) in [(x1, y1), (x2, y2)]:
-            sc_x, sc_y = _pt(xc, yc, sx, sy, ox, oy)
-            lines.append(f'<circle cx="{sc_x:.1f}" cy="{sc_y:.1f}" r="{r_px:.1f}" '
-                         f'fill="{color}"/>')
-    return "\n".join(lines)
+            cxp, cyp = _pt(xc, yc, sx, sy, ox, oy)
+            out.append(f'<circle cx="{cxp:.1f}" cy="{cyp:.1f}" r="{r_px:.1f}" fill="url(#{gid})"/>')
+    return "".join(out)
 
 
 def _draw_dim(x1, y1, x2, y2, label, sx, sy, ox, oy, offset_px=20, vertical=False) -> str:
@@ -178,6 +234,102 @@ def _draw_dim(x1, y1, x2, y2, label, sx, sy, ox, oy, offset_px=20, vertical=Fals
 
 # ─── Rendu principal ──────────────────────────────────────────────────────────
 
+def _sprocket(cx, cy, r_pitch, teeth, sx, sy, ox, oy,
+              fill="#aeb4bd", edge="#6c727b", spider=True) -> str:
+    """Plateau/pignon réaliste : silhouette dentée + corps + bras d'araignée."""
+    scx, scy = _pt(cx, cy, sx, sy, ox, oy)
+    r = max(3.0, r_pitch * abs(sx))
+    th = max(1.2, r * 0.085)                 # hauteur de dent
+    N = max(8, int(teeth))
+    pts = []
+    for i in range(N):
+        a0 = 2 * math.pi * i / N
+        am = 2 * math.pi * (i + 0.5) / N
+        pts.append(f"{scx + (r+th)*math.cos(a0):.1f},{scy + (r+th)*math.sin(a0):.1f}")
+        pts.append(f"{scx + (r-th*0.5)*math.cos(am):.1f},{scy + (r-th*0.5)*math.sin(am):.1f}")
+    out = [f'<polygon points="{" ".join(pts)}" fill="{fill}" stroke="{edge}" stroke-width="0.8"/>']
+    # corps + bras d'araignée + axe
+    if spider:
+        out.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{r*0.62:.1f}" fill="{_shade(fill,0.9)}"/>')
+        for k in range(5):
+            a = 2 * math.pi * k / 5
+            ex, ey = scx + r * 0.6 * math.cos(a), scy + r * 0.6 * math.sin(a)
+            out.append(f'<line x1="{scx:.1f}" y1="{scy:.1f}" x2="{ex:.1f}" y2="{ey:.1f}" '
+                       f'stroke="{_shade(fill,0.72)}" stroke-width="{max(2,r*0.13):.1f}" stroke-linecap="round"/>')
+    out.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{r*0.2:.1f}" fill="{_shade(fill,0.6)}" '
+               f'stroke="{edge}" stroke-width="0.6"/>')
+    return "".join(out)
+
+
+import json as _json, os as _os, re as _re
+_SHAPES_PATH = _os.path.join(_os.path.dirname(__file__), "..", "..", "refs", "bikecad_shapes.json")
+try:
+    _BIKECAD_SHAPES = _json.load(open(_SHAPES_PATH, encoding="utf-8"))
+except Exception:
+    _BIKECAD_SHAPES = {}
+
+
+_NPAIRS = {"M": 1, "L": 1, "Q": 2, "C": 3, "Z": 0}
+
+
+def _xform_path(d_local, P):
+    """Réécrit un path SVG (M/L/Q/C/Z absolus) en appliquant P(lx,ly)->(px,py)."""
+    toks = _re.findall(r'[MLCQZ]|-?\d+\.?\d*', d_local)
+    out, i = [], 0
+    while i < len(toks):
+        t = toks[i]
+        if t in _NPAIRS:
+            cmd = t; i += 1
+            if cmd == "Z":
+                out.append("Z"); continue
+            n = _NPAIRS[cmd]; coords = []
+            for k in range(n):
+                px, py = P(float(toks[i + 2*k]), float(toks[i + 2*k + 1]))
+                coords.append(f"{px:.1f} {py:.1f}")
+            i += 2 * n
+            out.append(cmd + " ".join(coords))
+        else:
+            i += 1
+    return " ".join(out)
+
+
+def _draw_motor_bikecad(dt, calc, sx, sy, ox, oy) -> str | None:
+    """Carter moteur avec la FORME EXACTE de BikeCAD (extraite de son code,
+    basic.bafang / basic.bafangM800), transformée mm (y-bas) → monde (y-haut)."""
+    if not dt.motor_key.startswith("bafang"):
+        return None
+    key = "bafangM800" if "m800" in dt.motor_key else "bafang_gearbox"
+    shape = _BIKECAD_SHAPES.get(key)
+    if not shape or not shape.get("area", {}).get("d"):
+        return None
+    ang = math.radians(dt.motor_angle)
+    ca, sa = math.cos(ang), math.sin(ang)
+    bx, by = calc.bb.x + dt.motor_x, calc.bb.y + dt.motor_y
+
+    def P(lx, ly):
+        fx, fy = lx, -ly                      # Java2D y-bas → y-haut
+        wx = bx + fx * ca - fy * sa
+        wy = by + fx * sa + fy * ca
+        return wx * sx + ox, wy * sy + oy
+
+    d = _xform_path(shape["area"]["d"], P)
+    base = PALETTE["motor"]
+    grad = (f'<linearGradient id="motorg" x1="0" y1="0" x2="0" y2="1">'
+            f'<stop offset="0%" stop-color="{_shade(base,1.5)}"/>'
+            f'<stop offset="55%" stop-color="{base}"/>'
+            f'<stop offset="100%" stop-color="{_shade(base,0.55)}"/></linearGradient>')
+    out = [grad, f'<g class="motor">',
+           f'<path d="{d}" fill="url(#motorg)" fill-rule="evenodd" '
+           f'stroke="#10151c" stroke-width="1.4"/>']
+    # lignes de détail (logo/usinage) par-dessus, en plus clair
+    det = shape.get("detail", {}).get("d") if isinstance(shape.get("detail"), dict) else None
+    if det:
+        out.append(f'<path d="{_xform_path(det, P)}" fill="none" '
+                   f'stroke="{_shade(base,1.7)}" stroke-width="0.8" opacity="0.5"/>')
+    out.append("</g>")
+    return "".join(out)
+
+
 def _draw_drivetrain(bike, calc, sx, sy, ox, oy, scale) -> str:
     """Plateau, pignon AR, courroie/chaîne (+ galet), moteur central, manivelle."""
     dt = bike.drivetrain
@@ -196,8 +348,11 @@ def _draw_drivetrain(bike, calc, sx, sy, ox, oy, scale) -> str:
     # sinon rectangle générique. NB : l'enveloppe est en coords MONDE relatives
     # au BB ; on translate par bb avant projection écran.
     if dt.use_motor:
-        env = motor_envelope_world(dt)
-        if env is not None:
+        motor_svg = _draw_motor_bikecad(dt, calc, sx, sy, ox, oy)
+        env = None if motor_svg else motor_envelope_world(dt)
+        if motor_svg:
+            parts.append(motor_svg)
+        elif env is not None:
             pts = " ".join(
                 f"{x:.1f},{y:.1f}" for x, y in
                 (_pt(bb[0] + ex, bb[1] + ey, sx, sy, ox, oy) for ex, ey in env)
@@ -217,26 +372,34 @@ def _draw_drivetrain(bike, calc, sx, sy, ox, oy, scale) -> str:
                 f'fill="{PALETTE["motor"]}" opacity="0.85" />'
             )
 
-    # Manivelle (vers le bas-avant) + axe
-    bx, by = _pt(*bb, sx, sy, ox, oy)
-    crank_len = bike.cranks.crank_length
-    pedal_w = bb[0] + crank_len * 0.5
-    pedal_h = bb[1] - crank_len * 0.87
-    cex, cey = _pt(pedal_w, pedal_h, sx, sy, ox, oy)
-    parts.append(f'<line x1="{bx:.1f}" y1="{by:.1f}" x2="{cex:.1f}" y2="{cey:.1f}" '
-                 f'stroke="{PALETTE["crank"]}" stroke-width="{max(3, 12*scale):.1f}" stroke-linecap="round" />')
-    # Pédale (plateforme, vue de côté ≈ longueur fore/aft)
-    pl = bike.pedals.length
-    pt_th = max(2.5, bike.pedals.thickness * scale)
-    px0, py0 = _pt(pedal_w - pl / 2, pedal_h, sx, sy, ox, oy)
-    parts.append(f'<rect class="pedals" x="{px0:.1f}" y="{py0 - pt_th/2:.1f}" width="{pl*scale:.1f}" '
-                 f'height="{pt_th:.1f}" rx="2" fill="{PALETTE["crank"]}" />')
+    # Plateau (chainring denté) au BB + pignon AR — dessinés AVANT la manivelle
+    parts.append(_sprocket(bb[0], bb[1], r_cr, su.chainring_teeth, sx, sy, ox, oy,
+                           fill=PALETTE["cog"], edge=PALETTE["cog_dark"]))
+    parts.append(_sprocket(axle[0], axle[1], r_cog, su.cog_teeth, sx, sy, ox, oy,
+                           fill=PALETTE["cog"], edge=PALETTE["cog_dark"], spider=False))
 
-    # Plateau et pignon
-    for c, r in ((bb, r_cr), (axle, r_cog)):
-        scx, scy, sr = _circle(c[0], c[1], r, sx, sy, ox, oy)
-        parts.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{sr:.1f}" '
-                     f'fill="none" stroke="{PALETTE["cog"]}" stroke-width="2.5" />')
+    # Manivelle profilée (polygone effilé BB→pédale) + axe + pédale
+    crank_len = bike.cranks.crank_length
+    pe = (bb[0] + crank_len * 0.5, bb[1] - crank_len * 0.87)   # bout de manivelle
+    dx, dy = pe[0] - bb[0], pe[1] - bb[1]
+    dl = math.hypot(dx, dy) or 1.0
+    nx, ny = -dy / dl, dx / dl
+    wb, wp = 24.0, 13.0                       # largeur au BB / à la pédale
+    quad = [(bb[0] + nx*wb/2, bb[1] + ny*wb/2), (pe[0] + nx*wp/2, pe[1] + ny*wp/2),
+            (pe[0] - nx*wp/2, pe[1] - ny*wp/2), (bb[0] - nx*wb/2, bb[1] - ny*wb/2)]
+    qpts = " ".join(f"{p[0]*sx+ox:.1f},{p[1]*sy+oy:.1f}" for p in quad)
+    parts.append(f'<polygon points="{qpts}" fill="{PALETTE["crank"]}" stroke="#000" stroke-width="0.6"/>')
+    # boss de manivelle au BB
+    bcx, bcy = _pt(*bb, sx, sy, ox, oy)
+    parts.append(f'<circle cx="{bcx:.1f}" cy="{bcy:.1f}" r="{16*scale:.1f}" fill="{PALETTE["crank"]}" '
+                 f'stroke="#000" stroke-width="0.6"/>')
+    # pédale (corps + axe)
+    pl = max(80.0, bike.pedals.length)
+    pth = max(14.0, bike.pedals.thickness)
+    pcx, pcy = _pt(pe[0], pe[1], sx, sy, ox, oy)
+    parts.append(f'<rect class="pedals" x="{pcx-pl/2*scale:.1f}" y="{pcy-pth/2*scale:.1f}" '
+                 f'width="{pl*scale:.1f}" height="{pth*scale:.1f}" rx="{3*scale:.1f}" '
+                 f'fill="#101114" stroke="#000" stroke-width="0.6"/>')
 
     # Courroie : brins tangents (haut tendu + bas), via galet si présent
     def tangents(c0, r0, c1, r1):
@@ -286,6 +449,35 @@ def _draw_battery(bike, calc, sx, sy, ox, oy) -> str:
                  f'dominant-baseline="middle" font-size="13" font-family="sans-serif" '
                  f'font-weight="bold" fill="#fff">{label}</text>')
     parts.append("</g>")
+    return "".join(parts)
+
+
+def _draw_lugs(nodes, sx, sy, ox, oy, scale) -> str:
+    """Lugs CNC aux jonctions : manchon (collar) le long de chaque douille +
+    corps central usiné. Montre la construction lug-and-bond du cadre."""
+    if not nodes:
+        return ""
+    metal = PALETTE["lug"]
+    parts = ['<g class="lugs">']
+    for n in nodes:
+        nx, ny = n.x, n.y
+        bores = [s.bore_dia for s in n.sockets] or [40.0]
+        # Manchons : chaque douille = tube métal le long de son axe (longueur = insertion)
+        for s in n.sockets:
+            a = math.radians(s.axis_deg)
+            ex = nx + math.cos(a) * s.depth
+            ey = ny + math.sin(a) * s.depth
+            parts.append(_draw_tube(nx, ny, ex, ey, s.bore_dia + 6.0, metal,
+                                    sx, sy, ox, oy, scale, cap_r=(s.bore_dia + 6.0) / 2))
+        # Corps central du lug (boule usinée)
+        cxp, cyp = _pt(nx, ny, sx, sy, ox, oy)
+        r_hub = (max(bores) / 2 + 7.0) * abs(sx)
+        parts.append(f'<circle cx="{cxp:.1f}" cy="{cyp:.1f}" r="{r_hub:.1f}" '
+                     f'fill="{metal}" stroke="{PALETTE["lug_edge"]}" stroke-width="0.8"/>')
+        # reflet
+        parts.append(f'<circle cx="{cxp-r_hub*0.3:.1f}" cy="{cyp-r_hub*0.3:.1f}" '
+                     f'r="{r_hub*0.32:.1f}" fill="#e8ebef" opacity="0.5"/>')
+    parts.append('</g>')
     return "".join(parts)
 
 
@@ -342,10 +534,10 @@ def _draw_rider(fit, sx, sy, ox, oy) -> str:
 
 def _draw_suspension(frames, wheel_r_r, sx, sy, ox, oy, scale,
                      animate=False, period=4.0) -> str:
-    """Overlay biellette de suspension (pivots, bielles, amortisseur, galet, roue AR).
+    """Overlay CLAIR de la biellette : bielles colorées épaisses, amortisseur
+    (corps + tige + œillets) qui se comprime, pivots marqués, jante AR mobile.
 
-    `frames` = liste KinematicsResult.frames (géométrie monde par pas de course).
-    Statique → dessine la frame de sag (~30 %). Animé → SMIL ping-pong topout↔talon.
+    `frames` = KinematicsResult.frames. Statique → frame de sag. Animé → SMIL.
     """
     if not frames:
         return ""
@@ -354,90 +546,97 @@ def _draw_suspension(frames, wheel_r_r, sx, sy, ox, oy, scale,
         return (pt[0] * sx + ox, pt[1] * sy + oy)
 
     def vals(seq):
-        # ping-pong : aller + retour (sans dupliquer les extrémités)
         full = list(seq) + list(reversed(seq[:-1]))
         return ";".join(f"{v:.1f}" for v in full)
 
-    acc = "#e84393"   # rose accent (pivots/bielles mobiles)
-    sh  = "#00b894"   # amortisseur
-    parts = ['<g class="suspension">']
-    anim = (f'<animate attributeName="{{a}}" values="{{v}}" '
-            f'dur="{period}s" repeatCount="indefinite" />')
+    anim_simple = f'<animate attributeName="{{a}}" values="{{v}}" dur="{period}s" repeatCount="indefinite"/>'
 
-    # Frame de référence pour l'affichage statique : ~sag (30 %)
-    sag_i = max(range(len(frames)), key=lambda i: 0) if False else \
-            min(range(len(frames)), key=lambda i: abs(frames[i]["travel"] -
-                (frames[-1]["travel"] * 0.3)))
+    sag_i = min(range(len(frames)),
+                key=lambda i: abs(frames[i]["travel"] - frames[-1]["travel"] * 0.3))
     ref = frames[sag_i]
-
     n_links = len(ref["links"])
-    # ── Bielles ──────────────────────────────────────────────────────────────
-    for li in range(n_links):
+    LINK_COL = (["#e67e22"] if n_links == 1
+                else ["#e67e22", "#2e86de", "#8e44ad", "#16a085"])[:n_links]
+    parts = ['<g class="suspension">']
+
+    def aline(getter, color, w):
+        """Ligne animée (ou statique au sag) : getter(frame)->((x1,y1),(x2,y2))."""
         if animate:
-            x1 = [P(fr["links"][li][0])[0] for fr in frames]
-            y1 = [P(fr["links"][li][0])[1] for fr in frames]
-            x2 = [P(fr["links"][li][1])[0] for fr in frames]
-            y2 = [P(fr["links"][li][1])[1] for fr in frames]
+            a1 = [P(getter(fr)[0]) for fr in frames]
+            a2 = [P(getter(fr)[1]) for fr in frames]
             parts.append(
-                f'<line stroke="{acc}" stroke-width="4" stroke-linecap="round" opacity="0.9">'
-                + anim.format(a="x1", v=vals(x1)) + anim.format(a="y1", v=vals(y1))
-                + anim.format(a="x2", v=vals(x2)) + anim.format(a="y2", v=vals(y2))
-                + '</line>')
+                f'<line stroke="{color}" stroke-width="{w}" stroke-linecap="round" opacity="0.95">'
+                + anim_simple.format(a="x1", v=vals([p[0] for p in a1]))
+                + anim_simple.format(a="y1", v=vals([p[1] for p in a1]))
+                + anim_simple.format(a="x2", v=vals([p[0] for p in a2]))
+                + anim_simple.format(a="y2", v=vals([p[1] for p in a2])) + '</line>')
         else:
-            a, b = P(ref["links"][li][0]), P(ref["links"][li][1])
-            parts.append(f'<line x1="{a[0]:.1f}" y1="{a[1]:.1f}" x2="{b[0]:.1f}" y2="{b[1]:.1f}" '
-                         f'stroke="{acc}" stroke-width="4" stroke-linecap="round" opacity="0.9"/>')
+            p1, p2 = P(getter(ref)[0]), P(getter(ref)[1])
+            parts.append(f'<line x1="{p1[0]:.1f}" y1="{p1[1]:.1f}" x2="{p2[0]:.1f}" y2="{p2[1]:.1f}" '
+                         f'stroke="{color}" stroke-width="{w}" stroke-linecap="round" opacity="0.95"/>')
 
-    # ── Amortisseur ──────────────────────────────────────────────────────────
+    def adot(getter, r, fill, stroke="#fff", sw=2.0):
+        if animate:
+            pts = [P(getter(fr)) for fr in frames]
+            parts.append(f'<circle r="{r}" fill="{fill}" stroke="{stroke}" stroke-width="{sw}">'
+                         + anim_simple.format(a="cx", v=vals([p[0] for p in pts]))
+                         + anim_simple.format(a="cy", v=vals([p[1] for p in pts])) + '</circle>')
+        else:
+            p = P(getter(ref))
+            parts.append(f'<circle cx="{p[0]:.1f}" cy="{p[1]:.1f}" r="{r}" fill="{fill}" '
+                         f'stroke="{stroke}" stroke-width="{sw}"/>')
+
+    # ── Jante AR mobile (anneau accent, lisible) + axe ───────────────────────
+    rim = wheel_r_r * 0.84 * abs(sx)
     if animate:
-        sx1 = [P(fr["shock"][0])[0] for fr in frames]; sy1 = [P(fr["shock"][0])[1] for fr in frames]
-        sx2 = [P(fr["shock"][1])[0] for fr in frames]; sy2 = [P(fr["shock"][1])[1] for fr in frames]
-        parts.append(
-            f'<line stroke="{sh}" stroke-width="7" stroke-linecap="round" opacity="0.85">'
-            + anim.format(a="x1", v=vals(sx1)) + anim.format(a="y1", v=vals(sy1))
-            + anim.format(a="x2", v=vals(sx2)) + anim.format(a="y2", v=vals(sy2)) + '</line>')
+        pts = [P(fr["axle"]) for fr in frames]
+        parts.append(f'<circle r="{rim:.1f}" fill="none" stroke="#e84393" stroke-width="3" opacity="0.55">'
+                     + anim_simple.format(a="cx", v=vals([p[0] for p in pts]))
+                     + anim_simple.format(a="cy", v=vals([p[1] for p in pts])) + '</circle>')
     else:
-        a, b = P(ref["shock"][0]), P(ref["shock"][1])
-        parts.append(f'<line x1="{a[0]:.1f}" y1="{a[1]:.1f}" x2="{b[0]:.1f}" y2="{b[1]:.1f}" '
-                     f'stroke="{sh}" stroke-width="7" stroke-linecap="round" opacity="0.85"/>')
+        a = P(ref["axle"])
+        parts.append(f'<circle cx="{a[0]:.1f}" cy="{a[1]:.1f}" r="{rim:.1f}" '
+                     f'fill="none" stroke="#e84393" stroke-width="3" opacity="0.55"/>')
 
-    # ── Roue arrière fantôme (cercle) + axe ──────────────────────────────────
-    rr = wheel_r_r * abs(sx)
-    if animate:
-        cxs = [P(fr["axle"])[0] for fr in frames]; cys = [P(fr["axle"])[1] for fr in frames]
-        parts.append(
-            f'<circle r="{rr:.1f}" fill="none" stroke="{acc}" stroke-width="2" opacity="0.5">'
-            + anim.format(a="cx", v=vals(cxs)) + anim.format(a="cy", v=vals(cys)) + '</circle>')
-        parts.append(
-            f'<circle r="6" fill="{acc}">'
-            + anim.format(a="cx", v=vals(cxs)) + anim.format(a="cy", v=vals(cys)) + '</circle>')
-    else:
-        ax = P(ref["axle"])
-        parts.append(f'<circle cx="{ax[0]:.1f}" cy="{ax[1]:.1f}" r="{rr:.1f}" '
-                     f'fill="none" stroke="{acc}" stroke-width="2" opacity="0.5"/>')
-        parts.append(f'<circle cx="{ax[0]:.1f}" cy="{ax[1]:.1f}" r="6" fill="{acc}"/>')
+    # ── Bielles colorées (chainstay/seatstay/rocker) ─────────────────────────
+    for li in range(n_links):
+        aline(lambda fr, li=li: fr["links"][li], LINK_COL[li], 6)
 
-    # ── Galet (si présent) ────────────────────────────────────────────────────
+    # ── Amortisseur : corps + tige + œillets (se comprime) ───────────────────
+    up0, lo0 = ref["shock"][1], ref["shock"][0]
+    body_len = 0.5 * math.hypot(frames[0]["shock"][0][0] - frames[0]["shock"][1][0],
+                                frames[0]["shock"][0][1] - frames[0]["shock"][1][1])
+
+    def body_end(fr):
+        up, lo = fr["shock"][1], fr["shock"][0]
+        d = math.hypot(lo[0] - up[0], lo[1] - up[1]) or 1.0
+        u = ((lo[0] - up[0]) / d, (lo[1] - up[1]) / d)
+        return (up[0] + u[0] * body_len, up[1] + u[1] * body_len)
+    # tige (fine) : corps→œillet bas ; corps (épais) : œillet haut→corps
+    aline(lambda fr: (body_end(fr), fr["shock"][0]), "#cfd6df", 4)      # tige argent
+    aline(lambda fr: (fr["shock"][1], body_end(fr)), "#16a085", 11)     # corps amorto
+    adot(lambda fr: fr["shock"][0], 5, "#0e6b57")                       # œillet bas (mobile)
+
+    # ── Galet (si présent) ───────────────────────────────────────────────────
     if ref.get("idler"):
-        if animate and all(fr.get("idler") for fr in frames):
-            ixs = [P(fr["idler"])[0] for fr in frames]; iys = [P(fr["idler"])[1] for fr in frames]
-            parts.append(f'<circle r="5" fill="{sh}" opacity="0.9">'
-                         + anim.format(a="cx", v=vals(ixs)) + anim.format(a="cy", v=vals(iys)) + '</circle>')
-        else:
-            ip = P(ref["idler"])
-            parts.append(f'<circle cx="{ip[0]:.1f}" cy="{ip[1]:.1f}" r="5" fill="{sh}" opacity="0.9"/>')
+        adot(lambda fr: fr["idler"], 5, "#16a085")
 
-    # ── Pivots fixes (cadre) : premiers points des bielles à la frame topout ──
-    fixed = []
+    # ── Pivots MOBILES (extrémités des bielles, hors pivots-cadre) ───────────
+    # début link0 = main (fixe), fin dernier link = cadre (fixe) ; les autres bougent
+    for li in range(n_links):
+        # extrémité « fin » de chaque bielle (sauf la dernière = pivot cadre)
+        if li < n_links - 1:
+            adot(lambda fr, li=li: fr["links"][li][1], 6, "#c0392b")
+
+    # ── Pivots FIXES au cadre (carrés blancs cerclés) ────────────────────────
     f0 = frames[0]
-    fixed.append(f0["links"][0][0])                 # main pivot (début 1re bielle)
+    fixed = [f0["links"][0][0], f0["shock"][1]]
     if n_links >= 3:
-        fixed.append(f0["links"][2][1])             # rocker/cadre (fin 3e bielle)
-    fixed.append(f0["shock"][1])                     # amorto haut (cadre)
+        fixed.append(f0["links"][2][1])
     for fp in fixed:
-        sp = P(fp)
-        parts.append(f'<circle cx="{sp[0]:.1f}" cy="{sp[1]:.1f}" r="5" '
-                     f'fill="#2d3436" stroke="#fff" stroke-width="1.5"/>')
+        p = P(fp)
+        parts.append(f'<rect x="{p[0]-5:.1f}" y="{p[1]-5:.1f}" width="10" height="10" '
+                     f'fill="#1b2330" stroke="#fff" stroke-width="2"/>')
 
     parts.append("</g>")
     return "".join(parts)
@@ -446,7 +645,8 @@ def _draw_suspension(frames, wheel_r_r, sx, sy, ox, oy, scale,
 def render_svg(bike: BikeDesign, calc: CalcResult,
                width: int = 1400, height: int = 750,
                show_dims: bool = True, fit=None,
-               suspension=None, animate_suspension=False) -> str:
+               suspension=None, animate_suspension=False, lugs=None) -> str:
+    _TUBE_ID[0] = 0
     f = bike.frame
     fk = bike.fork
 
@@ -526,7 +726,7 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
 
     # === ROUES ===============================================================
     # Dessinées en premier (derrière le cadre)
-    parts.append(_draw_wheel(ra.x, ra.y, wheel_r_r, rim_r_r, n_sp_r, sx, sy, ox, oy))
+    parts.append(_draw_wheel(ra.x, ra.y, wheel_r_r, rim_r_r, n_sp_r, sx, sy, ox, oy, cassette=True))
     parts.append(_draw_wheel(fa.x, fa.y, wheel_r_f, rim_r_f, n_sp_f, sx, sy, ox, oy))
 
     # === FREINS (disques) ====================================================
@@ -557,52 +757,37 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
     parts.append(_draw_tube(cr.x, cr.y, ht.x, ht.y, f.head_tube_d,
                             PALETTE["crown"], sx, sy, ox, oy, scale_f, cap_r=f.head_tube_d/2))
 
-    # === FOURCHE =============================================================
+    # === FOURCHE (silhouette UNIQUE, vue de profil — comme BikeCAD) ==========
     hta = math.radians(f.head_angle)
-    # Décalage latéral des tubes de fourche (±40mm)
-    fork_offset_lateral = 35.0
-    nfx =  math.sin(hta) * fork_offset_lateral
-    nfy = -math.cos(hta) * fork_offset_lateral
+    # direction transversale à l'axe de direction (pour dessiner les couronnes)
+    perp_x, perp_y = math.sin(hta), math.cos(hta)
+    cw = 60.0                       # largeur de couronne (vue de profil)
+    blade = fk.blade_width
+    stan  = blade * 0.66            # plongeur plus fin que le fourreau
+
+    def _crown_block(c):
+        parts.append(_draw_tube(c.x - perp_x * cw / 2, c.y - perp_y * cw / 2,
+                                c.x + perp_x * cw / 2, c.y + perp_y * cw / 2, 24.0,
+                                PALETTE["crown"], sx, sy, ox, oy, scale_f, cap_r=12.0))
 
     if fk.dual_crown:
-        # Couronne basse (crown) → axe AV : deux jambes
-        for sign in [+1, -1]:
-            lx1 = cr.x + sign * nfx
-            ly1 = cr.y + sign * nfy
-            lx2 = fa.x + sign * nfx * 0.5
-            ly2 = fa.y + sign * nfy * 0.5
-            parts.append(_draw_tube(lx1, ly1, lx2, ly2, fk.blade_width,
-                                    PALETTE["fork"], sx, sy, ox, oy, scale_f))
-        # Axe avant (cross bar basse couronne)
-        parts.append(_draw_tube(cr.x - nfx, cr.y - nfy,
-                                cr.x + nfx, cr.y + nfy, 20.0,
-                                PALETTE["crown"], sx, sy, ox, oy, scale_f))
-        # Tubes plongeurs (stanchions) : couronne haute → couronne basse
-        upper_crown_x = ht.x
-        upper_crown_y = ht.y
-        for sign in [+1, -1]:
-            sx1 = upper_crown_x + sign * nfx * 0.4
-            sy1 = upper_crown_y + sign * nfy * 0.4
-            sx2 = cr.x + sign * nfx
-            sy2 = cr.y + sign * nfy
-            parts.append(_draw_tube(sx1, sy1, sx2, sy2, fk.blade_width * 0.7,
-                                    PALETTE["fork"], sx, sy, ox, oy, scale_f))
-        # Couronne haute (cross bar)
-        parts.append(_draw_tube(ht.x - nfx * 0.4, ht.y - nfy * 0.4,
-                                ht.x + nfx * 0.4, ht.y + nfy * 0.4, 20.0,
-                                PALETTE["crown"], sx, sy, ox, oy, scale_f))
+        # plongeurs (argent) entre couronne haute (ht) et basse (cr)
+        parts.append(_draw_tube(ht.x, ht.y, cr.x, cr.y, stan,
+                                PALETTE["stanchion"], sx, sy, ox, oy, scale_f))
+        # fourreau (noir) de la couronne basse à l'axe
+        parts.append(_draw_tube(cr.x, cr.y, fa.x, fa.y, blade,
+                                PALETTE["fork_low"], sx, sy, ox, oy, scale_f, cap_r=blade/2))
+        _crown_block(ht); _crown_block(cr)
     else:
-        # Fourche simple couronne
-        for sign in [+1, -1]:
-            lx1 = cr.x + sign * nfx
-            ly1 = cr.y + sign * nfy
-            lx2 = fa.x + sign * nfx * 0.5
-            ly2 = fa.y
-            parts.append(_draw_tube(lx1, ly1, lx2, ly2, fk.blade_width,
-                                    PALETTE["fork"], sx, sy, ox, oy, scale_f))
-        parts.append(_draw_tube(cr.x - nfx, cr.y - nfy,
-                                cr.x + nfx, cr.y + nfy, 18.0,
-                                PALETTE["crown"], sx, sy, ox, oy, scale_f))
+        # simple couronne : plongeur (haut, argent) + fourreau (bas, noir),
+        # split à ~42 % de la longueur couronne→axe.
+        mfx = cr.x + (fa.x - cr.x) * 0.42
+        mfy = cr.y + (fa.y - cr.y) * 0.42
+        parts.append(_draw_tube(cr.x, cr.y, mfx, mfy, stan,
+                                PALETTE["stanchion"], sx, sy, ox, oy, scale_f))
+        parts.append(_draw_tube(mfx, mfy, fa.x, fa.y, blade,
+                                PALETTE["fork_low"], sx, sy, ox, oy, scale_f, cap_r=blade/2))
+        _crown_block(cr)
 
     # === BB shell =============================================================
     bb_svgx, bb_svgy, bb_svgr = _circle(bb.x, bb.y, f.bb_shell_d / 2, sx, sy, ox, oy)
@@ -721,6 +906,10 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
 
     # === TRANSMISSION (plateau, courroie, moteur, manivelle) =================
     parts.append(_draw_drivetrain(bike, calc, sx, sy, ox, oy, scale_f))
+
+    # === LUGS (jonctions CNC lug-and-bond) ===================================
+    if lugs:
+        parts.append(_draw_lugs(lugs, sx, sy, ox, oy, scale_f))
 
     # === BATTERIE (pack dans le triangle avant) ==============================
     if bike.battery.enabled:

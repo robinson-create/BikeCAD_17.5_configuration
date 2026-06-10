@@ -7,7 +7,8 @@ export async function fetchDefault() {
 }
 
 export async function calcAndRender(bike, width = 1400, height = 750, showDims = true,
-                                    showRider = false, showSuspension = false, animateSuspension = false) {
+                                    showRider = false, showSuspension = false,
+                                    animateSuspension = false, showLugs = false) {
   const r = await fetch(`${BASE}/render/svg`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -15,6 +16,7 @@ export async function calcAndRender(bike, width = 1400, height = 750, showDims =
       bike, width, height,
       show_dims: showDims, show_rider: showRider,
       show_suspension: showSuspension, animate_suspension: animateSuspension,
+      show_lugs: showLugs,
     }),
   })
   if (!r.ok) throw new Error(await r.text())
@@ -117,6 +119,25 @@ export async function exportDxf(bike, opts = {}) {
   document.body.appendChild(a)
   a.click()
   a.remove()
+  URL.revokeObjectURL(url)
+  return { ok: true }
+}
+
+export async function exportDrawing(bike) {
+  // Plan technique SVG (cotation, axes, visserie, lugs, cartouche) → téléchargement.
+  const r = await fetch(`${BASE}/export/drawing`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ bike }),
+  })
+  if (!r.ok) throw new Error(await r.text())
+  const text = await r.text()
+  const blob = new Blob([text], { type: 'image/svg+xml' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${(bike?.name ?? 'bike').replace(/\s+/g, '_')}_plan.svg`
+  document.body.appendChild(a); a.click(); a.remove()
   URL.revokeObjectURL(url)
   return { ok: true }
 }

@@ -12,9 +12,11 @@
 
   const SUGGESTIONS = [
     'Passe en high-pivot M620 et vérifie le dégagement moteur',
-    'Règle le reach à 480 mm',
-    'Pourquoi le belt growth est-il élevé ?',
-    'Mets l\'angle de direction à 63,5° et le débattement à 170',
+    'Calcule le sag pour une raideur de 500 N/mm',
+    'Quelle raideur pour 28 % de sag ?',
+    'Montre-moi les axes de roue et le chemin d\'axe arrière',
+    'Cherche dans la banque : courroie Gates et belt growth',
+    'Règle le reach à 480 mm et l\'angle de direction à 63,5°',
   ]
 
   onMount(async () => { available = await assistantAvailable() })

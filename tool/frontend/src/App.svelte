@@ -1,8 +1,8 @@
 <script>
   import { onMount } from 'svelte'
   import { activeTab, TABS, bike, scheduleRefresh, viewMode, showDims,
-           showSuspension, animateSuspension } from './lib/store.js'
-  import { fetchDefault, loadBcad, exportBcad, exportDxf, exportLugs, listBikes,
+           showSuspension, animateSuspension, showLugs } from './lib/store.js'
+  import { fetchDefault, loadBcad, exportBcad, exportDxf, exportLugs, exportDrawing, listBikes,
            saveBikeLibrary, listLibrary, loadLibrary } from './lib/api.js'
   import BikeRenderer from './BikeRenderer.svelte'
   import CatalogSelect from './lib/CatalogSelect.svelte'
@@ -124,6 +124,16 @@
     setTimeout(() => status = '', 2000)
   }
 
+  async function handleExportDrawing() {
+    try {
+      await exportDrawing($bike)
+      status = 'Plan technique téléchargé ✓'
+    } catch {
+      status = 'Erreur plan'
+    }
+    setTimeout(() => status = '', 2500)
+  }
+
   async function handleBikeSelect(e) {
     const path = e.target.value
     if (!path) return
@@ -159,6 +169,7 @@
         <button class="btn" on:click={handleExportBcad} title="Fichier .bcad (Free-safe par défaut)">.bcad</button>
         <button class="btn" on:click={handleExportDxf} title="DXF 2D pour SolidWorks">DXF</button>
         <button class="btn" on:click={handleExportLugs} title="Table de conception des lugs">Lugs</button>
+        <button class="btn" on:click={handleExportDrawing} title="Plan technique coté (axes, visserie, cartouche)">📐 Plan</button>
       </div>
 
       <!-- Groupe : affichage (toggles segmentés) -->
@@ -171,6 +182,8 @@
             on:click={() => { $showSuspension = !$showSuspension; $bike && scheduleRefresh($bike) }}>Suspension</button>
           <button class="tg" class:on={$animateSuspension} disabled={!$showSuspension}
             on:click={() => { $animateSuspension = !$animateSuspension; $bike && scheduleRefresh($bike) }}>▶ Animer</button>
+          <button class="tg" class:on={$showLugs}
+            on:click={() => { $showLugs = !$showLugs; $bike && scheduleRefresh($bike) }}>Lugs</button>
         </div>
       </div>
 
