@@ -141,6 +141,23 @@ def battery_endpoint(bike: BikeDesign):
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
+@app.post("/api/transmission")
+def transmission_endpoint(bike: BikeDesign):
+    """Transmission : dérailleur/IGH, étendue, garde-fou couple moyeu."""
+    from .calculations.transmission import compute_transmission
+    try:
+        return compute_transmission(bike)
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.get("/api/igh")
+def igh_list():
+    """Catalogue des moyeux à vitesses intégrées sélectionnables."""
+    from .models.bike import IGH_TYPES
+    return [{"key": k, **v} for k, v in IGH_TYPES.items()]
+
+
 @app.post("/api/fit")
 def fit_endpoint(bike: BikeDesign) -> FitResult:
     """Calcule le fit pilote (angles articulaires, KOPS, reach/drop)."""

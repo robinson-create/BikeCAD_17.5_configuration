@@ -8,7 +8,8 @@
 
 <section class="panel">
   <h3>Pédalier</h3>
-  <Diagram src="CRANKDIMS.png" caption="Cotes pédalier (A,B,C,D…)" />
+  <Diagram src="CRANKDIMS.png" caption="Cotes pédalier"
+    legend={[{k:'Q', v:'Q-factor (largeur de pédalage)'}]} />
   <CatalogSelect category="cranks" />
 
   <fieldset>
@@ -21,7 +22,7 @@
       <input type="number" step="2.5" value={cr.crank_length ?? 165}
         on:change={e => upd({ crank_length: +e.target.value })} />
     </label>
-    <label>Q-factor (mm)
+    <label><span class="dimkey">Q</span>Q-factor (mm)
       <input type="number" step="1" value={cr.q_factor ?? 168}
         on:change={e => upd({ q_factor: +e.target.value })} />
     </label>

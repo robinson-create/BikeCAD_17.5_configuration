@@ -8,17 +8,18 @@
 
 <section class="panel">
   <h3>Potence</h3>
-  <Diagram src="stemconst.png" caption="Géométrie potence" />
+  <Diagram src="stemconst.png" caption="Géométrie potence"
+    legend={[{k:'J', v:'Longueur potence'}, {k:'M', v:'Angle potence'}]} />
   <CatalogSelect category="stem" />
   <CatalogSelect category="headset" label="📚 Jeu de direction" />
 
   <fieldset>
     <legend>Dimensions (mm / °)</legend>
-    <label>Longueur (mm)
+    <label><span class="dimkey">J</span>Longueur (mm)
       <input type="number" step="1" value={st.length ?? 50}
         on:change={e => upd({ length: +e.target.value })} />
     </label>
-    <label>Angle (°, + = relevé)
+    <label><span class="dimkey">M</span>Angle (°, + = relevé)
       <input type="number" step="0.5" value={st.angle ?? 6}
         on:change={e => upd({ angle: +e.target.value })} />
     </label>

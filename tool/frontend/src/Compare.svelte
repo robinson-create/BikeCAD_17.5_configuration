@@ -72,22 +72,22 @@
 </div>
 
 <style>
-  .cmp-wrap { height: 100%; overflow-y: auto; background: #1a1a2e; border-radius: 4px; padding: 12px; }
+  .cmp-wrap { height: 100%; overflow-y: auto; background: var(--surface); border-radius: var(--radius); padding: 12px; }
   .cmp-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
-  .cmp-head button { padding: 6px 14px; background: #1e3a5f; color: #8ecae6; border: 1px solid #3a5a8f; border-radius: 4px; cursor: pointer; font-size: .8rem; }
-  .ref-name { color: #e8851a; font-size: .8rem; }
-  .placeholder { color: #555; }
+  .cmp-head button { padding: 6px 14px; background: var(--accent-soft); color: var(--accent); border: 1px solid var(--border-strong); border-radius: var(--radius); cursor: pointer; font-size: .8rem; }
+  .ref-name { color: var(--brand); font-size: .8rem; }
+  .placeholder { color: var(--text-muted); }
   table.cmp { width: 100%; border-collapse: collapse; max-width: 640px; }
-  table.cmp th { text-align: right; padding: 6px 10px; font-size: .72rem; color: #8ecae6; border-bottom: 1px solid #3a3a5a; text-transform: uppercase; }
+  table.cmp th { text-align: right; padding: 6px 10px; font-size: .72rem; color: var(--accent); border-bottom: 1px solid var(--border-strong); text-transform: uppercase; }
   table.cmp th:first-child { text-align: left; }
-  table.cmp td { padding: 4px 10px; font-size: .8rem; border-bottom: 1px solid #23233a; text-align: right; font-variant-numeric: tabular-nums; }
-  table.cmp td.l { text-align: left; color: #aab; }
-  table.cmp td.v { color: #fff; font-weight: 600; }
-  table.cmp td.r { color: #99a; }
-  .u { color: #667; font-size: .7rem; }
-  tr.section td.l { color: #778; font-style: italic; }
-  td.d { color: #778; }
-  td.d.pos { color: #4caf50; }
-  td.d.neg { color: #e8851a; }
-  .hint { color: #667; font-size: .74rem; margin-top: 12px; font-style: italic; }
+  table.cmp td { padding: 4px 10px; font-size: .8rem; border-bottom: 1px solid var(--border); text-align: right; font-variant-numeric: tabular-nums; }
+  table.cmp td.l { text-align: left; color: var(--text-muted); }
+  table.cmp td.v { color: var(--text); font-weight: 600; }
+  table.cmp td.r { color: var(--text-muted); }
+  .u { color: var(--text-muted); font-size: .7rem; }
+  tr.section td.l { color: var(--text-muted); font-style: italic; }
+  td.d { color: var(--text-muted); }
+  td.d.pos { color: var(--ok); }
+  td.d.neg { color: var(--brand); }
+  .hint { color: var(--text-muted); font-size: .74rem; margin-top: 12px; font-style: italic; }
 </style>

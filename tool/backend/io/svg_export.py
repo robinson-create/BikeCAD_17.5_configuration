@@ -132,12 +132,18 @@ def _draw_wheel(cx: float, cy: float, r_tire: float, r_rim: float,
     # Jante : un seul anneau argent fin
     L.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{sr_rim-rim_w/2:.1f}" fill="none" '
              f'stroke="{PALETTE["rim"]}" stroke-width="{rim_w:.1f}"/>')
-    # Cassette (roue AR) : 2 cercles discrets intégrés
+    # Cassette (roue AR, dérailleur) : pile de pignons = anneaux concentriques
+    # décroissants (tip de denture par cog), alternés clair/sombre pour le relief.
     if cassette:
-        for rr in (40, 30):
+        radii = [50, 45, 41, 37, 33, 29, 25, 21, 18]
+        # disque de fond (corps de cassette) légèrement teinté
+        _, _, sc0 = _circle(cx, cy, radii[0], sx, sy, ox, oy)
+        L.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{sc0:.1f}" fill="{PALETTE["cog"]}" opacity="0.35"/>')
+        for i, rr in enumerate(radii):
             _, _, scr = _circle(cx, cy, rr, sx, sy, ox, oy)
+            col = PALETTE["cog"] if i % 2 == 0 else PALETTE["cog_dark"]
             L.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{scr:.1f}" fill="none" '
-                     f'stroke="{PALETTE["cog_dark"]}" stroke-width="1.0"/>')
+                     f'stroke="{col}" stroke-width="2.0"/>')
     # Moyeu : flasque + corps + axe (compact)
     L.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{sr_fl:.1f}" fill="{PALETTE["hub"]}" '
              f'stroke="#222" stroke-width="0.8"/>')
@@ -322,7 +328,11 @@ def _draw_motor_bikecad(dt, calc, sx, sy, ox, oy) -> str | None:
     bx, by = calc.bb.x + dt.motor_x, calc.bb.y + dt.motor_y
 
     def P(lx, ly):
-        fx, fy = lx, -ly                      # Java2D y-bas → y-haut
+        # PAS de flip Y : la forme getGArea est déjà dans un repère y-haut →
+        # flipper la mettait à l'ENVERS (bossages de fixation vers le bas). Vérifié
+        # visuellement : sans flip, le carter pointe vers l'avant, les bossages de
+        # fixation vers le HAUT (vers le tube diagonal), ailettes vers l'avant.
+        fx, fy = lx, ly
         wx = bx + fx * ca - fy * sa
         wy = by + fx * sa + fy * ca
         return wx * sx + ox, wy * sy + oy
@@ -491,14 +501,18 @@ def _draw_drivetrain(bike, calc, sx, sy, ox, oy, scale) -> str:
         nx, ny = -dy/d, dx/d
         return [((c0[0]+s*r0*nx, c0[1]+s*r0*ny), (c1[0]+s*r1*nx, c1[1]+s*r1*ny)) for s in (+1, -1)]
 
+    # Le galet de renvoi n'a de sens (et ne dévie le brin) que pour un single-pivot
+    # HAUT (high_pivot_idler). Sur un four-bar classique, on route en direct
+    # BB→pignon (sinon le galet crée un coude parasite sous le pédalier).
     segs = []
-    if su.use_idler and dt.drive_type == "belt":
+    use_idler = su.use_idler and dt.drive_type == "belt" and su.linkage_type == "high_pivot_idler"
+    if use_idler:
         idler = (su.idler.x, su.idler.y); r_id = su.idler_dia / 2
         segs += tangents(bb, r_cr, idler, r_id)
         segs += tangents(idler, r_id, axle, r_cog)
         icx, icy, isr = _circle(idler[0], idler[1], r_id, sx, sy, ox, oy)
         parts.append(f'<circle cx="{icx:.1f}" cy="{icy:.1f}" r="{isr:.1f}" '
-                     f'fill="{PALETTE["cog"]}" opacity="0.7" />')
+                     f'fill="{PALETTE["cog"]}" stroke="{PALETTE["cog_dark"]}" stroke-width="1"/>')
     else:
         segs += tangents(bb, r_cr, axle, r_cog)
 
@@ -905,9 +919,23 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
             )
 
     # === ROUES ===============================================================
-    # Dessinées en premier (derrière le cadre)
-    parts.append(_draw_wheel(ra.x, ra.y, wheel_r_r, rim_r_r, n_sp_r, sx, sy, ox, oy, cassette=True))
+    # Dessinées en premier (derrière le cadre). Cassette seulement si dérailleur.
+    is_igh = bike.drivetrain.transmission == "igh"
+    parts.append(_draw_wheel(ra.x, ra.y, wheel_r_r, rim_r_r, n_sp_r, sx, sy, ox, oy,
+                             cassette=not is_igh))
     parts.append(_draw_wheel(fa.x, fa.y, wheel_r_f, rim_r_f, n_sp_f, sx, sy, ox, oy))
+
+    # === MOYEU À VITESSES (IGH : Rohloff / 3X3) — gros corps de moyeu ==========
+    if is_igh:
+        hcx, hcy, hr = _circle(ra.x, ra.y, 56.0, sx, sy, ox, oy)
+        parts.append(f'<circle cx="{hcx:.1f}" cy="{hcy:.1f}" r="{hr:.1f}" fill="{PALETTE["hub"]}" '
+                     f'stroke="#222" stroke-width="1.2"/>')
+        _, _, hr2 = _circle(ra.x, ra.y, 44.0, sx, sy, ox, oy)
+        parts.append(f'<circle cx="{hcx:.1f}" cy="{hcy:.1f}" r="{hr2:.1f}" fill="none" '
+                     f'stroke="{_shade(PALETTE["hub"],0.8)}" stroke-width="1.5"/>')
+        _, _, hr3 = _circle(ra.x, ra.y, 30.0, sx, sy, ox, oy)
+        parts.append(f'<circle cx="{hcx:.1f}" cy="{hcy:.1f}" r="{hr3:.1f}" fill="{_shade(PALETTE["hub"],1.15)}" '
+                     f'stroke="#333" stroke-width="0.8"/>')
 
     # === FREINS (disques) ====================================================
     parts.append(_draw_brakes(bike, calc, sx, sy, ox, oy))
@@ -997,29 +1025,46 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
     parts.append(_draw_tube(stt.x, stt.y, sp_end_x, sp_end_y, bike.seatpost.diameter,
                             PALETTE["seatpost"], sx, sy, ox, oy, scale_f, cap_r=bike.seatpost.diameter/2))
 
-    # === SELLE (silhouette posée sur la tige) ================================
-    L_sdl = max(240.0, bike.saddle.length)
-    thk = max(28.0, bike.saddle.thickness)
-    cx_s = sp_end_x - L_sdl * 0.12          # centre un peu en arrière de la tige
-    top = sp_end_y + thk * 0.35             # coque juste au-dessus de la tige
-    tail = W(cx_s - L_sdl * 0.46, top)
-    tail_dn = W(cx_s - L_sdl * 0.46, top - thk * 0.7)
-    nose = W(cx_s + L_sdl * 0.55, top - thk * 0.15)
-    midtop = W(cx_s + L_sdl * 0.05, top + thk * 0.25)
-    midbot = W(cx_s + L_sdl * 0.05, top - thk * 0.55)
-    parts.append(
-        f'<path d="M {tail[0]:.0f},{tail[1]:.0f} '
-        f'Q {midtop[0]:.0f},{midtop[1]:.0f} {nose[0]:.0f},{nose[1]:.0f} '
-        f'Q {midbot[0]:.0f},{midbot[1]:.0f} {tail_dn[0]:.0f},{tail_dn[1]:.0f} Z" '
-        f'fill="{PALETTE["saddle"]}" stroke="#000" stroke-width="0.8"/>'
+    # === SELLE (profil VTT moderne : coque fine, bec effilé, arrière relevé) ==
+    # Nez vers l'avant (+x = droite). Construit en coords monde (y-haut) puis projeté.
+    L_sdl = max(250.0, bike.saddle.length)
+    H_sdl = max(16.0, min(30.0, bike.saddle.thickness))   # épaisseur de coque
+    clampH = 24.0
+    cxs = sp_end_x + 0.04 * L_sdl          # pince ~ sous le centre, légèrement avant
+    ty  = sp_end_y + clampH                # ligne d'assise (haut de coque)
+    def Wp(x, y):                          # raccourci monde→px
+        return f"{W(x, y)[0]:.1f},{W(x, y)[1]:.1f}"
+    # Profil supérieur : arrière relevé → creux d'assise → bec relevé
+    tailT = (cxs - 0.46 * L_sdl, ty + 0.060 * L_sdl)
+    sit   = (cxs - 0.06 * L_sdl, ty)
+    noseT = (cxs + 0.56 * L_sdl, ty + 0.045 * L_sdl)
+    # Dessous (concave, fin)
+    noseB = (cxs + 0.55 * L_sdl, ty + 0.045 * L_sdl - H_sdl * 0.55)
+    sitB  = (cxs - 0.04 * L_sdl, ty - H_sdl)
+    tailB = (cxs - 0.44 * L_sdl, ty + 0.060 * L_sdl - H_sdl * 0.65)
+    shell = (
+        f'M {Wp(*tailT)} '
+        f'C {Wp(cxs-0.30*L_sdl, ty+0.05*L_sdl)} {Wp(cxs-0.20*L_sdl, ty+0.004*L_sdl)} {Wp(*sit)} '
+        f'C {Wp(cxs+0.18*L_sdl, ty-0.004*L_sdl)} {Wp(cxs+0.42*L_sdl, ty+0.055*L_sdl)} {Wp(*noseT)} '
+        f'L {Wp(*noseB)} '
+        f'C {Wp(cxs+0.20*L_sdl, ty-H_sdl*0.7)} {Wp(cxs+0.05*L_sdl, ty-H_sdl)} {Wp(*sitB)} '
+        f'C {Wp(cxs-0.22*L_sdl, ty-H_sdl*0.9)} {Wp(cxs-0.40*L_sdl, ty-0.0*L_sdl)} {Wp(*tailB)} Z'
     )
-    # reflet sur la coque
+    parts.append(f'<path d="{shell}" fill="{PALETTE["saddle"]}" stroke="#000" stroke-width="0.8" stroke-linejoin="round"/>')
+    # liseré clair sur le dessus (matière/coutures)
     parts.append(
-        f'<path d="M {W(cx_s-L_sdl*0.4, top)[0]:.0f},{W(cx_s-L_sdl*0.4, top)[1]:.0f} '
-        f'Q {W(cx_s,top+thk*0.18)[0]:.0f},{W(cx_s,top+thk*0.18)[1]:.0f} '
-        f'{W(cx_s+L_sdl*0.5,top-thk*0.12)[0]:.0f},{W(cx_s+L_sdl*0.5,top-thk*0.12)[1]:.0f}" '
-        f'stroke="{PALETTE["saddle_hi"]}" stroke-width="2" fill="none" opacity="0.7"/>'
+        f'<path d="M {Wp(cxs-0.40*L_sdl, ty+0.045*L_sdl)} '
+        f'C {Wp(cxs-0.20*L_sdl, ty+0.01*L_sdl)} {Wp(cxs+0.20*L_sdl, ty+0.005*L_sdl)} {Wp(cxs+0.50*L_sdl, ty+0.04*L_sdl)}" '
+        f'stroke="{PALETTE["saddle_hi"]}" stroke-width="1.6" fill="none" opacity="0.65"/>'
     )
+    # rails + pince de tige
+    rail_y = ty - H_sdl - 4.0
+    parts.append(f'<line x1="{Wp(cxs-0.30*L_sdl, rail_y).split(",")[0]}" y1="{Wp(cxs-0.30*L_sdl, rail_y).split(",")[1]}" '
+                 f'x2="{Wp(cxs+0.34*L_sdl, rail_y).split(",")[0]}" y2="{Wp(cxs+0.34*L_sdl, rail_y).split(",")[1]}" '
+                 f'stroke="{PALETTE["rim_dark"]}" stroke-width="1.6"/>')
+    clx, cly = W(sp_end_x, sp_end_y)
+    parts.append(f'<rect x="{clx-5:.1f}" y="{cly-2:.1f}" width="10" height="9" rx="2" '
+                 f'fill="{PALETTE["seatpost"]}" />')
 
     # === POTENCE (corps + collier + faceplate) ===============================
     parts.append(_draw_tube(sb.x, sb.y, stip.x, stip.y, 26.0,
@@ -1097,7 +1142,8 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
     parts.append(_draw_drivetrain(bike, calc, sx, sy, ox, oy, scale_f))
 
     # === DÉRAILLEUR ARRIÈRE (forme réelle BikeCAD, sous l'axe AR) =============
-    if bike.drivetrain.drive_type != "belt":   # courroie = mono-vitesse, pas de dérailleur
+    # Uniquement en transmission par dérailleur (IGH/courroie = pas de dérailleur).
+    if bike.drivetrain.transmission == "derailleur" and bike.drivetrain.drive_type != "belt":
         parts.append(_draw_sprite("derailleur", ra.x, ra.y, sx, sy, ox, oy,
                                   scale=1.0, klass="derailleur"))
 

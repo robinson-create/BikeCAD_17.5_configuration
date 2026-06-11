@@ -264,8 +264,27 @@ GEARBOX_TYPES = {
     "none":               "",
 }
 
+# Moyeux/boîtes à vitesses intégrées (IGH) sélectionnables. Données vérifiées
+# (sites fabricants) — voir knowledge/bank.py. min_ratio = facteur de transmission
+# primaire (plateau/pignon) minimal recommandé pour ne pas dépasser le couple moyeu.
+IGH_TYPES = {
+    "rohloff_14": {"label": "Rohloff SPEEDHUB 500/14", "gears": 14, "range_pct": 526.0,
+                   "max_torque_nm": 130.0, "min_ratio": 1.90, "weight_g": 1820, "belt": True},
+    "3x3_nine":   {"label": "3X3 NINE (3x3.bike)", "gears": 9, "range_pct": 554.0,
+                   "max_torque_nm": 250.0, "min_ratio": 1.60, "weight_g": 2000, "belt": True},
+}
+TransmissionType = Literal["derailleur", "igh"]
+
+
 class DrivetrainConfig(BaseModel):
     drive_type:  DriveType = Field("belt", description="Chaîne ou courroie")
+    transmission: TransmissionType = Field("igh",
+                   description="Type de transmission : dérailleur (cassette) ou IGH (moyeu à vitesses)")
+    igh_model:   str       = Field("3x3_nine", description="Modèle IGH (voir IGH_TYPES) ou 'custom'")
+    igh_gears:   int       = Field(14,    description="Nb vitesses IGH (si custom)")
+    igh_range_pct:float    = Field(526.0, description="Étendue IGH % (si custom)")
+    igh_max_torque_nm:float= Field(130.0, description="Couple d'entrée max moyeu (Nm, si custom)")
+    motor_torque_nm: float = Field(150.0, description="Couple moteur au pédalier (Nm)")
     motor_key:   str       = Field("bafang_mm520", description="Clé moteur (voir GEARBOX_TYPES)")
     use_motor:   bool      = Field(True,  description="Afficher le moteur")
     motor_angle: float     = Field(0.0,   description="Angle moteur (°)")
@@ -370,9 +389,13 @@ class BatteryConfig(BaseModel):
     height:     float = Field(90.0,   description="Hauteur du pack (mm)")
     width:      float = Field(90.0,   description="Largeur transversale (mm)")
     # Placement le long du tube diagonal (BB → couronne)
-    mount_offset: float = Field(60.0, description="Décalage depuis le BB le long du tube diagonal (mm)")
-    standoff:     float = Field(8.0,  description="Jeu entre tube diagonal et pack (mm)")
-    in_downtube:  bool  = Field(False, description="Intégrée DANS le tube diagonal (sinon externe)")
+    mount_offset: float = Field(120.0, description="Décalage depuis le BB le long du tube diagonal (mm)")
+    standoff:     float = Field(8.0,  description="Jeu entre la SURFACE du tube diagonal et le pack (mm)")
+    in_downtube:  bool  = Field(False, description="Intégrée DANS le tube diagonal (sinon posée dessus)")
+    # ── Alimentation / puissance (calculateur d'autonomie) ──────────────────────
+    nominal_power_w: float = Field(500.0,  description="Puissance moteur nominale (W)")
+    peak_power_w:    float = Field(1000.0, description="Puissance moteur crête (W)")
+    consumption_whkm:float = Field(14.0,   description="Conso moyenne de référence (Wh/km)")
 
 
 # ─── DESIGN COMPLET ───────────────────────────────────────────────────────────
@@ -485,7 +508,32 @@ class BatteryResult(BaseModel):
     polygon:         list = []        # 4 coins du pack (coords monde)
     volume_l:        float = 0.0      # volume du pack (litres)
     est_capacity_wh: float = 0.0      # capacité estimée d'après le volume
+    # ── Calculateur alimentation / autonomie ────────────────────────────────────
+    capacity_ah:      float = 0.0     # capacité (Ah) = Wh / V
+    nominal_current_a:float = 0.0     # courant nominal = P_nom / V
+    peak_current_a:   float = 0.0     # courant crête = P_crête / V
+    c_rate_peak:      float = 0.0     # régime de décharge crête (C)
+    runtime_nominal_h:float = 0.0     # autonomie à puissance nominale continue (h)
+    runtime_peak_min: float = 0.0     # tenue à puissance crête (min)
+    autonomy:         list = []       # [{mode, whkm, km}] éco/rando/boost + perso
     notes:           list[str] = []
+
+
+class TransmissionResult(BaseModel):
+    ok:               bool = True
+    kind:             str = "derailleur"     # derailleur | igh
+    label:            str = ""               # nom de l'IGH le cas échéant
+    gears:            int = 0
+    range_pct:        float = 0.0
+    weight_g:         int = 0
+    primary_ratio:    float = 0.0            # plateau/pignon
+    hub_input_nm:     float = 0.0            # couple à l'entrée du moyeu
+    max_torque_nm:    float = 0.0            # limite moyeu
+    torque_ok:        bool = True
+    ratio_ok:         bool = True
+    min_ratio:        float = 0.0
+    belt_ok:          bool = True            # compat courroie
+    notes:            list[str] = []
 
 
 class KinematicsResult(BaseModel):

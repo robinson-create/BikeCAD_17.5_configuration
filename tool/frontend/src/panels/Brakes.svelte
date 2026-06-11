@@ -16,7 +16,8 @@
 
 <section class="panel">
   <h3>Freins</h3>
-  <Diagram src="DISC_ROTOR.png" caption="Disque de frein" />
+  <Diagram src="DISC_ROTOR.png" caption="Disque de frein"
+    legend={[{k:'Ø', v:'Ø extérieur du disque'}]} />
 
   <fieldset>
     <legend>Type</legend>
@@ -43,11 +44,11 @@
   {#if isDisc}
     <fieldset>
       <legend>Disques</legend>
-      <label>Ø disque avant (mm)
+      <label><span class="dimkey">Ø</span>Ø disque avant (mm)
         <input type="number" step="10" value={bk.rotor_front ?? 203}
           on:change={e => upd({ rotor_front: +e.target.value })} />
       </label>
-      <label>Ø disque arrière (mm)
+      <label><span class="dimkey">Ø</span>Ø disque arrière (mm)
         <input type="number" step="10" value={bk.rotor_rear ?? 180}
           on:change={e => upd({ rotor_rear: +e.target.value })} />
       </label>

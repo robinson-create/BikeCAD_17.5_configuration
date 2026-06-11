@@ -44,5 +44,9 @@
 
 <style>
   .catalog { display: flex; flex-direction: column; gap: 2px; font-size: .72rem;
-             color: #8ecae6; margin-bottom: 8px; }
+             color: var(--accent); margin-bottom: 8px; }
+  .catalog select { background: var(--surface); color: var(--text);
+             border: 1px solid var(--border); border-radius: var(--radius);
+             padding: 4px 6px; font-size: .78rem; }
+  .catalog select:disabled { color: var(--text-muted); }
 </style>

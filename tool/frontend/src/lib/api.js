@@ -61,6 +61,22 @@ export async function fetchBattery(bike) {
   return r.json()  // BatteryResult
 }
 
+export async function fetchTransmission(bike) {
+  const r = await fetch(`${BASE}/transmission`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(bike),
+  })
+  if (!r.ok) throw new Error(await r.text())
+  return r.json()  // TransmissionResult
+}
+
+export async function listIgh() {
+  const r = await fetch(`${BASE}/igh`)
+  if (!r.ok) return []
+  return r.json()  // [{key,label,gears,range_pct,max_torque_nm,...}]
+}
+
 export async function fetchFit(bike) {
   const r = await fetch(`${BASE}/fit`, {
     method: 'POST',

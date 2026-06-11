@@ -1,5 +1,5 @@
 import { writable, derived, get } from 'svelte/store'
-import { calcAndRender, fetchKinematics, fetchFit, fetchSuspensionPreset, fetchBattery } from './api.js'
+import { calcAndRender, fetchKinematics, fetchFit, fetchSuspensionPreset, fetchBattery, fetchTransmission } from './api.js'
 
 // ── Design courant ─────────────────────────────────────────────────────────
 export const bike = writable(null)      // BikeDesign (null = pas encore chargé)
@@ -8,6 +8,7 @@ export const svg  = writable('')        // SVG string
 export const kinematics = writable(null) // KinematicsResult
 export const fit  = writable(null)       // FitResult
 export const battery = writable(null)    // BatteryResult
+export const transmission = writable(null) // TransmissionResult
 export const loading = writable(false)
 export const error   = writable('')
 export const activeTab = writable('frame')  // onglet actif
@@ -44,18 +45,20 @@ async function doRefresh(bikeData) {
   loading.set(true)
   error.set('')
   try {
-    const [result, kin, fitRes, batRes] = await Promise.all([
+    const [result, kin, fitRes, batRes, txRes] = await Promise.all([
       calcAndRender(bikeData, 1400, 750, get(showDims), get(showRider),
                     get(showSuspension), get(animateSuspension), get(showLugs)),
       fetchKinematics(bikeData).catch(() => null),
       bikeData.rider ? fetchFit(bikeData).catch(() => null) : Promise.resolve(null),
       bikeData.battery?.enabled ? fetchBattery(bikeData).catch(() => null) : Promise.resolve(null),
+      fetchTransmission(bikeData).catch(() => null),
     ])
     svg.set(result.svg)
     calc.set(result.calc)
     if (kin) kinematics.set(kin)
     fit.set(fitRes)
     battery.set(batRes)
+    transmission.set(txRes)
   } catch (e) {
     error.set(e.message ?? 'Erreur de calcul')
   } finally {

@@ -35,12 +35,34 @@ CURATED = [
                  "pas un tendeur actif."),
     },
     {
-        "id": "gearbox-hub", "title": "Moyeu à vitesses 3x3.bike",
-        "tags": ["gearbox", "moyeu", "3x3", "transmission", "rapports"],
-        "text": ("Moyeu arrière à vitesses (gearbox hub) 3×3.bike : 9 rapports dans le moyeu. "
-                 "Le rapport de transmission varie selon le rapport engagé ; le belt growth doit "
-                 "rester < 2 mm sur TOUS les rapports. Avec un mid-drive, le pignon moteur (plateau) "
-                 "est fixe au BB (≠ cassette qui bouge) → change la ligne de chaîne et l'anti-squat."),
+        "id": "gearbox-hub", "title": "Moyeu à vitesses 3X3 NINE (3x3.bike)",
+        "tags": ["gearbox", "moyeu", "3x3", "3x3nine", "igh", "transmission", "rapports", "courroie", "couple"],
+        "text": ("3X3 NINE (H+B Hightech GmbH / 3X3 Bikes, DE) : moyeu ARRIÈRE à vitesses intégrées "
+                 "(IGH), 9 rapports via 3 étages planétaires × 3 (= 3×3, d'où le nom). Étendue 554 %, "
+                 "pas ≈ 24 % (larges, orienté e-bike). COUPLE D'ENTRÉE MAX ≈ 250 Nm (vs 130 Nm Rohloff) "
+                 "→ encaisse les gros mid-drive type M620. ~2000 g. Axes 135 QR / 142×12 / 148×12 Boost, "
+                 "alésage 12 mm, 32/36 trous, roues 20–29″. Chaîne OU courroie Gates (pignons Gates). "
+                 "Sans vidange d'huile (graissé). Shifters : R9.S (mécanique, tirage R.SB) ou E9.XP "
+                 "(électronique sans fil). Moyeu ≈900 $, kit méca ≈1485 $, kit e-shift ≈1765 $. "
+                 "Masse non suspendue arrière (~2 kg) — n'aide pas à centraliser la masse ni à dégager "
+                 "le carter moteur (≠ boîte au pédalier). Belt growth < 2 mm requis sur TOUS les rapports."),
+    },
+    {
+        "id": "rohloff-speedhub", "title": "Rohloff SPEEDHUB 500/14",
+        "tags": ["rohloff", "speedhub", "igh", "moyeu", "gearbox", "14", "courroie", "couple", "e-14", "transmission"],
+        "text": ("Rohloff SPEEDHUB 500/14 : moyeu arrière IGH 14 rapports égaux (pas ~13,6 %), "
+                 "étendue 526 %, rendement ~95–99 %, ~1700 g (moyeu) / ~1820 g installé. "
+                 "COUPLE D'ENTRÉE MAX = 130 Nm AU MÉCANISME (moteur + pédalage combinés APRÈS la "
+                 "réduction plateau/pignon, PAS au boîtier). Garde-fou e-MTB : respecter le facteur de "
+                 "transmission MIN (plateau/pignon) ≥ 1,90 (pilote <100 kg) ou ≥ 2,50 (fort couple / "
+                 ">100 kg / tandem) — avec un mid-drive 120–150 Nm, un primaire ~2,3 (ex. 42:18) ramène "
+                 "l'entrée moyeu bien sous 130 Nm. Versions : CC/TS/EX, A12 (thru-axle 12 mm + boulons "
+                 "M7), DB (disque Rohloff 4 trous). E-14 = passage ÉLECTRONIQUE (180 ms, coupure couple "
+                 "moteur ; eShift Bosch Smart System / Panasonic, Direct Shift Bafang/Brose). "
+                 "Courroie Gates via Splined Carrier L (réf. 8540L, pignon mini 15 t ; CDX:EXP 19/20/22 t). "
+                 "Pignon chaîne M34×6 (13/15/16/17 t). Vidange huile : 25 ml init., 12,5 ml / 5000 km ou 1 an. "
+                 "Homologué S-Pedelec 45 km/h. Moyeu rigide (axe plein/traversant) → chemin d'axe AR et "
+                 "pedal kickback se calculent normalement."),
     },
     {
         "id": "shock-sizes", "title": "Amortisseurs (entraxe × course)",

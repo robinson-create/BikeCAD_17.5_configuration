@@ -123,12 +123,12 @@
               <rect x={PAD} y={band.y} width={W - 2 * PAD} height={band.height}
                 fill="rgba(76,175,80,.12)" />
               <!-- axes -->
-              <line x1={PAD} y1={PAD} x2={PAD} y2={H - PAD} stroke="#444" />
-              <line x1={PAD} y1={H - PAD} x2={W - PAD} y2={H - PAD} stroke="#444" />
+              <line x1={PAD} y1={PAD} x2={PAD} y2={H - PAD} stroke="var(--border-strong)" />
+              <line x1={PAD} y1={H - PAD} x2={W - PAD} y2={H - PAD} stroke="var(--border-strong)" />
               <!-- graduations Y -->
               {#each ticks(c.yMin, c.yMax) as t}
                 {@const yy = H - PAD - (t - c.yMin) / (c.yMax - c.yMin) * (H - 2 * PAD)}
-                <line x1={PAD - 3} y1={yy} x2={W - PAD} y2={yy} stroke="#2a2a4a" stroke-width="0.5" />
+                <line x1={PAD - 3} y1={yy} x2={W - PAD} y2={yy} stroke="var(--border)" stroke-width="0.5" />
                 <text x={PAD - 6} y={yy + 3} text-anchor="end" class="tick">{t.toFixed(c.key === 'leverage' ? 1 : 0)}</text>
               {/each}
               <!-- courbe -->
@@ -148,31 +148,31 @@
   .kin-wrap {
     height: 100%;
     overflow-y: auto;
-    background: #1a1a2e;
-    border-radius: 4px;
+    background: var(--bg);
+    border-radius: var(--radius);
     padding: 10px;
   }
-  .placeholder { display: flex; align-items: center; justify-content: center; height: 100%; color: #555; }
-  .error-banner { background: #c0392b; color: #fff; padding: 8px 12px; border-radius: 4px; }
-  .warn-banner { background: #6b5320; color: #ffd; padding: 6px 12px; border-radius: 4px; font-size: .8rem; margin-bottom: 10px; }
+  .placeholder { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-muted); }
+  .error-banner { background: var(--no); color: #fff; padding: 8px 12px; border-radius: var(--radius); }
+  .warn-banner { background: var(--accent-soft); color: var(--warn); border: 1px solid var(--border); padding: 6px 12px; border-radius: var(--radius); font-size: .8rem; margin-bottom: 10px; }
   .kin-content { display: flex; flex-direction: column; gap: 14px; }
 
-  .summary h4 { font-size: .85rem; color: #e8851a; margin-bottom: 8px; text-transform: uppercase; letter-spacing: .04em; }
+  .summary h4 { font-size: .85rem; color: var(--brand); margin-bottom: 8px; text-transform: uppercase; letter-spacing: .04em; }
   .summary table { width: 100%; border-collapse: collapse; }
-  .summary td { padding: 4px 8px; border-bottom: 1px solid #2a2a4a; font-size: .8rem; }
-  .vl { color: #aab; }
-  .vv { color: #fff; font-weight: 600; font-variant-numeric: tabular-nums; }
-  .vt { color: #778; font-size: .72rem; }
+  .summary td { padding: 4px 8px; border-bottom: 1px solid var(--border); font-size: .8rem; }
+  .vl { color: var(--text-muted); }
+  .vv { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .vt { color: var(--text-muted); font-size: .72rem; }
   .vb { text-align: right; }
   .badge { display: inline-block; width: 18px; height: 18px; line-height: 18px; text-align: center; border-radius: 50%; font-size: .72rem; font-weight: 700; }
-  .badge.ok { background: #2e7d32; color: #fff; }
-  .badge.no { background: #c0392b; color: #fff; }
-  .note { font-size: .68rem; color: #667; margin-top: 8px; font-style: italic; }
+  .badge.ok { background: var(--ok); color: #fff; }
+  .badge.no { background: var(--no); color: #fff; }
+  .note { font-size: .68rem; color: var(--text-muted); margin-top: 8px; font-style: italic; }
 
   .charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; }
-  .chart { background: #16213e; border: 1px solid #2a2a4a; border-radius: 4px; padding: 8px; }
-  .chart-title { font-size: .78rem; color: #8ecae6; margin-bottom: 4px; text-align: center; }
+  .chart { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px; }
+  .chart-title { font-size: .78rem; color: var(--accent); margin-bottom: 4px; text-align: center; }
   .chart-svg { width: 100%; height: auto; }
-  .tick { fill: #667; font-size: 9px; }
-  .axlabel { fill: #778; font-size: 9px; }
+  .tick { fill: var(--text-muted); font-size: 9px; }
+  .axlabel { fill: var(--text-muted); font-size: 9px; }
 </style>

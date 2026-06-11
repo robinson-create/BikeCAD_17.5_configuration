@@ -42,8 +42,8 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-    background: #1a1a2e;
-    border-radius: 4px;
+    background: var(--surface);
+    border-radius: var(--radius);
     overflow: hidden;
   }
   .svg-container {
@@ -60,19 +60,19 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(0,0,0,.4);
+    background: rgba(255,255,255,.55);
     z-index: 10;
   }
   .spinner {
     width: 32px; height: 32px;
-    border: 3px solid #444;
-    border-top-color: #e8851a;
+    border: 3px solid var(--border-strong);
+    border-top-color: var(--brand);
     border-radius: 50%;
     animation: spin .7s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
   .error-banner {
-    background: #c0392b;
+    background: var(--no);
     color: #fff;
     padding: 6px 12px;
     font-size: .8rem;
@@ -82,7 +82,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #555;
+    color: var(--text-muted);
     font-size: .9rem;
   }
   .calc-strip {
@@ -90,10 +90,10 @@
     gap: 16px;
     flex-wrap: wrap;
     padding: 6px 12px;
-    background: #16213e;
-    border-top: 1px solid #2a2a4a;
+    background: var(--panel);
+    border-top: 1px solid var(--border);
     font-size: .75rem;
-    color: #8ecae6;
+    color: var(--accent);
   }
   .calc-strip span {
     white-space: nowrap;

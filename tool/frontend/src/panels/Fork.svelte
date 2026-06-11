@@ -8,7 +8,8 @@
 
 <section class="panel">
   <h3>Fourche</h3>
-  <Diagram src="forkLAC.png" caption="Longueur / axe / couronne" />
+  <Diagram src="forkLAC.png" caption="Longueur / axe / couronne"
+    legend={[{k:'AC', v:'Axe → couronne (A2C)'}, {k:'L', v:'Longueur de plongeur'}]} />
   <CatalogSelect category="fork" />
 
   <fieldset>
@@ -25,7 +26,7 @@
 
   <fieldset>
     <legend>Géométrie fourche</legend>
-    <label>A2C — Axe à couronne (mm)
+    <label><span class="dimkey">AC</span>A2C — Axe à couronne (mm)
       <input type="number" step="0.1" value={fk.a2c ?? 570.8}
         on:change={e => upd({ a2c: +e.target.value })} />
     </label>
@@ -33,7 +34,7 @@
       <input type="number" step="0.5" value={fk.offset ?? 44}
         on:change={e => upd({ offset: +e.target.value })} />
     </label>
-    <label>Tube plongeur haut (mm)
+    <label><span class="dimkey">L</span>Tube plongeur haut (mm)
       <input type="number" step="1" value={fk.upper_stanchion ?? 425}
         on:change={e => upd({ upper_stanchion: +e.target.value })} />
     </label>

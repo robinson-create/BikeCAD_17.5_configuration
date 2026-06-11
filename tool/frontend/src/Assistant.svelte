@@ -99,26 +99,26 @@
 </div>
 
 <style>
-  .assistant { height: 100%; display: flex; flex-direction: column; background: #1a1a2e; border-radius: 4px; }
+  .assistant { height: 100%; display: flex; flex-direction: column; background: var(--panel); border-radius: var(--radius); }
   .log { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
-  .welcome, .notice { color: #aab; padding: 16px; }
-  .welcome h3, .notice h3 { color: #e8851a; margin-bottom: 8px; }
-  .dim { color: #778; font-size: .82rem; }
+  .welcome, .notice { color: var(--text); padding: 16px; }
+  .welcome h3, .notice h3 { color: var(--brand); margin-bottom: 8px; }
+  .dim { color: var(--text-muted); font-size: .82rem; }
   .suggestions { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
-  .chip { text-align: left; background: #16213e; border: 1px solid #2a2a4a; color: #cde; border-radius: 6px; padding: 7px 10px; font-size: .8rem; cursor: pointer; }
-  .chip:hover { background: #20304f; }
+  .chip { text-align: left; background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 7px 10px; font-size: .8rem; cursor: pointer; }
+  .chip:hover { background: var(--accent-soft); border-color: var(--border-strong); }
   .msg { display: flex; flex-direction: column; gap: 4px; max-width: 86%; }
   .msg.user { align-self: flex-end; align-items: flex-end; }
   .msg.assistant { align-self: flex-start; }
   .bubble { padding: 9px 12px; border-radius: 10px; font-size: .85rem; line-height: 1.4; white-space: pre-wrap; }
-  .msg.user .bubble { background: #0f3460; color: #fff; }
-  .msg.assistant .bubble { background: #16213e; color: #dde; border: 1px solid #2a2a4a; }
+  .msg.user .bubble { background: var(--accent); color: #fff; }
+  .msg.assistant .bubble { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
   .actions { display: flex; flex-wrap: wrap; gap: 4px; }
-  .act { font-size: .68rem; background: #2e7d32; color: #fff; border-radius: 4px; padding: 2px 6px; font-variant-numeric: tabular-nums; }
-  .err { background: #c0392b; color: #fff; padding: 8px 12px; border-radius: 6px; font-size: .8rem; }
-  .composer { display: flex; gap: 8px; padding: 10px; border-top: 1px solid #2a2a4a; }
-  .composer textarea { flex: 1; resize: none; background: #0f1626; color: #eef; border: 1px solid #2a2a4a; border-radius: 6px; padding: 8px; font-size: .85rem; font-family: inherit; }
-  .send { background: #e8851a; color: #1a1a2e; border: none; border-radius: 6px; padding: 0 16px; font-weight: 700; cursor: pointer; }
+  .act { font-size: .68rem; background: var(--ok); color: #fff; border-radius: 4px; padding: 2px 6px; font-variant-numeric: tabular-nums; }
+  .err { background: var(--no); color: #fff; padding: 8px 12px; border-radius: 6px; font-size: .8rem; }
+  .composer { display: flex; gap: 8px; padding: 10px; border-top: 1px solid var(--border); }
+  .composer textarea { flex: 1; resize: none; background: var(--surface); color: var(--text); border: 1px solid var(--border-strong); border-radius: 6px; padding: 8px; font-size: .85rem; font-family: inherit; }
+  .send { background: var(--brand); color: #fff; border: none; border-radius: 6px; padding: 0 16px; font-weight: 700; cursor: pointer; }
   .send:disabled { opacity: .5; cursor: default; }
-  code { background: #0f1626; padding: 1px 5px; border-radius: 3px; color: #8ecae6; }
+  code { background: var(--accent-soft); padding: 1px 5px; border-radius: 3px; color: var(--accent); }
 </style>

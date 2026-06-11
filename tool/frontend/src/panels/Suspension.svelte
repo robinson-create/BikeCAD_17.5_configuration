@@ -134,14 +134,14 @@
     gap: 4px;
     align-items: center;
   }
-  .pivot-head span { font-size: .68rem; color: #8ecae6; text-align: center; }
+  .pivot-head span { font-size: .68rem; color: var(--accent); text-align: center; }
   .pivot-head span:first-child { text-align: left; }
-  .pivot-label { font-size: .72rem; color: #9999bb; }
+  .pivot-label { font-size: .72rem; color: var(--text-muted); }
   .pivot-row input { padding: 2px 4px; }
   .preset {
     margin-top: 8px; width: 100%; padding: 6px;
-    background: #2e7d32; color: #fff; border: none; border-radius: 4px;
+    background: var(--ok); color: #fff; border: none; border-radius: var(--radius);
     font-size: .76rem; cursor: pointer;
   }
-  .preset:hover { background: #388e3c; }
+  .preset:hover { filter: brightness(0.92); }
 </style>

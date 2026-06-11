@@ -170,8 +170,11 @@ br = compute_battery(bk, cc)
 check(br.ok and br.enabled, "batterie : calcul OK")
 check(br.fits_triangle, f"batterie défaut tient dans le triangle ({br.notes})")
 check(br.est_capacity_wh > 0 and br.volume_l > 0, "batterie : volume/capacité estimés")
+# calculateur d'autonomie / alimentation alimenté
+check(br.capacity_ah > 0 and br.peak_current_a > 0 and len(br.autonomy) >= 3,
+      f"batterie : calcul autonomie/courant ({br.capacity_ah}Ah, {len(br.autonomy)} modes)")
 # pack volontairement trop gros → doit être détecté hors triangle
-bk.battery.length = 520; bk.battery.height = 140
+bk.battery.length = 700; bk.battery.height = 180
 br2 = compute_battery(bk, cc)
 check(not br2.fits_triangle, "batterie surdimensionnée détectée hors triangle")
 # désactivée → pas de polygone, ok

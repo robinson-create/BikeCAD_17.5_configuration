@@ -49,19 +49,19 @@
 </div>
 
 <style>
-  .set-wrap { height: 100%; display: flex; flex-direction: column; background: #1a1a2e; border-radius: 4px; padding: 10px; }
+  .set-wrap { height: 100%; display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px; }
   .head { flex-shrink: 0; }
-  h4 { font-size: .85rem; color: #e8851a; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .04em; }
-  .srcs { font-size: .68rem; color: #778; margin-bottom: 8px; }
-  .tag { background: #1e3a5f; color: #8ecae6; padding: 1px 6px; border-radius: 3px; margin-right: 4px; }
-  .cat { color: #99a; margin-right: 8px; }
-  .search { width: 100%; padding: 6px 10px; background: #0f0f20; border: 1px solid #333; border-radius: 4px; color: #dde; font-size: .85rem; }
-  .count { font-size: .7rem; color: #667; margin: 4px 0; }
+  h4 { font-size: .85rem; color: var(--brand); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .04em; }
+  .srcs { font-size: .68rem; color: var(--text-muted); margin-bottom: 8px; }
+  .tag { background: var(--accent-soft); color: var(--accent); padding: 1px 6px; border-radius: 3px; margin-right: 4px; }
+  .cat { color: var(--text-muted); margin-right: 8px; }
+  .search { width: 100%; padding: 6px 10px; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 4px; color: var(--text); font-size: .85rem; }
+  .count { font-size: .7rem; color: var(--text-muted); margin: 4px 0; }
   .rows { flex: 1; overflow-y: auto; }
   table { width: 100%; border-collapse: collapse; }
-  th { position: sticky; top: 0; background: #16213e; text-align: left; padding: 5px 8px; font-size: .7rem; color: #8ecae6; }
-  td { padding: 3px 8px; border-bottom: 1px solid #23233a; font-size: .74rem; }
-  td.k { color: #cce; font-family: monospace; }
-  td.v { color: #fff; font-variant-numeric: tabular-nums; }
-  .more { color: #667; font-size: .72rem; font-style: italic; padding: 8px; }
+  th { position: sticky; top: 0; background: var(--surface); text-align: left; padding: 5px 8px; font-size: .7rem; color: var(--accent); }
+  td { padding: 3px 8px; border-bottom: 1px solid var(--border); font-size: .74rem; }
+  td.k { color: var(--text); font-family: monospace; }
+  td.v { color: var(--text); font-variant-numeric: tabular-nums; }
+  .more { color: var(--text-muted); font-size: .72rem; font-style: italic; padding: 8px; }
 </style>

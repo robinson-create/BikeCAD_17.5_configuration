@@ -44,7 +44,11 @@ def battery_polygon_world(bike, calc):
     if ny < 0:
         nx, ny = -nx, -ny
 
-    base = bat.standoff if not bat.in_downtube else -bat.height * 0.4
+    # Décalage mesuré depuis la SURFACE du tube diagonal (pas son axe) → le pack
+    # ne traverse plus le tube. Externe : posé sur la surface + jeu. Intégrée :
+    # centrée sur l'axe (le tube diagonal EST le logement, surdimensionné).
+    dt_r = getattr(bike.frame, "down_tube_d", 50.0) / 2.0
+    base = (-bat.height * 0.4) if bat.in_downtube else (dt_r + bat.standoff)
     sx = bb[0] + ux * bat.mount_offset + nx * base
     sy = bb[1] + uy * bat.mount_offset + ny * base
     ex = sx + ux * bat.length
@@ -107,6 +111,28 @@ def compute_battery(bike, calc):
     vol_l = bat.length * bat.height * bat.width / 1e6
     # densité énergétique pack 21700 ~ 0.25–0.30 Wh/cm³ ; on prend 0.27
     est_wh = vol_l * 1000 * 0.27
+    # Avertissement si la capacité demandée dépasse ce que le volume peut contenir
+    if bat.capacity_wh > est_wh * 1.05:
+        notes.append(f"Capacité demandée ({bat.capacity_wh:.0f} Wh) > volume du pack "
+                     f"(~{est_wh:.0f} Wh à 0,27 Wh/cm³) — agrandir le pack ou réduire la capacité.")
+
+    # ── Calculateur alimentation / autonomie ────────────────────────────────────
+    V = max(1.0, bat.voltage)
+    cap_ah = bat.capacity_wh / V
+    nom_i = bat.nominal_power_w / V
+    peak_i = bat.peak_power_w / V
+    c_rate = (peak_i / cap_ah) if cap_ah > 0 else 0.0
+    runtime_nom_h = (bat.capacity_wh / bat.nominal_power_w) if bat.nominal_power_w > 0 else 0.0
+    runtime_peak_min = (bat.capacity_wh / bat.peak_power_w * 60.0) if bat.peak_power_w > 0 else 0.0
+    # Scénarios de conso (Wh/km) : éco / rando / boost, calés autour de la conso de réf.
+    cref = max(1.0, bat.consumption_whkm)
+    usable = bat.capacity_wh * 0.92      # ~8 % réserve / rendement BMS
+    scenarios = [("Éco", cref * 0.62), ("Rando", cref), ("Boost", cref * 1.6)]
+    autonomy = [{"mode": m, "whkm": round(w, 1), "km": round(usable / w, 1)} for m, w in scenarios]
+    autonomy.append({"mode": "Perso", "whkm": round(cref, 1), "km": round(usable / cref, 1)})
+    if c_rate > 10:
+        notes.append(f"Régime de décharge crête élevé (~{c_rate:.0f}C) — vérifier le BMS / "
+                     f"le calibre cellules pour la puissance crête {bat.peak_power_w:.0f} W.")
 
     return BatteryResult(
         ok=True,
@@ -117,5 +143,12 @@ def compute_battery(bike, calc):
         polygon=[list(c) for c in poly],
         volume_l=round(vol_l, 2),
         est_capacity_wh=round(est_wh, 0),
+        capacity_ah=round(cap_ah, 1),
+        nominal_current_a=round(nom_i, 1),
+        peak_current_a=round(peak_i, 1),
+        c_rate_peak=round(c_rate, 1),
+        runtime_nominal_h=round(runtime_nom_h, 2),
+        runtime_peak_min=round(runtime_peak_min, 1),
+        autonomy=autonomy,
         notes=notes,
     )

@@ -103,18 +103,18 @@
 </section>
 
 <style>
-  .hint { color: #99a; font-size: .8rem; margin-bottom: 10px; }
-  button.big { width: 100%; padding: 8px; background: #1e3a5f; color: #8ecae6; border: 1px solid #3a5a8f; border-radius: 4px; cursor: pointer; }
-  button.small { margin-top: 6px; padding: 3px 10px; background: #3a2020; color: #e8a; border: 1px solid #5a3030; border-radius: 3px; cursor: pointer; font-size: .75rem; }
+  .hint { color: var(--text-muted); font-size: .8rem; margin-bottom: 10px; }
+  button.big { width: 100%; padding: 8px; background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent); border-radius: var(--radius); cursor: pointer; }
+  button.small { margin-top: 6px; padding: 3px 10px; background: var(--surface); color: var(--no); border: 1px solid var(--border-strong); border-radius: 3px; cursor: pointer; font-size: .75rem; }
   table.fit { width: 100%; border-collapse: collapse; }
-  table.fit td { padding: 3px 6px; border-bottom: 1px solid #2a2a4a; font-size: .74rem; }
-  .fl { color: #aab; }
-  .fv { color: #fff; font-weight: 600; font-variant-numeric: tabular-nums; }
-  .ft { color: #778; font-size: .68rem; }
+  table.fit td { padding: 3px 6px; border-bottom: 1px solid var(--border); font-size: .74rem; }
+  .fl { color: var(--text-muted); }
+  .fv { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .ft { color: var(--text-muted); font-size: .68rem; }
   .fb { text-align: right; }
   .badge { display: inline-block; width: 16px; height: 16px; line-height: 16px; text-align: center; border-radius: 50%; font-size: .68rem; font-weight: 700; }
-  .badge.ok { background: #2e7d32; color: #fff; }
-  .badge.no { background: #c89020; color: #1a1a2e; }
-  .warn { color: #e8a; font-size: .72rem; margin-top: 6px; }
-  .note { color: #667; font-size: .66rem; font-style: italic; margin-top: 8px; }
+  .badge.ok { background: var(--ok); color: #fff; }
+  .badge.no { background: var(--no); color: #fff; }
+  .warn { color: var(--warn); font-size: .72rem; margin-top: 6px; }
+  .note { color: var(--text-muted); font-size: .66rem; font-style: italic; margin-top: 8px; }
 </style>

@@ -21,7 +21,8 @@
 
 <section class="panel">
   <h3>Roues</h3>
-  <Diagram src="RIMCS1.png" caption="Jante / rayons / moyeu" />
+  <Diagram src="RIMCS1.png" caption="Jante / rayons / moyeu"
+    legend={[{k:'BSD', v:'Ø de la portée de tringle'}, {k:'A', v:'Hauteur / profil de jante'}]} />
   <CatalogSelect category="wheel" />
 
   {#each [['wheel_f', wf, 'Roue avant'], ['wheel_r', wr, 'Roue arrière']] as [sec, w, title]}
@@ -35,7 +36,7 @@
         <input type="number" step="1" value={w.tire_width ?? 61}
           on:change={e => updateSection(sec, { tire_width: +e.target.value })} />
       </label>
-      <label>BSD / ETRTO (mm)
+      <label><span class="dimkey">BSD</span>BSD / ETRTO (mm)
         <select value={w.bead_seat_dia ?? 622}
           on:change={e => updateSection(sec, { bead_seat_dia: +e.target.value })}>
           {#each bsdOptions as o}
@@ -43,7 +44,7 @@
           {/each}
         </select>
       </label>
-      <label>Profil de jante (mm)
+      <label><span class="dimkey">A</span>Profil de jante (mm)
         <input type="number" step="1" value={w.rim_depth ?? 25}
           on:change={e => updateSection(sec, { rim_depth: +e.target.value })} />
       </label>
