@@ -48,6 +48,15 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_BCAD = REPO_ROOT / "BIKE" / "eMTB_DOM_Engineering.bcad"
 
 
+def _repo_path(p):
+    """Résout un chemin : absolu inchangé, relatif → depuis la racine du dépôt
+    (le backend tourne avec CWD=tool/, donc 'BIKE/x' doit pointer la racine)."""
+    if not p:
+        return p
+    q = Path(p)
+    return str(q if q.is_absolute() else (REPO_ROOT / q))
+
+
 # ─── Endpoints ────────────────────────────────────────────────────────────────
 
 @app.get("/api/default")
@@ -76,6 +85,7 @@ class RenderRequest(BaseModel):
     show_suspension: bool = False    # overlay biellette sur la vue 2D
     animate_suspension: bool = False # animation SMIL de la course
     show_lugs: bool = False          # afficher les lugs CNC aux jonctions
+    show_pivots: bool = False        # afficher roulements/axes aux pivots
 
 
 @app.post("/api/render/svg")
@@ -92,9 +102,14 @@ def render(req: RenderRequest):
             if kin.ok:
                 frames = kin.frames
         lug_nodes = build_joints(req.bike, calc) if req.show_lugs else None
+        pivots = None
+        if req.show_pivots and req.bike.suspension.enabled:
+            from .calculations.pivots import compute_pivots
+            pr = compute_pivots(req.bike)
+            pivots = pr if pr.ok else None
         svg  = render_svg(req.bike, calc, req.width, req.height, req.show_dims, fit,
                           suspension=frames, animate_suspension=req.animate_suspension,
-                          lugs=lug_nodes)
+                          lugs=lug_nodes, pivots=pivots)
         return JSONResponse(content={"svg": svg, "calc": calc.model_dump()})
     except Exception as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -158,6 +173,44 @@ def igh_list():
     return [{"key": k, **v} for k, v in IGH_TYPES.items()]
 
 
+@app.post("/api/pivots")
+def pivots_endpoint(bike: BikeDesign):
+    """Hardware des pivots : roulements + axes + logements par pivot + nomenclature."""
+    from .calculations.pivots import compute_pivots
+    try:
+        return compute_pivots(bike)
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.get("/api/bearings")
+def bearings_list():
+    """Catalogue de roulements de pivot sélectionnables."""
+    from .models.bike import BEARING_CATALOG
+    return [{"ref": k, **v} for k, v in BEARING_CATALOG.items()]
+
+
+class PivotsExportRequest(BaseModel):
+    bike: BikeDesign
+    fmt: str = "csv"   # csv | json | summary
+
+
+@app.post("/api/export/pivots")
+def export_pivots(req: PivotsExportRequest):
+    """Exporte le hardware de pivots (roulements/axes) en CSV/JSON/résumé."""
+    from .calculations.pivots import compute_pivots
+    from .io import pivot_export
+    try:
+        pres = compute_pivots(req.bike)
+        if req.fmt == "json":
+            return PlainTextResponse(pivot_export.to_json(pres), media_type="application/json")
+        if req.fmt == "summary":
+            return PlainTextResponse(pivot_export.to_summary(pres), media_type="text/plain")
+        return PlainTextResponse(pivot_export.to_csv(pres), media_type="text/csv")
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
 @app.post("/api/fit")
 def fit_endpoint(bike: BikeDesign) -> FitResult:
     """Calcule le fit pilote (angles articulaires, KOPS, reach/drop)."""
@@ -199,7 +252,9 @@ def export_bcad(req: ExportRequest):
     planter BikeCAD Free (BELTorCHAIN=2). La fidélité totale (courroie/suspension)
     reste dans la bibliothèque JSON."""
     try:
-        out = save_bcad(req.bike, req.path, req.source_path, req.backup, req.free_safe)
+        # Résout les chemins relatifs depuis la RACINE du dépôt (le CWD = tool/).
+        out = save_bcad(req.bike, _repo_path(req.path), _repo_path(req.source_path),
+                        req.backup, req.free_safe)
         return {"path": str(out), "ok": True, "free_safe": req.free_safe}
     except Exception as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

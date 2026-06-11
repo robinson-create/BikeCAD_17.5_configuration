@@ -16,6 +16,7 @@ from ..models.bike import (
     BikeDesign, FrameGeometry, ForkConfig, HeadtubeConfig, HeadsetConfig,
     StemConfig, HandlebarConfig, SaddleConfig, SeatpostConfig,
     CranksConfig, WheelConfig, PedalsConfig, BrakeConfig, DrivetrainConfig,
+    BatteryConfig, SuspensionConfig,
     GEARBOX_TYPES,
 )
 
@@ -274,6 +275,10 @@ def load_bcad(path: str | Path) -> BikeDesign:
     belt_on   = (_s(props, "BELTorCHAIN", "1") == "2")
     drivetrain = DrivetrainConfig(
         drive_type  = "belt" if belt_on else "chain",
+        # Un .bcad BikeCAD ne décrit PAS notre champ transmission : on choisit un
+        # défaut COHÉRENT avec l'entraînement (courroie → moyeu IGH, chaîne →
+        # dérailleur+cassette) pour ne pas plaquer un moyeu IGH sur un BMX/route.
+        transmission = "igh" if belt_on else "derailleur",
         motor_key   = motor_key,
         use_motor   = _b(props, "USEgearbox", False),
         motor_angle = _f(props, "GEARBOXangle", 0.0),
@@ -299,6 +304,11 @@ def load_bcad(path: str | Path) -> BikeDesign:
         pedals      = pedals,
         brakes      = brakes,
         drivetrain  = drivetrain,
+        # Le .bcad ne contient PAS notre pack batterie (concept propre à l'outil
+        # DOM) → on ne le force pas sur un vélo chargé (sinon batterie eMTB
+        # 380 mm hors-cadre sur un BMX). La suspension reste au défaut : l'overlay
+        # cinématique est opt-in (bouton), il n'encombre pas la vue 2D.
+        battery     = BatteryConfig(enabled=False),
     )
 
 

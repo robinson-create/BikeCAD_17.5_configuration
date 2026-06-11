@@ -139,6 +139,7 @@ for name in ("reach","stack","trail","wheelbase","bb_height"):
 print("\n=== 3. PRÉSENCE GRAPHIQUE DES COMPOSANTS ===")
 bike = load_bcad(SRC)
 bike.rider = RiderConfig()
+bike.battery.enabled = True   # vélo chargé = batterie OFF par défaut ; on l'active pour le test graphique
 calc = calculate(bike)
 fit = compute_fit(bike, calc)
 svg = render_svg(bike, calc, 1400, 750, True, fit)
@@ -166,6 +167,9 @@ for label, token in components.items():
 print("  -- batterie 52V triangle avant --")
 from backend.calculations.battery import compute_battery
 bk = load_bcad(SRC); cc = calculate(bk)
+# load_bcad charge un vélo GÉNÉRIQUE (batterie OFF par défaut) ; on l'active
+# explicitement pour tester l'intégration du pack DOM.
+bk.battery.enabled = True
 br = compute_battery(bk, cc)
 check(br.ok and br.enabled, "batterie : calcul OK")
 check(br.fits_triangle, f"batterie défaut tient dans le triangle ({br.notes})")

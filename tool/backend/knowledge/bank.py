@@ -165,8 +165,26 @@ def _parts_catalogue() -> list:
     return out
 
 
+@lru_cache(maxsize=1)
+def _loaded_entries() -> list:
+    """Entrées de connaissances chargées des JSON du dossier knowledge/
+    (ex. geometry_dh.json : géométrie DH/enduro/e-MTB + Specialized). Format :
+    liste de {id, title, tags, text}."""
+    import json as _json
+    here = Path(__file__).resolve().parent
+    out = []
+    for jf in sorted(here.glob("*.json")):
+        try:
+            data = _json.load(open(jf, encoding="utf-8"))
+            if isinstance(data, list):
+                out += [e for e in data if isinstance(e, dict) and e.get("text")]
+        except Exception:
+            continue
+    return out
+
+
 def entries() -> list:
-    return CURATED + _parts_catalogue()
+    return CURATED + _loaded_entries() + _parts_catalogue()
 
 
 def _tokens(s: str) -> list:

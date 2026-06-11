@@ -276,6 +276,22 @@ IGH_TYPES = {
 TransmissionType = Literal["derailleur", "igh"]
 
 
+# Roulements à cartouche standard pour pivots de suspension VTT/e-MTB
+# (bore × OD × largeur en mm). "ac" = contact oblique, "max" = full-complement
+# (Enduro MAX, plus de billes → charge accrue, recommandé e-MTB fort couple).
+BEARING_CATALOG = {
+    "688-2RS":     {"bore": 8.0,  "od": 16.0, "width": 5.0, "type": "radial"},
+    "6900-2RS":    {"bore": 10.0, "od": 22.0, "width": 6.0, "type": "radial"},
+    "6901-2RS":    {"bore": 12.0, "od": 24.0, "width": 6.0, "type": "radial"},
+    "6802-2RS":    {"bore": 15.0, "od": 24.0, "width": 5.0, "type": "radial mince"},
+    "6902-2RS":    {"bore": 15.0, "od": 28.0, "width": 7.0, "type": "radial"},
+    "MR15268-2RS": {"bore": 15.0, "od": 26.0, "width": 8.0, "type": "radial suspension (large)"},
+    "7902-AC-MAX": {"bore": 15.0, "od": 28.0, "width": 7.0, "type": "contact oblique MAX"},
+    "MR2437-2RS":  {"bore": 24.0, "od": 37.0, "width": 7.0, "type": "radial gros alésage"},
+    "bushing-DU":  {"bore": 8.0,  "od": 15.0, "width": 12.0, "type": "bague DU / rotule"},
+}
+
+
 class DrivetrainConfig(BaseModel):
     drive_type:  DriveType = Field("belt", description="Chaîne ou courroie")
     transmission: TransmissionType = Field("igh",
@@ -334,6 +350,14 @@ class SuspensionConfig(BaseModel):
     idler:             Pivot = Field(default_factory=lambda: Pivot(x=-283.0, y=-18.0))
     idler_dia:         float = Field(32.0,  description="Ø galet (mm)")
     use_idler:         bool  = Field(True,  description="Galet de renvoi actif")
+
+    # ── Hardware des pivots : roulements + axes (cf. BEARING_CATALOG) ────────────
+    # Choix de roulement par TYPE de pivot. Dimensionnement structurel/fatigue =
+    # bureau d'études ; ici on pose la géométrie (alésages, axes) pour la CAO.
+    pivot_bearing_main: str   = Field("7902-AC-MAX", description="Roulement pivot PRINCIPAL (contact oblique MAX conseillé e-MTB)")
+    pivot_bearing_link: str   = Field("6902-2RS",    description="Roulement biellettes/Horst/rocker")
+    idler_bearing:      str   = Field("6900-2RS",    description="Roulement galet de renvoi")
+    pivot_torque_nm:    float = Field(12.0, description="Couple de serrage des axes de pivot (Nm)")
 
     # Transmission (pour belt growth + anti-squat)
     chainring_teeth:   int   = Field(36, description="Dents plateau")
@@ -517,6 +541,31 @@ class BatteryResult(BaseModel):
     runtime_peak_min: float = 0.0     # tenue à puissance crête (min)
     autonomy:         list = []       # [{mode, whkm, km}] éco/rando/boost + perso
     notes:           list[str] = []
+
+
+class PivotItem(BaseModel):
+    name:        str                 # nom du pivot
+    role:        str                 # rôle (principal, Horst, rocker, amortisseur, galet)
+    x:           float               # position monde (mm)
+    y:           float
+    bearing:     str                 # référence roulement (ou bague)
+    bore:        float               # alésage = Ø axe (mm)
+    od:          float               # Ø extérieur roulement (mm)
+    width:       float               # largeur roulement (mm)
+    qty:         int                 # nb de roulements (typiquement 2/pivot)
+    housing_od:  float               # Ø logement usiné dans le lug (= od + paroi)
+    axle_dia:    float               # Ø de l'axe/boulon (mm)
+    bolt:        str                 # filetage du boulon
+    note:        str = ""
+
+
+class PivotResult(BaseModel):
+    ok:          bool = True
+    topology:    str = ""
+    torque_nm:   float = 0.0
+    pivots:      list[PivotItem] = []
+    bom:         list = []           # nomenclature agrégée [{ref, qty, dims}]
+    notes:       list[str] = []
 
 
 class TransmissionResult(BaseModel):

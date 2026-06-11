@@ -1,7 +1,13 @@
 <script>
-  import { bike, updateSection, applySuspensionPreset } from '../lib/store.js'
+  import { bike, updateSection, applySuspensionPreset, pivots as pivotsStore, showPivots, scheduleRefresh } from '../lib/store.js'
+  import { listBearings, exportPivots } from '../lib/api.js'
+  import { onMount } from 'svelte'
   $: su = $bike?.suspension ?? {}
+  $: piv = $pivotsStore
   const upd = patch => updateSection('suspension', patch)
+
+  let bearings = []
+  onMount(async () => { bearings = await listBearings() })
 
   // Édition d'un pivot {x,y}
   function updPivot(key, axis, val) {
@@ -114,6 +120,63 @@
   </fieldset>
 
   <fieldset>
+    <legend>Pivots — roulements &amp; axes</legend>
+    <label class="check">
+      <input type="checkbox" checked={$showPivots}
+        on:change={e => { $showPivots = e.target.checked; $bike && scheduleRefresh($bike) }} />
+      Afficher les roulements sur le vélo 2D
+    </label>
+    <label>Roulement pivot principal
+      <select value={su.pivot_bearing_main ?? '7902-AC-MAX'}
+        on:change={e => upd({ pivot_bearing_main: e.target.value })}>
+        {#each bearings as b}<option value={b.ref}>{b.ref} — {b.bore}×{b.od}×{b.width}</option>{/each}
+      </select>
+    </label>
+    <label>Roulement biellettes / Horst
+      <select value={su.pivot_bearing_link ?? '6902-2RS'}
+        on:change={e => upd({ pivot_bearing_link: e.target.value })}>
+        {#each bearings as b}<option value={b.ref}>{b.ref} — {b.bore}×{b.od}×{b.width}</option>{/each}
+      </select>
+    </label>
+    <div class="grid-2">
+      <label>Roulement galet
+        <select value={su.idler_bearing ?? '6900-2RS'}
+          on:change={e => upd({ idler_bearing: e.target.value })}>
+          {#each bearings as b}<option value={b.ref}>{b.ref}</option>{/each}
+        </select>
+      </label>
+      <label>Couple axes (Nm)
+        <input type="number" step="1" value={su.pivot_torque_nm ?? 12}
+          on:change={e => upd({ pivot_torque_nm: +e.target.value })} />
+      </label>
+    </div>
+
+    {#if piv?.ok && piv.pivots?.length}
+      <table class="piv">
+        <tr><th>Pivot</th><th>Roulement</th><th>Ø int×ext×l</th><th>Qté</th><th>Axe</th></tr>
+        {#each piv.pivots as p}
+          <tr>
+            <td title={p.role}>{p.name.replace('_pivot','').replace('_',' ')}</td>
+            <td>{p.bearing}</td>
+            <td>{p.bore}×{p.od}×{p.width}</td>
+            <td>{p.qty}</td>
+            <td>Ø{p.axle_dia} {p.bolt}</td>
+          </tr>
+        {/each}
+      </table>
+      <div class="bom">
+        <b>Nomenclature :</b>
+        {#each piv.bom as b}<span class="chip">{b.qty}× {b.ref}</span>{/each}
+      </div>
+      <div class="exp">
+        <button on:click={() => exportPivots($bike, 'csv')}>⤓ CSV (SolidWorks)</button>
+        <button on:click={() => exportPivots($bike, 'summary')}>⤓ Résumé</button>
+      </div>
+      {#each piv.notes as n}<p class="pnote">• {n}</p>{/each}
+    {/if}
+  </fieldset>
+
+  <fieldset>
     <legend>Anti-squat</legend>
     <label>Hauteur centre de gravité (mm)
       <input type="number" step="10" value={su.cog_height ?? 1100}
@@ -144,4 +207,13 @@
     font-size: .76rem; cursor: pointer;
   }
   .preset:hover { filter: brightness(0.92); }
+  table.piv { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  table.piv th { font-size: .62rem; color: var(--accent); text-align: left; padding: 2px 4px; border-bottom: 1px solid var(--border); }
+  table.piv td { font-size: .68rem; color: var(--text); padding: 2px 4px; border-bottom: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+  .bom { margin-top: 6px; font-size: .7rem; color: var(--text-muted); display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+  .chip { background: var(--accent-soft); color: var(--accent); border-radius: 4px; padding: 1px 6px; font-weight: 600; }
+  .exp { display: flex; gap: 6px; margin-top: 8px; }
+  .exp button { flex: 1; padding: 5px; border: 1px solid var(--border-strong); background: #fff; color: var(--text); border-radius: var(--radius); font-size: .72rem; cursor: pointer; }
+  .exp button:hover { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+  .pnote { font-size: .64rem; color: var(--text-muted); margin-top: 5px; font-style: italic; }
 </style>

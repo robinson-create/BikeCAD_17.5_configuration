@@ -1,5 +1,5 @@
 import { writable, derived, get } from 'svelte/store'
-import { calcAndRender, fetchKinematics, fetchFit, fetchSuspensionPreset, fetchBattery, fetchTransmission } from './api.js'
+import { calcAndRender, fetchKinematics, fetchFit, fetchSuspensionPreset, fetchBattery, fetchTransmission, fetchPivots } from './api.js'
 
 // ── Design courant ─────────────────────────────────────────────────────────
 export const bike = writable(null)      // BikeDesign (null = pas encore chargé)
@@ -18,6 +18,8 @@ export const showDims  = writable(true)     // afficher les cotes
 export const showSuspension    = writable(false)  // overlay biellette sur la vue 2D
 export const animateSuspension = writable(false)  // animation de la course
 export const showLugs          = writable(false)  // lugs CNC aux jonctions
+export const showPivots        = writable(false)  // roulements/axes aux pivots
+export const pivots            = writable(null)    // PivotResult
 export const baseline  = writable(null)     // snapshot de référence pour comparaison
 
 // Fige le design courant comme référence de comparaison
@@ -45,13 +47,14 @@ async function doRefresh(bikeData) {
   loading.set(true)
   error.set('')
   try {
-    const [result, kin, fitRes, batRes, txRes] = await Promise.all([
+    const [result, kin, fitRes, batRes, txRes, pivRes] = await Promise.all([
       calcAndRender(bikeData, 1400, 750, get(showDims), get(showRider),
-                    get(showSuspension), get(animateSuspension), get(showLugs)),
+                    get(showSuspension), get(animateSuspension), get(showLugs), get(showPivots)),
       fetchKinematics(bikeData).catch(() => null),
       bikeData.rider ? fetchFit(bikeData).catch(() => null) : Promise.resolve(null),
       bikeData.battery?.enabled ? fetchBattery(bikeData).catch(() => null) : Promise.resolve(null),
       fetchTransmission(bikeData).catch(() => null),
+      bikeData.suspension?.enabled ? fetchPivots(bikeData).catch(() => null) : Promise.resolve(null),
     ])
     svg.set(result.svg)
     calc.set(result.calc)
@@ -59,6 +62,7 @@ async function doRefresh(bikeData) {
     fit.set(fitRes)
     battery.set(batRes)
     transmission.set(txRes)
+    pivots.set(pivRes)
   } catch (e) {
     error.set(e.message ?? 'Erreur de calcul')
   } finally {

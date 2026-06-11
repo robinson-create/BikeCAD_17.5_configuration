@@ -1,0 +1,378 @@
+[
+ {
+  "id": "dh-geometry-modern-2024-2026",
+  "title": "Géométrie DH moderne 2024-2026 : plages de référence",
+  "tags": [
+   "dh",
+   "geometrie",
+   "angle-direction",
+   "debattement",
+   "reference"
+  ],
+  "text": "Sur les DH 2024-2026, l'angle de direction (HA) s'établit dans la plage ~62-63,5° en position basse (slack). Le débattement est de ~200 mm a l'avant avec fourche double-te (dual-crown), souvent 190-210 mm a l'arriere. Le Specialized Demo Race 2024 affiche HA = 62,8° avec fourche Ohlins DH38 200 mm et roues mixtes (29 AV / 27,5 AR). Le Santa Cruz V10 propose HA reglable 62,7° (low) a 63,3°, BB drop 21 mm (low) / chute mesuree autour de 350-356 mm de hauteur BB, reach de 412 a 492 mm selon taille et cups de jeu de direction. Le Commencal Supreme DH V5 va de 61° (XS low extreme) a 64° via flip-chips, avec un reach de 400 a 502 mm. Tendance 2025-2026 : moins d'extreme, plus de reglages (flip-chips angle/BB/bases) et bases size-specific."
+ },
+ {
+  "id": "enduro-geometry-modern-2024-2026",
+  "title": "Géométrie enduro moderne 2024-2026 : plages chiffrées",
+  "tags": [
+   "enduro",
+   "geometrie",
+   "angle-selle",
+   "reach",
+   "reference",
+   "dom-cible"
+  ],
+  "text": "Les enduro modernes se stabilisent : angle de direction (HA) ~63-65°, debattement 150-180 mm. Le reach typique est ~450-460 mm en taille M et >500 mm en plus grande taille. L'angle de selle effectif (STA) court desormais a 77-78° (contre 73-74° il y a cinq ans), de plus en plus corrige a la hauteur de pedalage reelle (important pour les grands pilotes et les longs debattements). Les bases s'etaient allongees puis se stabilisent, avec une tendance aux bases proportionnelles a la taille. Reference comparable : Specialized Levo 4 (e-MTB) HA 64,5°, STA 77°, BB drop 29,5 mm, bases 435 mm reglables, reach 435-535 mm. Les cibles projet DOM (HA 63,5-64°, STA eff 77-78°, bases 435, BB drop 30, reach ~480, debattement 160/170) sont coherentes avec cette plage enduro/e-enduro 2025."
+ },
+ {
+  "id": "head-angle-effect",
+  "title": "Angle de direction (HA) : effet sur le comportement",
+  "tags": [
+   "angle-direction",
+   "stabilite",
+   "maniabilite",
+   "concept"
+  ],
+  "text": "L'angle de direction (head angle, depuis l'horizontale) gouverne le compromis stabilite/maniabilite. Plus il est couche (slack, ex. 62-63° en DH), plus le velo est stable a haute vitesse et dans les pentes raides, car le contact pneu/sol s'eloigne devant l'axe de direction (trail eleve), mais la direction devient lente et lourde a basse vitesse. Plus il est redresse (steep, 65°+), plus la direction est vive et reactive en montee/virages serres, au prix d'une stabilite reduite en descente. Les enduro modernes vivent en 63-65°, les DH en 62-63,5°. L'innovation actuelle porte moins sur le 'toujours plus slack' que sur l'accord HA / deport de fourche / trail pour regler la sensation de direction."
+ },
+ {
+  "id": "reach-stack-effect",
+  "title": "Reach et stack : longueur de cockpit et hauteur",
+  "tags": [
+   "reach",
+   "stack",
+   "taille",
+   "fit",
+   "concept"
+  ],
+  "text": "Le reach (distance horizontale BB -> haut du tube de direction) definit la longueur du cockpit debout sur les pedales : plus de reach = plus d'espace, plus de stabilite en descente et meilleure repartition du poids vers l'avant, mais demande plus d'effort pour relever la roue avant. Plages modernes : ~450-460 mm en M, >500 mm en grande taille (enduro) ; les DH vont de ~400 (XS) a ~500 mm (XL). Le stack (hauteur verticale BB -> haut du tube de direction) regle la hauteur du cockpit : un stack eleve (DH ~620-640 mm) redresse le pilote et charge moins l'avant. Plusieurs DH (V10, Supreme) ajustent reach/stack via cups de jeu de direction ou flip-chips sans changer de cadre."
+ },
+ {
+  "id": "chainstay-rear-center-effect",
+  "title": "Longueur de bases (chainstay) : court vs long et mullet",
+  "tags": [
+   "bases",
+   "rear-center",
+   "mullet",
+   "repartition-poids",
+   "concept"
+  ],
+  "text": "Les bases (chainstay / rear center) reglent la repartition du poids et l'agilite. Des bases courtes (~430-442 mm) rendent le velo joueur, facile a manualer/sauter, mais peuvent surcharger l'avant a haute vitesse. Des bases longues (>450 mm, jusqu'a 465 mm en XL sur le V10) augmentent stabilite et traction, et equilibrent le poids sur les longs reach. Tendance 2025 : bases size-specific (proportionnelles a la taille) pour garder un meme equilibre AV/AR a toutes les tailles. Le Commencal Supreme regle les bases de +/-6 mm par flip-chip autour de 442,5 mm. En setup mullet (29 AV / 27,5 AR, ex. Demo), la petite roue arriere raccourcit naturellement les bases et libere de la place, gagnant en maniabilite ; un reglage de base compense la hauteur de BB."
+ },
+ {
+  "id": "bb-drop-height-effect",
+  "title": "BB drop et hauteur de boitier : stabilite vs garde au sol",
+  "tags": [
+   "bb-drop",
+   "hauteur-bb",
+   "stabilite",
+   "pedales",
+   "concept"
+  ],
+  "text": "Le BB drop (chute du boitier sous l'axe des roues) et la hauteur de BB au sol reglent le centre de gravite et le risque de toucher les pedales. Un BB plus bas / drop plus eleve (DH ~20-30 mm de drop, hauteur ~350 mm) abaisse le centre de gravite, donne un velo plus pose et stable en virage, mais augmente le risque de toucher une pedale (pedal strike). Un BB plus haut ameliore la garde au sol et le passage d'obstacles au prix d'une sensation plus 'perchee'. Reperes : Demo et V10 ~350-356 mm de hauteur BB ; Levo 4 BB drop 29,5 mm (hauteur ~350 mm) ; cible DOM BB drop 30 mm. Les flip-chips de DH modifient souvent la hauteur de BB de ~5 mm conjointement avec l'angle."
+ },
+ {
+  "id": "trail-fork-offset-effect",
+  "title": "Trail et déport de fourche (offset) : accord avec le HA",
+  "tags": [
+   "trail",
+   "offset",
+   "deport",
+   "direction",
+   "concept"
+  ],
+  "text": "Le trail (chasse) est la distance entre le point de contact du pneu au sol et l'intersection de l'axe de direction avec le sol ; c'est lui, plus que le HA seul, qui determine la stabilite et l'auto-centrage de la direction. Sweet-spot VTT ~80-100 mm de trail. Le deport de fourche (offset/rake) est la distance entre l'axe de roue et l'axe de direction : reduire l'offset (37-46 mm courant aujourd'hui, vs 51 mm aux debuts du 29\") augmente le trail, donc la stabilite ; augmenter l'offset le reduit et rend la direction plus vive. Avec des HA tres slack et des roues de 29\", les marques utilisent un offset reduit (44 ou 42 mm) pour ramener le trail dans une plage maniable. Reference : Levo 4 offset 44 mm, fork length 577 mm, trail 132 mm."
+ },
+ {
+  "id": "seat-tube-angle-effect",
+  "title": "Angle de tube de selle effectif (STA) : position de pédalage",
+  "tags": [
+   "angle-selle",
+   "sta",
+   "pedalage",
+   "concept"
+  ],
+  "text": "L'angle de tube de selle effectif (STA, a la hauteur de selle reelle) place le pilote sur le pedalier en montee. Un STA redresse (77-78° sur les enduro/e-MTB modernes, contre 73-74° avant) avance le bassin au-dessus du boitier : meilleure mise en puissance, charge l'avant en cote raide et evite le 'wheelie' involontaire, surtout sur longs debattements et grands cadres. Les marques corrigent de plus en plus le STA a la hauteur de pedalage reelle pour que les grands pilotes ne se retrouvent pas trop recules. Reperes : Levo 4 STA 77° ; cible DOM STA effectif 77-78°. Attention : un STA effectif depend de la hauteur de selle, donc varie selon le pilote pour un meme cadre."
+ },
+ {
+  "id": "high-pivot-axle-path",
+  "title": "High-pivot et chemin d'axe arrière : absorption et galet",
+  "tags": [
+   "high-pivot",
+   "chemin-axe",
+   "galet",
+   "anti-rise",
+   "cinematique",
+   "dom"
+  ],
+  "text": "Une suspension high-pivot place le pivot principal nettement au-dessus du boitier, souvent au niveau ou au-dessus du plateau. Cela cree un chemin d'axe arriere recule (rearward axle path) : la roue recule en debut de compression, ce qui lui permet d'absorber les chocs a arete vive (racines, marches) en 'reculant' devant l'obstacle au lieu de le percuter, maintenant mieux la vitesse. Contrepartie : pour eviter un fort pedal kickback (recul/croissance de chaine) du au chemin d'axe, un galet de renvoi (idler) decouple la ligne de chaine du mouvement de suspension. Les high-pivot ont aussi tendance a un anti-rise eleve (souvent >100-127%) : la suspension se comprime au freinage, limitant la plongee de l'avant et stabilisant l'assiette, au prix d'une legere reduction d'absorption sous freinage. Repere : Commencal Supreme DH V5 = high-pivot 6-barres (HVCS) avec galet ; preset DOM high_pivot_m620 = single-pivot haut + galet pres du pivot (degage le carter M620)."
+ },
+ {
+  "id": "dh-reference-bikes-angles",
+  "title": "Vélos DH repères 2024-2025 : angles et cotes",
+  "tags": [
+   "dh",
+   "reference",
+   "demo",
+   "v10",
+   "supreme",
+   "chiffres"
+  ],
+  "text": "Specialized Demo Race 2024 : HA 62,8°, fourche Ohlins DH38 200 mm, roues mixtes 29/27,5 (mullet), bases reglables via flip-chip Horst (compatible 29\" arriere). Santa Cruz V10 (DH) : HA 62,7° (low) a 63,3°, BB drop 21 mm en low (hauteur ~351-356 mm), reach 412-492 mm selon taille et cups, bases 440 mm (S) a 465 mm (XL) avec flip-chip +10 mm, reglage 3 positions (jeu de direction, biellette basse, base). Commencal Supreme DH V5 2024 : high-pivot 6-barres a galet, HA 63,2° (low) / 63,7° (high) sur la plupart des tailles, reach 400-502 mm (low), bases 442,5 mm reglables +/-6 mm, STA jusqu'a 79° en high sur petites tailles. Ces trois references encadrent la plage DH moderne (HA 62-64°, reach 400-500 mm, bases 420-465 mm, debattement ~200 mm)."
+ },
+ {
+  "id": "specialized-s-sizing-philosophy",
+  "title": "Specialized S-Sizing (S1-S6 decouple de l'entrejambe)",
+  "tags": [
+   "specialized",
+   "s-sizing",
+   "geometrie",
+   "taille",
+   "philosophie",
+   "fit"
+  ],
+  "text": "Le S-Sizing remplace les tailles S/M/L par S1-S6, choisies selon la taille du pilote ET le style de pilotage, pas selon l'entrejambe. Toutes les tailles d'un modele partagent des longueurs de tube de direction et un standover proches, ce qui permet de monter/descendre d'une taille pour ajuster le reach sans contrainte de hauteur de selle. Le Stumpjumper EVO offre ainsi un reach de 408 a 528 mm en reglage stock sur S1-S6 (pas d'env. 24 mm), le Levo 4 de 435 a 535 mm. Le but explicite est de decoupler la longueur du cadre (reach) de la hauteur, permettant un cadre plus long et plus stable a hauteur de selle egale."
+ },
+ {
+  "id": "specialized-stumpjumper-evo-geo-adj",
+  "title": "Stumpjumper EVO - reglages geometrie (headset excentrique + flip chip)",
+  "tags": [
+   "specialized",
+   "stumpjumper-evo",
+   "flip-chip",
+   "headset-excentrique",
+   "geometrie",
+   "reglage",
+   "trail"
+  ],
+  "text": "Le Stumpjumper EVO combine deux systemes de reglage independants. Le bol de jeu de direction excentrique offre 3 angles de direction par pas de 1 degre, de 63.5 a 65.5 degres. Le flip chip aux pivots de base (Horst) bascule entre position low et high : la position low ralentit l'angle de direction et l'angle de selle effectif de 0.5 degre, abaisse le boitier de pedalier de 7 mm et raccourcit le reach de 5 mm. La combinaison des deux donne 6 configurations geometriques distinctes. 6 tailles S1-S6, reach 408-528 mm. Les bases sont specifiques a la taille : 432 mm sur les petites, jusqu'a 438-443 mm sur S5/S6 pour les grands pilotes. Debattement 150 mm AR / 160 mm AV, roues 29."
+ },
+ {
+  "id": "specialized-stumpjumper-15-genie",
+  "title": "Stumpjumper 15 - amortisseur GENIE + bases par taille",
+  "tags": [
+   "specialized",
+   "stumpjumper-15",
+   "genie",
+   "suspension",
+   "geometrie",
+   "bases-progressives",
+   "trail"
+  ],
+  "text": "Le Stumpjumper 15 (remplacant de l'EVO) passe a 145 mm de debattement arriere / 150 mm fourche, roues 29. Jeu de direction excentrique a 3 positions : 63 / 64.5 / 65.5 degres. Sur S4 : angle de direction 64.5, angle de selle 76.5, reach 475 mm. S-Sizing S1-S6 avec bases SPECIFIQUES A LA TAILLE de 430 mm (S1) a 445 mm (S6), pour conserver une repartition de poids constante. Premier modele a recevoir l'amortisseur Fox Float GENIE co-developpe avec Fox. Specialized revendique +16.3 % de gestion de force d'impact, -57 % de temps de perte de traction et -39 % de talonnages severes vs l'EVO sortant."
+ },
+ {
+  "id": "specialized-genie-shock",
+  "title": "Amortisseur GENIE Specialized/Fox (double chambre PSA)",
+  "tags": [
+   "specialized",
+   "genie",
+   "fox-float-x",
+   "amortisseur",
+   "suspension",
+   "progressivite",
+   "ressort-air"
+  ],
+  "text": "Le GENIE est un ressort pneumatique a deux etages (Specialized: Pneumatic Spring Assist, PSA) co-developpe avec Fox. Un manchon exterieur ajoute un grand volume d'air actif sur les premiers ~70 % de la course, donnant une sensibilite et une touche proches du coil. Au repere de 70 %, une bande interne GENIE isole le manchon exterieur et reduit brutalement le volume d'air, creant une courbe tres progressive sur les 30 % restants pour le support anti-talonnage. Objectif : sensibilite du coil + progressivite/support de fin de course de l'air. Sur Levo 4 : Fox Float X GENIE Factory en 210x55 mm sur la majorite des montages."
+ },
+ {
+  "id": "specialized-levo-4-geometrie-motorisation",
+  "title": "Specialized Levo 4 - geometrie, Geo Adj et motorisation 3.1",
+  "tags": [
+   "specialized",
+   "levo-4",
+   "emtb",
+   "geometrie",
+   "geo-adj",
+   "moteur-3.1",
+   "mullet",
+   "genie"
+  ],
+  "text": "Le Turbo Levo 4 (S-Works ref. fournie) : debattement 150 mm AR / 160 mm AV, roues MIXTES (29 AV / 27.5 AR), amortisseur GENIE. S-Sizing S2-S6 : reach 435/455/480/505/535 mm, stack 618-667 mm, HT 95-149 mm, angle direction 64.5, angle de selle 77. Sur S4 : angle direction 64.4, angle selle 77, BB 350 mm de hauteur / 29.5 mm de drop, base 435 mm. Geo Adj a 6 positions : angle de direction +/-1 degre (bols de jeu de direction), BB -6 mm en position low, bases 435 mm (short) extensibles a 444 mm (long, +9 mm). Moteur Specialized 3.1 : 720 W crete / 111 Nm en tune S-Works, 666 W / 101 Nm en standard (meme bloc, difference firmware). Batterie 840 Wh (option 600 Wh, range extender 280 Wh -> 1120 Wh max). Poids ~23.7 kg (S4 S-Works)."
+ },
+ {
+  "id": "specialized-levo-4-evo",
+  "title": "Specialized Levo 4 EVO - variante gravity (170/180 mm)",
+  "tags": [
+   "specialized",
+   "levo-4-evo",
+   "emtb",
+   "enduro",
+   "geometrie",
+   "debattement",
+   "mullet"
+  ],
+  "text": "Le Levo 4 EVO complete la gamme cote gravity : debattement 170 mm AR / 180 mm AV (vs 150/160 du Levo 4), meme moteur 3.1 et batterie 840 Wh, roues mullet. Geometrie plus orientee descente : sur S4, l'angle de direction passe de 64.5 (Levo 4) a 63.6 degres (stock), reglable +/-1 degre (jusqu'a 63 en position slack), le reach passe de 480 a 470 mm, le stack monte de 638 a 646 mm, l'angle de selle s'assouplit a 76. Bases ~447 mm reglables sur ~11 mm. Positionnement : meme moteur que le Levo 4 mais plus de debattement et geometrie plus slack pour terrain raide et engage."
+ },
+ {
+  "id": "specialized-levo-sl-2",
+  "title": "Specialized Levo SL 2 - e-MTB leger (moteur SL 1.2)",
+  "tags": [
+   "specialized",
+   "levo-sl",
+   "emtb-leger",
+   "sl-1.2",
+   "geometrie",
+   "poids"
+  ],
+  "text": "Le Turbo Levo SL 2 est l'e-MTB leger : moteur Specialized SL 1.2, 50 Nm / 320 W, ~1.9 kg, batterie interne 320 Wh. Debattement 150 mm AR (FSR), fourche pouvant passer a 160 mm, compatible 27.5 ou 29 AR via reglage des bases. Geometrie versatile : reach 470 mm (S4), angle de selle ~75.8-76, angle de direction reglable de ~63.8 a 65.7 degres via le meme jeu de direction excentrique que Levo/Stumpjumper (3 positions). Poids mesure ~19.3 kg (S4 Expert Di2), soit ~moitie de la puissance d'un full-power pour un comportement proche d'un VTT musculaire. Le SL 1.2 se situe dans la categorie assistance legere (Bosch SX, Fazua)."
+ },
+ {
+  "id": "specialized-enduro-geometrie",
+  "title": "Specialized Enduro - geometrie enduro 170 mm",
+  "tags": [
+   "specialized",
+   "enduro",
+   "geometrie",
+   "horst-link",
+   "flip-chip",
+   "170mm"
+  ],
+  "text": "L'Enduro est la plateforme enduro 29 a suspension Horst Link (FSR) : ~170 mm AR / 170 mm AV. Flip chip 2 positions : angle de direction 63.9 degres en low, 64.3 en high. Bases 442 mm constantes sur toutes les tailles. S-Sizing 4 tailles (S2-S5) avec reach 437 / 464 / 487 / 511 mm. Angle de selle steep, reach long et angle slack constituent son ADN descente. C'est le modele musculaire le plus proche, en debattement, des cibles enduro du projet DOM (160/170 mm)."
+ },
+ {
+  "id": "specialized-demo-dh",
+  "title": "Specialized Demo / Demo 11 - DH 200 mm",
+  "tags": [
+   "specialized",
+   "demo",
+   "dh",
+   "descente",
+   "geometrie",
+   "flip-chip",
+   "ohlins"
+  ],
+  "text": "Le Demo Race 2024 est le DH : 200 mm AR / 200 mm AV, suspension Horst Link (amortos Ohlins), 3 tailles S2-S4. Angle de direction 62.8 degres, bases 443 mm constantes, BB 350 mm de hauteur / 25 mm de drop, stack 632 mm, angle de selle 76.8-78.2 selon taille. Reach 426 / 446 / 466 mm (S2/S3/S4), WB 1244 / 1264 / 1284 mm. Flip chip au pivot Horst de base : assure aussi la compatibilite roue arriere 27.5 (mullet) / 29 en ajustant base et hauteur de BB. Le Demo 11 (prototype World Cup) pousse plus loin : angle de direction ~62.5 degres, second flip chip dans la biellette ramenant a 62.0, et flip chip de 6 mm dans le tube de direction."
+ },
+ {
+  "id": "specialized-status-freeride",
+  "title": "Specialized Status 140/160 - mullet abordable",
+  "tags": [
+   "specialized",
+   "status",
+   "mullet",
+   "freeride",
+   "geometrie",
+   "flip-chip",
+   "abordable"
+  ],
+  "text": "Le Status est le mullet polyvalent/freeride alu abordable, vendu en mixte (29 AV / 27.5 AR), 5 tailles S1-S5, reach 417 mm (low) a 512 mm. Status 160 : 160 mm de debattement, angle de direction tres slack a 63.2 degres en low. Status 140 : 140 mm, angle de direction 63.7 (high) a 64.2 degres (low) selon les sources. Flip chip dans la fixation arriere d'amortisseur : modifie l'angle de direction de 0.5 degre et la hauteur de BB de jusqu'a 9 mm. Positionnement : geometrie capable a petit prix, base mullet pour stabilite a l'avant et arriere court manoeuvrable."
+ },
+ {
+  "id": "specialized-dom-comparaison-cibles",
+  "title": "Comparaison gamme Specialized vs cibles projet DOM e-MTB",
+  "tags": [
+   "specialized",
+   "dom",
+   "comparaison",
+   "cibles",
+   "geometrie",
+   "emtb",
+   "analyse"
+  ],
+  "text": "Cibles DOM (e-MTB custom 29, M620, courroie Gates) : angle direction 63.5-64, angle selle eff 77-78, bases 435, BB drop 30, reach ~480, HT 120-125, debattement 160 (V1)/170. Le Levo 4 X de reference (HA 64.5, STA 77, bases 435 reglables, reach 435-535, drop 29.5, debattement 160/150) est tres proche : meme angle de selle, meme base courte, meme drop, reach S4 = 480 = cible DOM. Ecarts notables : le DOM vise un angle de direction plus slack (63.5-64 vs 64.5) et des roues 29 full vs le mullet 29/27.5 du Levo 4. Pour la geometrie reglable, le Levo 4 EVO (HA 63.6, debattement 170/180) cadre mieux la cible 170 mm + angle slack. Le couple/puissance Levo 4 (111 Nm / 720 W S-Works) sert de point de comparaison au M620, mais attention : la fiche DOM cite '850W/111Nm' alors que le crete S-Works verifie est 720 W (101 Nm/666 W en standard)."
+ },
+ {
+  "id": "emtb-geometry-vs-analog-stats",
+  "title": "Géométrie e-MTB vs musculaire : écarts mesurés",
+  "tags": [
+   "emtb",
+   "geometrie",
+   "chainstay",
+   "statistiques",
+   "benchmark"
+  ],
+  "text": "Sur un panneau de vélos taille L, l'e-MTB moyen diffère peu du musculaire sauf sur l'arrière : bases 446.0 ±3.4 mm (e-MTB) vs 434.3 ±0.9 mm (musculaire), soit +12.4 mm ; empattement 1242.7 ±7.5 mm vs 1209.3 ±4.2 mm (+33.4 mm) ; stack 625.6 vs 618.9 mm (+6.7 mm). Reach quasi identique (463 vs 461 mm), HA 65.1° vs 66.3° (0.8° plus couché), STA 75.3° vs 74.9°. Une autre série (singletracks, 14 modèles) donne des écarts plus faibles (bases +3.1 mm, WB +5.4 mm, HA/STA identiques à 64.5°/77.2°), preuve que l'allongement des bases dépend surtout du moteur et du débattement, pas d'une règle universelle. Tendance 2019→2020 : bases raccourcies de ~9 mm (456→446) à mesure que les carters moteur ont rétréci. Sources : ebike-mtb.com, singletracks.com."
+ },
+ {
+  "id": "emtb-chainstay-motor-packaging",
+  "title": "Pourquoi les bases d'un e-MTB sont longues : carter moteur + climbing",
+  "tags": [
+   "emtb",
+   "chainstay",
+   "moteur",
+   "carter",
+   "climbing",
+   "poids"
+  ],
+  "text": "La cause première de bases plus longues est l'encombrement du moteur central : le carter occupe bien plus de place qu'un boîtier de pédalier classique et repousse l'axe arrière pour dégager la roue. Raison secondaire dynamique : la puissance moteur permet des montées plus raides où l'avant tend à se cabrer ; des bases longues remettent du poids sur l'arrière, gardent l'avant planté et améliorent la motricité. Le carter impose aussi un BB plus haut (anti-pedal-strike) que les marques compensent par des manivelles plus courtes. À titre indicatif, Specialized affichait des bases Levo à 459 mm contre 437 mm sur le Stumpjumper musculaire équivalent. Sources : singletracks.com, ebike-mtb.com, emountainbikekings.com."
+ },
+ {
+  "id": "emtb-battery-downtube-constraints",
+  "title": "Batterie dans le tube diagonal : contraintes de cadre",
+  "tags": [
+   "emtb",
+   "batterie",
+   "tube-diagonal",
+   "bb-drop",
+   "sta",
+   "integration"
+  ],
+  "text": "La batterie est quasi systématiquement logée dans le tube diagonal : ce tube accepte les plus gros packs et place la masse bas et centrée, ce qui préserve la maniabilité. Contrainte dimensionnelle : un pack triangle 52V 20Ah demande une largeur interne de tube diagonal >=100 mm. La présence du pack + du carter force les concepteurs à arbitrer hauteur de BB, angles de direction et tube de selle : les STA d'e-MTB montent jusqu'à 78° pour replacer le pilote au-dessus du pédalier (climbing efficace, traction avant) malgré la masse centrale. Mal placés, batterie et moteur dégradent tenue de route et fonctionnement de la suspension même avec une bonne géométrie. Sources : leoguarbikes.com, ebike-mtb.com, em3ev.com."
+ },
+ {
+  "id": "emtb-antisquat-kickback-middrive",
+  "title": "Anti-squat et pedal kickback sur mid-drive",
+  "tags": [
+   "cinematique",
+   "anti-squat",
+   "kickback",
+   "mid-drive",
+   "idler",
+   "chainline"
+  ],
+  "text": "L'anti-squat naît de la force de chaîne qui s'oppose à l'enfoncement sous pédalage ; le pedal kickback vient de la croissance de la base (chain growth) qui tire les manivelles en arrière en compression. Un AS élevé en milieu de course (~50%) implique davantage de kickback dans cette zone. La ligne de chaîne pilote l'AS (un grand pignon AR incline la chaîne et augmente l'AS). Sur e-MTB, le couple moteur amplifie ces forces : les ingénieurs réduisent souvent l'anti-squat et compensent par le tuning d'amortisseur. La position du pignon/galet et du pivot fixe le compromis AS↔kickback ; un galet (idler) près du pivot découple chain growth et gearing. Sources : singletracks.com, emtbforums.com, enduro-mtb.com."
+ },
+ {
+  "id": "high-pivot-idler-emtb",
+  "title": "High-pivot + galet sur e-MTB : kickback et couple",
+  "tags": [
+   "high-pivot",
+   "idler",
+   "kickback",
+   "emtb",
+   "chain-growth",
+   "couple"
+  ],
+  "text": "Un high-pivot crée un chemin d'axe reculé donc beaucoup de chain growth et de kickback ; le galet (idler) placé près du pivot rend la distance galet→axe quasi constante en compression, ce qui annule le pedal kickback tout en conservant un anti-squat élevé. L'idler permet aussi de changer le plateau/gearing sans modifier AS ni kickback. Sur e-MTB le high-pivot fonctionne avec un mid-drive (ex. Eminent Cycles avec Shimano EP8 + idler), mais le couple supplémentaire impose souvent de baisser l'anti-squat et de soigner le tuning d'amortisseur. Cas projet DOM : preset single-pivot haut + galet (M620) → AS≈112%, belt growth≈4.7 mm, kickback≈4.3°. Sources : bikeradar.com, flowmountainbike.com, mbr.co.uk."
+ },
+ {
+  "id": "specialized-levo4-reference",
+  "title": "Specialized Levo 4 (Gen 4 2026) — référence enduro e-MTB",
+  "tags": [
+   "levo",
+   "specialized",
+   "reference",
+   "enduro",
+   "geometrie-reglable",
+   "benchmark"
+  ],
+  "text": "e-MTB enduro/all-mountain S-Sizing S2–S6 : HA 64.5° (de série, position courte), STA 77°, BB drop 29.5 mm, BB-sol ~350 mm, bases 435 mm (réglables +11 mm → 446 via flip-chip Horst Link), fourche A2C 577 mm, offset 44 mm, trail 132 mm. Reach 435/455/480/505/535, Stack 618–667, HT 95–149. Débattement 160 AV / 150 AR (180/170 sur l'EVO), roues mixtes 29 AV / 27.5 AR, moteur 850 W / 111 Nm, batterie 840 Wh. Géométrie ajustable (Geo Adj) : cup de direction ±1° HA, flip-chip d'amortisseur pour la hauteur de BB, flip-chip de base ±9–11 mm. C'est le benchmark direct des cibles DOM (HA 63.5–64°, STA 77–78°, bases 435, reach ~480). Sources : pinkbike.com, bikometry.com, blisterreview.com."
+ },
+ {
+  "id": "oem-frame-e22-e23-positioning",
+  "title": "Cadre OEM E22/E23 : positionnement et segment",
+  "tags": [
+   "e22",
+   "e23",
+   "oem",
+   "segment",
+   "trail-suv",
+   "analyse"
+  ],
+  "text": "Le cadre E22/E23 (HA 66°, STA 72.5°, BB drop 25, FC 772.5, bases E22=484 / E23=495, WB 1231–1294, reach 420/446/470) N'EST PAS un enduro moderne : sa direction droite (66° vs 64.5° au Levo), son STA couché (72.5° vs 77°), son BB drop faible (25 vs ~30) et surtout ses bases très longues (484–495 vs 435–446) le situent dans le segment trail/SUV/all-mountain-touring e-MTB, orienté stabilité en montée chargée et confort plutôt que descente engagée. Ces bases dépassent largement la moyenne e-MTB (446 ±3.4 mm) ; elles s'expliquent par un gros carter (compatible moteur fort couple type Bafang M620, 160–170 Nm, conçu pour eCargo/eFat et charges lourdes) plus un dégagement de roue généreux. E23 = simplement +11 mm de bases vs E22 (484→495), reste identique. Sources : ebike-mtb.com, bafang-e.com, singletracks.com."
+ },
+ {
+  "id": "e22-e23-vs-levo-forces-faiblesses",
+  "title": "E22/E23 vs Levo : forces, faiblesses, écart aux cibles DOM",
+  "tags": [
+   "e22",
+   "e23",
+   "levo",
+   "comparaison",
+   "cibles-dom",
+   "geometrie"
+  ],
+  "text": "Forces du E22/E23 : très stable en montée raide chargée (bases 484–495, FC long 772.5), tube de selle court (ST 410–510) donc débattement de tige généreux, plateforme robuste pour moteur fort couple (M620). Faiblesses vs enduro type Levo : direction trop droite (66° contre 64.5°) → moins de stabilité à haute vitesse en descente ; STA 72.5° trop couché → pilote reculé, motricité avant et confort de grimpe inférieurs aux 77° modernes ; BB drop 25 mm faible (vs 29–30) → centre de gravité plus haut, moins ancré en virage ; bases 484–495 mm très longues → manque d'agilité et difficulté à lever l'avant. Par rapport aux cibles DOM (HA 63.5–64°, STA eff 77–78°, bases 435, BB drop 30, reach ~480), le E22/E23 est ~2.5° trop droit en direction, ~4.5–5.5° trop couché en STA, +49 à +60 mm de bases, et -5 mm de BB drop : c'est un châssis touring à recadrer fortement pour viser l'enduro/all-mountain agressif DOM. Sources : ebike-mtb.com, pinkbike.com, bikometry.com."
+ }
+]

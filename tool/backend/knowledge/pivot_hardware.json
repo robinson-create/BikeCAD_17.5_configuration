@@ -1,0 +1,20 @@
+[
+ {
+  "id": "pivot-bearings-catalog",
+  "title": "Roulements de pivot de suspension VTT/e-MTB",
+  "tags": ["pivot", "roulement", "bearing", "6902", "mr15268", "7902", "suspension", "hardware", "enduro-max"],
+  "text": "Pivots de suspension = roulements à cartouche étanches 2RS. Tailles standard (alésage×OD×largeur) : 688-2RS 8×16×5 (petits pivots/galets), 6900-2RS 10×22×6 et 6901-2RS 12×24×6 (galets/biellettes), 6802-2RS 15×24×5 (mince, biellettes peu chargées), 6902-2RS 15×28×7 (taille la plus courante, pivots et liaisons majeures), MR15268 15×26×8 (suspension, plus large→plus capacitaire), MR2437 24×37×7 (gros alésage / pivot principal concentrique BB). Codes : 69xx=série fine (bore 00/01/02=10/12/15 mm), 68xx=extra-fine. Le suffixe MAX (full-complement, fente de remplissage) ajoute ~35-45 % de billes donc de capacité — gamme Enduro MAX dédiée suspension."
+ },
+ {
+  "id": "pivot-main-angular-contact",
+  "title": "Pivot principal : contact oblique (7902) et appairage",
+  "tags": ["pivot", "principal", "contact-oblique", "angular", "7902", "main-pivot", "emtb", "couple"],
+  "text": "Le PIVOT PRINCIPAL voit des charges combinées radiales + axiales (torsion latérale du bras oscillant) : un roulement RADIAL (6902) encaisse mal le chargement latéral pur. Préférer un CONTACT OBLIQUE 7902 MAX (15×28×7, monté par PAIRE dos-à-dos, ex. Santa Cruz), rating statique ~3,6 kN — recommandé sur e-MTB à fort couple (Bafang M620). Les biellettes/Horst/rocker, qui tournent davantage, restent en radial (6902/6802). Les ancrages d'AMORTISSEUR n'utilisent PAS de roulement à billes mais une bague DU (Norglide/IGUS) ou une rotule (mieux pour l'oscillation faible + chocs latéraux)."
+ },
+ {
+  "id": "pivot-axle-housing-conventions",
+  "title": "Axes, logements et serrage de pivots",
+  "tags": ["pivot", "axe", "logement", "press-fit", "couple", "h7", "lug", "hardware"],
+  "text": "Montage : logement usiné dans le lug = Ø_ext roulement + ~6 mm de paroi mini, ajustement press-fit (tolérance H7), étanchéité 2RS vers l'extérieur. Axe/collet acier (ou Ti) traversant ; boulon dimensionné selon l'alésage (M8 pour bore 15, M6 pour 10-12, M5 pour 8). Pivots souvent montés par PAIRE (un roulement de chaque côté de la liaison) pour la rigidité latérale ; contact oblique en paire dos-à-dos. Couple de serrage des axes ~8-15 Nm (indicatif). e-MTB fort couple → roulements plus gros / MAX / contact oblique. Dimensionnement charge & fatigue = bureau d'études."
+ }
+]

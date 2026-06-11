@@ -570,8 +570,9 @@ def _draw_battery(bike, calc, sx, sy, ox, oy) -> str:
 
     parts = ['<g class="battery">']
     part = _PARTS.get("battery_norm")
-    if part and part.get("paths"):
-        # axe = bord « base » du pack (coin 0 → coin 1, le long du tube diagonal)
+    pts = " ".join(f"{x*sx+ox:.1f},{y*sy+oy:.1f}" for (x, y) in poly)
+    if ok and part and part.get("paths"):
+        # FIT OK → pack réel (sprite) + liseré vert
         p0, p1 = poly[0], poly[1]
         axis_ang = math.degrees(math.atan2(p1[1] - p0[1], p1[0] - p0[0]))
         along = math.hypot(p1[0] - p0[0], p1[1] - p0[1])  # = bat.length
@@ -581,25 +582,59 @@ def _draw_battery(bike, calc, sx, sy, ox, oy) -> str:
         bscale = along / norm_len if norm_len else 1.0
         parts.append(_draw_sprite("battery_norm", cx, cy, sx, sy, ox, oy,
                                   scale=bscale, angle_deg=axis_ang, klass="battery"))
-        # liseré de fit autour du pack réel
-        pts = " ".join(f"{x*sx+ox:.1f},{y*sy+oy:.1f}" for (x, y) in poly)
         parts.append(f'<polygon points="{pts}" fill="none" stroke="{edge}" '
                      f'stroke-width="2.5" stroke-linejoin="round" opacity="0.9"/>')
+        # Étiquette V·Wh au centroïde
+        cxl = sum(p[0] for p in poly) / 4 * sx + ox
+        cyl = sum(p[1] for p in poly) / 4 * sy + oy
+        label = f"{bike.battery.voltage:.0f}V · {bike.battery.capacity_wh:.0f}Wh"
+        parts.append(f'<text x="{cxl:.1f}" y="{cyl:.1f}" text-anchor="middle" '
+                     f'dominant-baseline="middle" font-size="12" font-family="sans-serif" '
+                     f'font-weight="bold" fill="#fff" stroke="#000" stroke-width="0.4" '
+                     f'paint-order="stroke">{label}</text>')
     else:
-        fill = "#27ae60" if ok else "#c0392b"
-        pts = " ".join(f"{x*sx+ox:.1f},{y*sy+oy:.1f}" for (x, y) in poly)
-        parts.append(f'<polygon points="{pts}" fill="{fill}" fill-opacity="0.45" '
-                     f'stroke="{fill}" stroke-width="2" stroke-linejoin="round"/>')
-    # Étiquette V·Wh au centroïde
-    cxl = sum(p[0] for p in poly) / 4 * sx + ox
-    cyl = sum(p[1] for p in poly) / 4 * sy + oy
-    label = f"{bike.battery.voltage:.0f}V · {bike.battery.capacity_wh:.0f}Wh"
-    parts.append(f'<text x="{cxl:.1f}" y="{cyl:.1f}" text-anchor="middle" '
-                 f'dominant-baseline="middle" font-size="12" font-family="sans-serif" '
-                 f'font-weight="bold" fill="#fff" stroke="#000" stroke-width="0.4" '
-                 f'paint-order="stroke">{label}</text>')
+        # NE TIENT PAS → on ne plaque PAS un gros pack noir hors cadre : juste un
+        # contour rouge pointillé (= « batterie trop grande pour ce cadre »),
+        # le détail du fit est dans le panneau Batterie.
+        parts.append(f'<polygon points="{pts}" fill="none" stroke="#c0392b" '
+                     f'stroke-width="2" stroke-dasharray="7 5" stroke-linejoin="round" opacity="0.75"/>')
     parts.append("</g>")
     return "".join(parts)
+
+
+def _draw_pivots(pres, sx, sy, ox, oy) -> str:
+    """Hardware des pivots : coupe roulement (logement + bague ext + billes + axe)
+    à chaque point de pivot. `pres` = PivotResult (compute_pivots)."""
+    if not pres or not getattr(pres, "ok", False):
+        return ""
+    out = ['<g class="pivots">']
+    for p in pres.pivots:
+        cx, cy = _pt(p.x, p.y, sx, sy, ox, oy)
+        r_house = max(5.0, p.housing_od / 2 * abs(sx))
+        r_od    = max(4.0, p.od / 2 * abs(sx))
+        r_bore  = max(1.6, p.bore / 2 * abs(sx))
+        is_bush = p.bearing.startswith("bushing")
+        race = "#b9874a" if is_bush else "#8b9099"   # bague bronze vs roulement acier
+        # logement usiné dans le lug
+        out.append(f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="{r_house:.1f}" '
+                   f'fill="#e7eaef" stroke="#5d636b" stroke-width="1"/>')
+        # bague extérieure
+        out.append(f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="{r_od:.1f}" fill="none" '
+                   f'stroke="{race}" stroke-width="{max(1.5, (r_od-r_bore)*0.32):.1f}"/>')
+        # billes (roulement) — 8 petites billes entre alésage et OD
+        if not is_bush and r_od - r_bore > 4:
+            rb = (r_od + r_bore) / 2
+            for i in range(8):
+                a = 2 * math.pi * i / 8
+                bx, by = cx + rb * math.cos(a), cy + rb * math.sin(a)
+                out.append(f'<circle cx="{bx:.1f}" cy="{by:.1f}" r="{(r_od-r_bore)*0.22:.1f}" '
+                           f'fill="#d6dae0" stroke="#5d636b" stroke-width="0.4"/>')
+        # alésage + axe
+        out.append(f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="{r_bore:.1f}" '
+                   f'fill="#33373d" stroke="#1a1d22" stroke-width="0.6"/>')
+        out.append(f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="{r_bore*0.42:.1f}" fill="#0e1013"/>')
+    out.append('</g>')
+    return "".join(out)
 
 
 def _draw_lugs(nodes, sx, sy, ox, oy, scale) -> str:
@@ -816,7 +851,7 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
                width: int = 1400, height: int = 750,
                show_dims: bool = True, fit=None,
                suspension=None, animate_suspension=False, lugs=None,
-               show_ground: bool = False) -> str:
+               show_ground: bool = False, pivots=None) -> str:
     _TUBE_ID[0] = 0
     f = bike.frame
     fk = bike.fork
@@ -980,13 +1015,20 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
                                 c.x + perp_x * cw / 2, c.y + perp_y * cw / 2, 24.0,
                                 PALETTE["crown"], sx, sy, ox, oy, scale_f, cap_r=12.0))
 
+    # Fourche SUSPENDUE ssi débattement > 0 (signal fiable du .bcad) ou double
+    # couronne (sinon un BMX, travel=0, héritait d'une fourche télescopique).
+    is_susp = (getattr(fk, "travel", 0.0) or 0.0) > 5.0 or getattr(fk, "dual_crown", False)
     fork_part = _PARTS.get("fork_norm")
-    if fork_part and fork_part.get("paths"):
-        # direction axe de roue → couronne (axe de direction, monde)
+    if not is_susp:
+        # FOURCHE RIGIDE : lame unique (légèrement effilée) de la couronne à l'axe
+        parts.append(_draw_tube(cr.x, cr.y, fa.x, fa.y, blade,
+                                PALETTE["fork_low"], sx, sy, ox, oy, scale_f, cap_r=blade/2))
+        _crown_block(cr)
+    elif fork_part and fork_part.get("paths"):
+        # SUSPENDUE : forme réelle BikeCAD (sprite normalisé)
         dir_ang = math.degrees(math.atan2(cr.y - fa.y, cr.x - fa.x))
         a2c = math.hypot(cr.x - fa.x, cr.y - fa.y)
         axis_len = fork_part.get("axis_len", 683.0) or 683.0
-        # ~74 % de la fourche (patte→couronne) couvre l'A2C ; le reste = pivot/té au-dessus
         fscale = (a2c / (axis_len * 0.74)) if axis_len else 1.0
         parts.append(_draw_sprite("fork_norm", fa.x, fa.y, sx, sy, ox, oy,
                                   scale=fscale, angle_deg=dir_ang - 90.0,
@@ -1161,6 +1203,10 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
         if frames:
             parts.append(_draw_suspension(frames, wheel_r_r, sx, sy, ox, oy, scale_f,
                                           animate=animate_suspension))
+
+    # === PIVOTS (roulements + axes, coupe) ===================================
+    if pivots:
+        parts.append(_draw_pivots(pivots, sx, sy, ox, oy))
 
     # === PILOTE (squelette de fit) ===========================================
     if fit is not None and getattr(fit, "ok", False):

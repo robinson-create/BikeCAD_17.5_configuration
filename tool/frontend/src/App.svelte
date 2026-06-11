@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte'
   import { activeTab, TABS, bike, scheduleRefresh, viewMode, showDims,
-           showSuspension, animateSuspension, showLugs } from './lib/store.js'
+           showSuspension, animateSuspension, showLugs, showPivots } from './lib/store.js'
   import { fetchDefault, loadBcad, exportBcad, exportDxf, exportLugs, exportDrawing, listBikes,
            saveBikeLibrary, listLibrary, loadLibrary } from './lib/api.js'
   import BikeRenderer from './BikeRenderer.svelte'
@@ -10,6 +10,7 @@
   import Compare from './Compare.svelte'
   import Settings from './Settings.svelte'
   import Assistant from './Assistant.svelte'
+  import BikeCADView from './BikeCADView.svelte'
 
   import Frame      from './panels/Frame.svelte'
   import Fork       from './panels/Fork.svelte'
@@ -184,6 +185,8 @@
             on:click={() => { $animateSuspension = !$animateSuspension; $bike && scheduleRefresh($bike) }}>▶ Animer</button>
           <button class="tg" class:on={$showLugs}
             on:click={() => { $showLugs = !$showLugs; $bike && scheduleRefresh($bike) }}>Lugs</button>
+          <button class="tg" class:on={$showPivots}
+            on:click={() => { $showPivots = !$showPivots; $bike && scheduleRefresh($bike) }}>Pivots</button>
         </div>
       </div>
 
@@ -218,6 +221,7 @@
         <button class:active={$viewMode === 'bike'} on:click={() => viewMode.set('bike')}>Vélo 2D</button>
         <button class:active={$viewMode === 'kinematics'} on:click={() => viewMode.set('kinematics')}>Cinématique</button>
         <button class:active={$viewMode === 'compare'} on:click={() => viewMode.set('compare')}>Comparaison</button>
+        <button class:active={$viewMode === 'bikecad'} on:click={() => viewMode.set('bikecad')}>🅑 Rendu BikeCAD</button>
         <button class:active={$viewMode === 'settings'} on:click={() => viewMode.set('settings')}>Réglages (réf.)</button>
         <button class:active={$viewMode === 'assistant'} on:click={() => viewMode.set('assistant')}>🤖 Assistant</button>
       </div>
@@ -228,6 +232,8 @@
           <Kinematics />
         {:else if $viewMode === 'compare'}
           <Compare />
+        {:else if $viewMode === 'bikecad'}
+          <BikeCADView />
         {:else if $viewMode === 'settings'}
           <Settings />
         {:else}
