@@ -122,6 +122,27 @@ def anti_squat(ic, axle, ground_y, drive_pt, r_drive, r_cog, cog_height,
     return h_above_ground / cog_height * 100.0
 
 
+def anti_rise(ic, axle, ground_y, cog_height, front_axle_x):
+    """Anti-rise % (FREINAGE, frein AR). Le couple de frein réagit au contact
+    pneu AR et passe par le bras → on utilise directement le CENTRE INSTANTANÉ
+    (pas la ligne de chaîne). Ligne (contact pneu AR → IC) projetée à la verticale
+    de l'axe AV ; hauteur / h_CG. 100 % = neutre au freinage (la suspension ignore
+    le transfert de charge). Méthode identique à l'anti-squat mais IC au lieu de l'IFC.
+
+    Source : github mark-bak/bikinematicsolver (méthode IC) ; Bikerumor « What is
+    Anti-Rise » + Pinkbike « What is Anti-Rise ». INDICATIVE — à valider dans Linkage.
+    """
+    if ic is None:
+        return 0.0
+    fx0, fy0 = (axle[0], ground_y)        # contact pneu AR au sol
+    fx1, fy1 = ic
+    if abs(fx1 - fx0) < 1e-6 or cog_height <= 0:
+        return 0.0
+    t = (front_axle_x - fx0) / (fx1 - fx0)
+    h_above_ground = (fy0 + t * (fy1 - fy0)) - ground_y
+    return h_above_ground / cog_height * 100.0
+
+
 # ── Assemblage du résultat ───────────────────────────────────────────────────
 
 def build_result(bike: BikeDesign, states: list,
@@ -162,6 +183,7 @@ def build_result(bike: BikeDesign, states: list,
             "axle_y": axle[1],
             "axle_dx": -(axle[0] - axle_top[0]),
             "anti_squat": st["anti_squat"],
+            "anti_rise": st.get("anti_rise", 0.0),
         }))
 
     max_travel_geom = curve[-1][0]
@@ -197,7 +219,7 @@ def build_result(bike: BikeDesign, states: list,
         t_target = travel_cap * i / N
         raw.append({k: interp_metric(t_target, k) for k in (
             "shock_stroke", "wheel_travel", "shock_length", "belt_growth",
-            "axle_x", "axle_y", "axle_dx", "anti_squat",
+            "axle_x", "axle_y", "axle_dx", "anti_squat", "anti_rise",
         )})
 
     if len(raw) < 3:
@@ -224,6 +246,7 @@ def build_result(bike: BikeDesign, states: list,
             shock_length=round(r["shock_length"], 2),
             leverage=round(lev, 3),
             anti_squat=round(r["anti_squat"], 1),
+            anti_rise=round(r["anti_rise"], 1),
             pedal_kickback=round(kick, 2),
             belt_growth=round(r["belt_growth"], 2),
             axle_x=round(r["axle_x"], 1),
@@ -241,6 +264,7 @@ def build_result(bike: BikeDesign, states: list,
                   key=lambda k: abs(samples[k].wheel_travel - sag_travel))
     lr_sag = samples[sag_idx].leverage
     as_sag = samples[sag_idx].anti_squat
+    ar_sag = samples[sag_idx].anti_rise
 
     belt_growth_max = max(abs(s_.belt_growth) for s_ in samples)
     pedal_kickback_max = max(abs(s_.pedal_kickback) for s_ in samples)
@@ -266,6 +290,7 @@ def build_result(bike: BikeDesign, states: list,
         leverage_sag=round(lr_sag, 3),
         progressivity=round(progressivity, 1),
         anti_squat_sag=round(as_sag, 1),
+        anti_rise_sag=round(ar_sag, 1),
         pedal_kickback_max=round(pedal_kickback_max, 2),
         belt_growth_max=round(belt_growth_max, 2),
         axle_path_rearward=round(axle_rearward, 1),

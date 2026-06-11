@@ -28,6 +28,8 @@
   // géométrie mal placée — on évite de couper la courbe).
   $: asMax = samples.length ? Math.max(...samples.map(s => s.anti_squat)) : 200
   $: asMin = samples.length ? Math.min(...samples.map(s => s.anti_squat)) : -50
+  $: arMax = samples.length ? Math.max(...samples.map(s => s.anti_rise ?? 0)) : 150
+  $: arMin = samples.length ? Math.min(...samples.map(s => s.anti_rise ?? 0)) : 0
 
   // Définition des graphes
   $: charts = [
@@ -40,6 +42,12 @@
       yMin: Math.min(-50, Math.floor((asMin) / 50) * 50),
       yMax: Math.max(200, Math.ceil((asMax) / 50) * 50),
       band: [100, 115], unit: '%',
+    },
+    {
+      title: 'Anti-rise (%) — freinage', key: 'anti_rise', color: '#16a085',
+      yMin: Math.min(0, Math.floor(arMin / 50) * 50),
+      yMax: Math.max(130, Math.ceil(arMax / 50) * 50),
+      band: [50, 130], unit: '%',
     },
     {
       title: 'Belt growth (mm)', key: 'belt_growth', color: '#5b9bd5',
@@ -69,6 +77,8 @@
       ok: k.progressivity >= 20 && k.progressivity <= 30, target: '20 – 30 %' },
     { label: 'Anti-squat (sag)', val: `${k.anti_squat_sag} %`,
       ok: k.anti_squat_sag >= 100 && k.anti_squat_sag <= 115, target: '100 – 115 %' },
+    { label: 'Anti-rise (sag)', val: `${k.anti_rise_sag} %`,
+      ok: k.anti_rise_sag >= 50 && k.anti_rise_sag <= 130, target: '50 – 130 % (freinage)' },
     { label: 'Belt growth max', val: `${k.belt_growth_max} mm`,
       ok: k.belt_growth_max < 2, target: '< 2 mm' },
     { label: 'Pedal kickback max', val: `${k.pedal_kickback_max}°`,

@@ -9,11 +9,11 @@
 
   <fieldset>
     <legend>Angles</legend>
-    <label>Angle de direction (°)
+    <label><span class="dimkey">HA</span>Angle de direction (°)
       <input type="number" step="0.1" value={f.head_angle ?? 64}
         on:change={e => upd({ head_angle: +e.target.value })} />
     </label>
-    <label>Angle tube de selle (°)
+    <label><span class="dimkey">STA</span>Angle tube de selle (°)
       <input type="number" step="0.1" value={f.seat_angle ?? 78}
         on:change={e => upd({ seat_angle: +e.target.value })} />
     </label>
@@ -21,23 +21,23 @@
 
   <fieldset>
     <legend>Longueurs (mm)</legend>
-    <label>Bases CS
+    <label><span class="dimkey">CS</span>Bases
       <input type="number" step="1" value={f.cs ?? 435}
         on:change={e => upd({ cs: +e.target.value })} />
     </label>
-    <label>Chute BB
+    <label><span class="dimkey">BB</span>Chute BB
       <input type="number" step="1" value={f.bb_drop ?? 30}
         on:change={e => upd({ bb_drop: +e.target.value })} />
     </label>
-    <label>Front center (FCD)
+    <label><span class="dimkey">FCD</span>Front center
       <input type="number" step="1" value={f.fcd ?? 820}
         on:change={e => upd({ fcd: +e.target.value })} />
     </label>
-    <label>Tube de selle c-c
+    <label><span class="dimkey">ST</span>Tube de selle c-c
       <input type="number" step="1" value={f.seat_tube ?? 423}
         on:change={e => upd({ seat_tube: +e.target.value })} />
     </label>
-    <label>Tube de direction
+    <label><span class="dimkey">HT</span>Tube de direction
       <input type="number" step="1" value={f.head_tube ?? 125}
         on:change={e => upd({ head_tube: +e.target.value })} />
     </label>

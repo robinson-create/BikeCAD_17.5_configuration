@@ -97,18 +97,15 @@ export async function applySuspensionPreset(name) {
 }
 
 // ── Tabs disponibles ─────────────────────────────────────────────────────────
-export const TABS = [
-  { id: 'frame',     label: 'Cadre',      icon: '⬡' },
-  { id: 'fork',      label: 'Fourche',    icon: '⑂' },
-  { id: 'stem',      label: 'Potence',    icon: '⌒' },
-  { id: 'handlebar', label: 'Cintre',     icon: '⌀' },
-  { id: 'saddle',    label: 'Selle',      icon: '◜' },
-  { id: 'seatpost',  label: 'Tige selle', icon: '↑' },
-  { id: 'cranks',    label: 'Manivelles', icon: '⟳' },
-  { id: 'drivetrain',label: 'Transmission','icon': '⚙' },
-  { id: 'wheels',    label: 'Roues',      icon: '◯' },
-  { id: 'brakes',    label: 'Freins',     icon: '⊠' },
-  { id: 'suspension',label: 'Suspension', icon: '◇' },
-  { id: 'battery',   label: 'Batterie',   icon: '🔋' },
-  { id: 'rider',     label: 'Pilote',     icon: '☻' },
+// Onglets regroupés (UX) : 6 groupes au lieu de 13 onglets, AUCUN champ perdu —
+// chaque groupe empile ses panneaux (chacun garde son titre/section).
+export const GROUPS = [
+  { id: 'frame',      label: 'Cadre',          icon: '⬡', panels: ['frame'] },
+  { id: 'suspension', label: 'Suspension',     icon: '◇', panels: ['suspension'] },
+  { id: 'drive',      label: 'Motorisation',   icon: '⚙', panels: ['drivetrain', 'cranks', 'battery'] },
+  { id: 'wheels',     label: 'Roues & freins', icon: '◯', panels: ['wheels', 'brakes'] },
+  { id: 'cockpit',    label: 'Pilotage',       icon: '⌒', panels: ['fork', 'stem', 'handlebar', 'saddle', 'seatpost'] },
+  { id: 'rider',      label: 'Pilote',         icon: '☻', panels: ['rider'] },
 ]
+// Compat : ancien `TABS` (certains imports) = liste à plat des panneaux.
+export const TABS = GROUPS

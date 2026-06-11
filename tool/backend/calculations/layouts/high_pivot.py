@@ -87,9 +87,10 @@ def solve_high_pivot(bike: BikeDesign):
             P, axle, ground_y, drive_pt, r_drive, r_cog, s.cog_height,
             front_axle_x=f.fcd,
         )
+        ar_pct = common.anti_rise(P, axle, ground_y, s.cog_height, front_axle_x=f.fcd)
         states.append({
             "axle": axle, "idler": idler,
-            "shock_len": shock_len, "anti_squat": as_pct,
+            "shock_len": shock_len, "anti_squat": as_pct, "anti_rise": ar_pct,
             "draw": {
                 "links": [[list(P), list(axle)]],   # bras rigide pivot→axe
                 "shock": [list(lo), list(shock_up)],

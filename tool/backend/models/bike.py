@@ -491,6 +491,7 @@ class KinematicSample(BaseModel):
     shock_length:  float  # longueur amortisseur (mm)
     leverage:      float  # ratio de levier d(roue)/d(amorto)
     anti_squat:    float  # anti-squat (%)
+    anti_rise:     float = 0.0  # anti-rise (%) au freinage (méthode IC)
     pedal_kickback:float = 0.0  # recul pédalier cumulé depuis topout (° manivelle)
     belt_growth:   float  # variation longueur courroie vs topout (mm)
     axle_x:        float  # position axe AR x (monde, mm)
@@ -596,6 +597,7 @@ class KinematicsResult(BaseModel):
     leverage_sag:     float = 0.0
     progressivity:    float = 0.0   # (LR_start - LR_end)/LR_start * 100
     anti_squat_sag:   float = 0.0
+    anti_rise_sag:    float = 0.0
     pedal_kickback_max:float = 0.0  # recul pédalier max sur la course (° manivelle)
     belt_growth_max:  float = 0.0
     axle_path_rearward:float = 0.0  # recul max de l'axe (mm)

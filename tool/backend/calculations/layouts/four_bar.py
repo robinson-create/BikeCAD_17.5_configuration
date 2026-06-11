@@ -130,9 +130,10 @@ def solve_four_bar(bike: BikeDesign):
             ic, axle, ground_y, drive_pt, r_drive, r_cog, s.cog_height,
             front_axle_x=f.fcd,
         )
+        ar_pct = common.anti_rise(ic, axle, ground_y, s.cog_height, front_axle_x=f.fcd)
         states.append({
             "axle": axle, "idler": idler,
-            "shock_len": shock_len, "anti_squat": as_pct,
+            "shock_len": shock_len, "anti_squat": as_pct, "anti_rise": ar_pct,
             "draw": {
                 "links": [[list(A), list(B)], [list(B), list(C)], [list(C), list(D)]],
                 "shock": [list(lo), list(shock_up)],

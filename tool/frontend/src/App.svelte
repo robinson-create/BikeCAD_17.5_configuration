@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte'
-  import { activeTab, TABS, bike, scheduleRefresh, viewMode, showDims,
+  import { activeTab, GROUPS, bike, scheduleRefresh, viewMode, showDims,
            showSuspension, animateSuspension, showLugs, showPivots } from './lib/store.js'
   import { fetchDefault, loadBcad, exportBcad, exportDxf, exportLugs, exportDrawing, listBikes,
            saveBikeLibrary, listLibrary, loadLibrary } from './lib/api.js'
@@ -199,19 +199,21 @@
     <!-- Left: tabs + panel -->
     <aside class="sidebar">
       <nav class="tabs">
-        {#each TABS as tab}
+        {#each GROUPS as g}
           <button
             class="tab-btn"
-            class:active={$activeTab === tab.id}
-            on:click={() => activeTab.set(tab.id)}>
-            {tab.label}
+            class:active={$activeTab === g.id}
+            on:click={() => activeTab.set(g.id)}>
+            <span class="tic">{g.icon}</span> {g.label}
           </button>
         {/each}
       </nav>
       <div class="panel-area">
-        {#if PANELS[$activeTab]}
-          <svelte:component this={PANELS[$activeTab]} />
-        {/if}
+        {#each (GROUPS.find(g => g.id === $activeTab)?.panels ?? []) as pid}
+          {#if PANELS[pid]}
+            <svelte:component this={PANELS[pid]} />
+          {/if}
+        {/each}
       </div>
     </aside>
 
@@ -371,24 +373,26 @@
     overflow: hidden;
   }
   .tabs {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 2px;
-    padding: 6px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 5px;
+    padding: 8px;
     border-bottom: 1px solid var(--border);
     background: var(--surface);
   }
   .tab-btn {
-    padding: 3px 8px;
-    border: 1px solid transparent;
-    border-radius: 4px;
-    background: transparent;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding: 8px 4px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: #fff;
     color: var(--text-muted);
     cursor: pointer;
     font-size: .72rem;
     transition: all .15s;
   }
-  .tab-btn:hover { color: var(--text); background: #fff; }
+  .tab-btn .tic { font-size: 1.05rem; line-height: 1; }
+  .tab-btn:hover { color: var(--text); border-color: var(--border-strong); }
   .tab-btn.active {
     background: var(--accent-soft);
     border-color: var(--accent);

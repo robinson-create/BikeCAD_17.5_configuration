@@ -105,16 +105,32 @@ def _pt(x: float, y: float, sx: float, sy: float, ox: float, oy: float):
 
 # ─── Composants visuels ───────────────────────────────────────────────────────
 
-def _draw_wheel(cx: float, cy: float, r_tire: float, r_rim: float,
-                n_spokes: int, sx: float, sy: float, ox: float, oy: float,
-                cassette=False) -> str:
+def _draw_wheel(cx: float, cy: float, r_tire: float,
+                sx: float, sy: float, ox: float, oy: float,
+                cassette=False, wcfg=None) -> str:
+    """Roue vue de côté. Les détails (jante depuis BSD+profil, croisement de
+    rayons, Ø flasque moyeu, cercle de croisement) viennent du WheelConfig `wcfg`
+    → chaque réglage de la roue agit sur l'aperçu."""
     scx, scy, sr_tire = _circle(cx, cy, r_tire, sx, sy, ox, oy)
-    _, _, sr_rim = _circle(cx, cy, r_rim, sx, sy, ox, oy)
-    sr_hub = 18.0 * abs(sx)               # corps moyeu
-    sr_fl  = 22.0 * abs(sx)               # flasque (réduit)
+    # Jante : bord extérieur = BSD/2 + profil de jante (sinon ~0.83·rayon pneu).
+    if wcfg is not None:
+        rim_mm    = min(r_tire - 3.0, wcfg.bead_seat_dia / 2 + max(0.0, wcfg.rim_depth))
+        n_spokes  = max(8, int(wcfg.spokes))
+        flange_mm = min(70.0, max(14.0, wcfg.hub_flange_dia_ds / 2))
+        cross     = max(0, int(wcfg.cross_pattern))
+        circ_mm   = wcfg.spoke_circ_dia
+    else:
+        rim_mm, n_spokes, flange_mm, cross, circ_mm = r_tire * 0.83, 32, 22.0, 3, 0.0
+    _, _, sr_rim = _circle(cx, cy, rim_mm, sx, sy, ox, oy)
+    sr_fl  = max(6.0, flange_mm * abs(sx))   # flasque moyeu (Ø réel)
+    sr_hub = max(7.0, sr_fl * 0.5)
     tire_w = max(4.0, sr_tire - sr_rim)
-    rim_w  = max(2.0, tire_w * 0.12)      # jante fine (un seul liseré)
-    r_bed  = sr_rim - rim_w               # lit de jante (intérieur)
+    rim_w  = max(2.0, tire_w * 0.14)
+    r_bed  = sr_rim - rim_w
+    # Rayon d'accroche au lit de jante (cercle de croisement si fourni)
+    r_attach = (circ_mm / 2 * abs(sx)) if circ_mm and circ_mm > 0 else r_bed * 0.99
+    r_attach = min(r_attach, r_bed * 0.99)
+    cross_off = cross * 0.06                 # croisement → décalage tangentiel (rad)
 
     L = [f'<g class="wheel">']
     # Pneu : anneau noir UNI (pas de sculpture) + liseré BikeCAD
@@ -122,11 +138,12 @@ def _draw_wheel(cx: float, cy: float, r_tire: float, r_rim: float,
              f'stroke="#333333" stroke-width="1.0"/>')
     # Creux (entre les rayons) = couleur de fond → roue ajourée comme BikeCAD
     L.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{r_bed:.1f}" fill="{PALETTE["wheel_gap"]}"/>')
-    # Rayons droits, fins (une nappe, radiaux du moyeu au lit de jante)
+    # Rayons : du flasque (décalé selon le croisement) vers le cercle d'accroche
     for i in range(n_spokes):
         a = 2 * math.pi * i / n_spokes
-        hx, hy = scx + sr_fl * math.cos(a), scy + sr_fl * math.sin(a)
-        rx, ry = scx + r_bed * 0.99 * math.cos(a), scy + r_bed * 0.99 * math.sin(a)
+        sign = 1 if i % 2 == 0 else -1       # 2 nappes alternées
+        hx, hy = scx + sr_fl * math.cos(a + sign * cross_off), scy + sr_fl * math.sin(a + sign * cross_off)
+        rx, ry = scx + r_attach * math.cos(a), scy + r_attach * math.sin(a)
         L.append(f'<line x1="{hx:.1f}" y1="{hy:.1f}" x2="{rx:.1f}" y2="{ry:.1f}" '
                  f'stroke="{PALETTE["spoke"]}" stroke-width="0.5"/>')
     # Jante : un seul anneau argent fin
@@ -422,6 +439,30 @@ def _draw_sprite(name, ax, ay, sx, sy, ox, oy, *, scale=1.0, angle_deg=0.0,
     return "".join(out)
 
 
+def _draw_motor(bike, calc, sx, sy, ox, oy, scale) -> str:
+    """Carter moteur central, dessiné DERRIÈRE le cadre (les tubes se rejoignent
+    par-dessus, au BB — le moteur est la jonction d'un mid-drive). Forme exacte
+    BikeCAD si dispo, sinon enveloppe carter, sinon rectangle générique."""
+    dt = bike.drivetrain
+    if not dt.use_motor:
+        return ""
+    bb = (calc.bb.x, calc.bb.y)
+    motor_svg = _draw_motor_bikecad(dt, calc, sx, sy, ox, oy)
+    if motor_svg:
+        return motor_svg
+    env = motor_envelope_world(dt)
+    if env is not None:
+        pts = " ".join(f"{x:.1f},{y:.1f}" for x, y in
+                       (_pt(bb[0] + ex, bb[1] + ey, sx, sy, ox, oy) for ex, ey in env))
+        return (f'<polygon class="motor" points="{pts}" fill="{PALETTE["motor"]}" '
+                f'stroke="#1a2530" stroke-width="1.5"/>')
+    mw, mh = 130.0, 150.0
+    mx, my = bb[0] + dt.motor_x, bb[1] + dt.motor_y
+    x0, y0 = _pt(mx - mw / 2, my + mh / 2, sx, sy, ox, oy)
+    return (f'<rect class="motor" x="{x0:.1f}" y="{y0:.1f}" width="{mw*scale:.1f}" '
+            f'height="{mh*scale:.1f}" rx="{18*scale:.1f}" fill="{PALETTE["motor"]}"/>')
+
+
 def _draw_drivetrain(bike, calc, sx, sy, ox, oy, scale) -> str:
     """Plateau, pignon AR, courroie/chaîne (+ galet), moteur central, manivelle."""
     dt = bike.drivetrain
@@ -436,33 +477,9 @@ def _draw_drivetrain(bike, calc, sx, sy, ox, oy, scale) -> str:
     r_cr = su.chainring_teeth * pitch / (2 * math.pi)
     r_cog = su.cog_teeth * pitch / (2 * math.pi)
 
-    # Moteur central : enveloppe réelle du carter si disponible (ex. M620),
-    # sinon rectangle générique. NB : l'enveloppe est en coords MONDE relatives
-    # au BB ; on translate par bb avant projection écran.
-    if dt.use_motor:
-        motor_svg = _draw_motor_bikecad(dt, calc, sx, sy, ox, oy)
-        env = None if motor_svg else motor_envelope_world(dt)
-        if motor_svg:
-            parts.append(motor_svg)
-        elif env is not None:
-            pts = " ".join(
-                f"{x:.1f},{y:.1f}" for x, y in
-                (_pt(bb[0] + ex, bb[1] + ey, sx, sy, ox, oy) for ex, ey in env)
-            )
-            parts.append(
-                f'<polygon class="motor" points="{pts}" '
-                f'fill="{PALETTE["motor"]}" opacity="0.85" '
-                f'stroke="#1a2530" stroke-width="1.5" />'
-            )
-        else:
-            mw, mh = 130.0, 150.0   # encombrement approximatif d'un mid-drive
-            mx, my = bb[0] + dt.motor_x, bb[1] + dt.motor_y
-            x0, y0 = _pt(mx - mw / 2, my + mh / 2, sx, sy, ox, oy)
-            parts.append(
-                f'<rect class="motor" x="{x0:.1f}" y="{y0:.1f}" width="{mw*scale:.1f}" '
-                f'height="{mh*scale:.1f}" rx="{18*scale:.1f}" '
-                f'fill="{PALETTE["motor"]}" opacity="0.85" />'
-            )
+    # NB : le MOTEUR n'est PLUS dessiné ici — il est rendu AVANT le cadre (derrière
+    # les tubes) via _draw_motor(), pour que les tubes se rejoignent visiblement au
+    # BB (le moteur EST la jonction sur un mid-drive). Voir render_svg.
 
     # Plateau (chainring denté) au BB + pignon AR — dessinés AVANT la manivelle
     parts.append(_sprocket(bb[0], bb[1], r_cr, su.chainring_teeth, sx, sy, ox, oy,
@@ -476,7 +493,8 @@ def _draw_drivetrain(bike, calc, sx, sy, ox, oy, scale) -> str:
     dx, dy = pe[0] - bb[0], pe[1] - bb[1]
     dl = math.hypot(dx, dy) or 1.0
     nx, ny = -dy / dl, dx / dl
-    wb, wp = 24.0, 13.0                       # largeur au BB / à la pédale
+    wb = max(14.0, bike.cranks.arm_thickness * 1.7)   # largeur manivelle (réglage)
+    wp = max(9.0, wb * 0.55)                            # largeur à la pédale
     quad = [(bb[0] + nx*wb/2, bb[1] + ny*wb/2), (pe[0] + nx*wp/2, pe[1] + ny*wp/2),
             (pe[0] - nx*wp/2, pe[1] - ny*wp/2), (bb[0] - nx*wb/2, bb[1] - ny*wb/2)]
     qpts = " ".join(f"{p[0]*sx+ox:.1f},{p[1]*sy+oy:.1f}" for p in quad)
@@ -956,9 +974,9 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
     # === ROUES ===============================================================
     # Dessinées en premier (derrière le cadre). Cassette seulement si dérailleur.
     is_igh = bike.drivetrain.transmission == "igh"
-    parts.append(_draw_wheel(ra.x, ra.y, wheel_r_r, rim_r_r, n_sp_r, sx, sy, ox, oy,
-                             cassette=not is_igh))
-    parts.append(_draw_wheel(fa.x, fa.y, wheel_r_f, rim_r_f, n_sp_f, sx, sy, ox, oy))
+    parts.append(_draw_wheel(ra.x, ra.y, wheel_r_r, sx, sy, ox, oy,
+                             cassette=not is_igh, wcfg=bike.wheel_r))
+    parts.append(_draw_wheel(fa.x, fa.y, wheel_r_f, sx, sy, ox, oy, wcfg=bike.wheel_f))
 
     # === MOYEU À VITESSES (IGH : Rohloff / 3X3) — gros corps de moyeu ==========
     if is_igh:
@@ -974,6 +992,9 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
 
     # === FREINS (disques) ====================================================
     parts.append(_draw_brakes(bike, calc, sx, sy, ox, oy))
+
+    # === MOTEUR (DERRIÈRE le cadre : les tubes se rejoignent par-dessus au BB) =
+    parts.append(_draw_motor(bike, calc, sx, sy, ox, oy, scale_f))
 
     # === CADRE (technique BikeCAD : remplissages groupés → fillets aux nœuds →
     #     liseré #333 en dernière passe → silhouette « objet peint » sans coutures)
@@ -1072,7 +1093,8 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
     L_sdl = max(250.0, bike.saddle.length)
     H_sdl = max(16.0, min(30.0, bike.saddle.thickness))   # épaisseur de coque
     clampH = 24.0
-    cxs = sp_end_x + 0.04 * L_sdl          # pince ~ sous le centre, légèrement avant
+    # setback = recul de la selle derrière l'axe de tige (réglage tige de selle)
+    cxs = sp_end_x + 0.04 * L_sdl - max(0.0, bike.seatpost.setback)
     ty  = sp_end_y + clampH                # ligne d'assise (haut de coque)
     def Wp(x, y):                          # raccourci monde→px
         return f"{W(x, y)[0]:.1f},{W(x, y)[1]:.1f}"
