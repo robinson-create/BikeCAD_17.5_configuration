@@ -1,5 +1,5 @@
 import { writable, derived, get } from 'svelte/store'
-import { calcAndRender, fetchKinematics, fetchFit, fetchSuspensionPreset, fetchBattery, fetchTransmission, fetchPivots } from './api.js'
+import { calcAndRender, fetchKinematics, fetchFit, fetchSuspensionPreset, fetchBattery, fetchTransmission, fetchPivots, fetchFasteners } from './api.js'
 
 // ── Design courant ─────────────────────────────────────────────────────────
 export const bike = writable(null)      // BikeDesign (null = pas encore chargé)
@@ -20,6 +20,8 @@ export const animateSuspension = writable(false)  // animation de la course
 export const showLugs          = writable(false)  // lugs CNC aux jonctions
 export const showPivots        = writable(false)  // roulements/axes aux pivots
 export const pivots            = writable(null)    // PivotResult
+export const showFasteners     = writable(false)  // points de vis/boulons sur la vue 2D
+export const fasteners         = writable(null)    // FastenerResult
 export const baseline  = writable(null)     // snapshot de référence pour comparaison
 
 // Fige le design courant comme référence de comparaison
@@ -47,14 +49,16 @@ async function doRefresh(bikeData) {
   loading.set(true)
   error.set('')
   try {
-    const [result, kin, fitRes, batRes, txRes, pivRes] = await Promise.all([
+    const [result, kin, fitRes, batRes, txRes, pivRes, fastRes] = await Promise.all([
       calcAndRender(bikeData, 1400, 750, get(showDims), get(showRider),
-                    get(showSuspension), get(animateSuspension), get(showLugs), get(showPivots)),
+                    get(showSuspension), get(animateSuspension), get(showLugs), get(showPivots),
+                    get(showFasteners)),
       fetchKinematics(bikeData).catch(() => null),
       bikeData.rider ? fetchFit(bikeData).catch(() => null) : Promise.resolve(null),
       bikeData.battery?.enabled ? fetchBattery(bikeData).catch(() => null) : Promise.resolve(null),
       fetchTransmission(bikeData).catch(() => null),
       bikeData.suspension?.enabled ? fetchPivots(bikeData).catch(() => null) : Promise.resolve(null),
+      fetchFasteners(bikeData).catch(() => null),
     ])
     svg.set(result.svg)
     calc.set(result.calc)
@@ -63,6 +67,7 @@ async function doRefresh(bikeData) {
     battery.set(batRes)
     transmission.set(txRes)
     pivots.set(pivRes)
+    fasteners.set(fastRes)
   } catch (e) {
     error.set(e.message ?? 'Erreur de calcul')
   } finally {
@@ -106,6 +111,7 @@ export const GROUPS = [
   { id: 'wheels',     label: 'Roues & freins', icon: '◯', panels: ['wheels', 'brakes'] },
   { id: 'cockpit',    label: 'Pilotage',       icon: '⌒', panels: ['fork', 'stem', 'handlebar', 'saddle', 'seatpost'] },
   { id: 'rider',      label: 'Pilote',         icon: '☻', panels: ['rider'] },
+  { id: 'fasteners',  label: 'Visserie',       icon: '⊕', panels: ['fasteners'] },
 ]
 // Compat : ancien `TABS` (certains imports) = liste à plat des panneaux.
 export const TABS = GROUPS

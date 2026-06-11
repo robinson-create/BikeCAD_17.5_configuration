@@ -296,6 +296,29 @@ svg = render_svg(b, calc, 1400, 750, True, None)
 check('class="motor"' in svg and "polygon" in svg, "carter M620 dessiné en polygone dans le SVG")
 check(svg_finite(svg), "SVG carter M620 valide")
 
+# 5e. TRANSMISSION courroie + moyeu IGH + TENSION (patte coulissante)
+print("  -- transmission courroie + tension --")
+from backend.calculations.transmission import compute_transmission
+b = load_bcad(SRC)
+b.drivetrain.transmission = "igh"; b.drivetrain.igh_model = "3x3_nine"
+b.drivetrain.drive_type = "belt"; b.drivetrain.motor_torque_nm = 150.0
+b.suspension.chainring_teeth = 39; b.suspension.cog_teeth = 24
+b.suspension.belt_tension_method = "sliding_dropout"; b.suspension.dropout_adjust_mm = 15.0
+t = compute_transmission(b)
+check(t.kind == "igh" and t.gears == 9, f"IGH 3X3 NINE détecté ({t.gears}v)")
+check(t.torque_ok and t.hub_input_nm < t.max_torque_nm, f"couple moyeu OK ({t.hub_input_nm}/{t.max_torque_nm})")
+check(t.ratio_ok, f"rapport primaire ≥ mini ({t.primary_ratio}≥{t.min_ratio})")
+check(t.belt and t.belt_teeth > 50, f"courroie : {t.belt_teeth} dents calculées")
+check(t.belt_tension_ok, "tension courroie OK (patte coulissante 15mm)")
+# garde-fou : sans réglage → tension impossible
+b.suspension.dropout_adjust_mm = 0.0
+t0 = compute_transmission(b)
+check(not t0.belt_tension_ok, "courroie sans réglage d'entraxe → tension impossible (détecté)")
+# patte coulissante dessinée dans le SVG
+b.suspension.dropout_adjust_mm = 15.0
+svg = render_svg(b, calculate(b), 1400, 800, True, None)
+check('class="dropout"' in svg, "patte coulissante dessinée dans le SVG")
+
 # ─── 6. SOLVEUR GÉNÉRIQUE PAR CONTRAINTES ───────────────────────────────────
 print("\n=== 6. SOLVEUR GÉNÉRIQUE (Newton-Raphson) ===")
 b = load_bcad(SRC)
@@ -410,7 +433,9 @@ SECTIONS = ["frame", "fork", "headtube", "headset", "stem", "handlebar",
 # Design non trivial : suspension high-pivot + selle A→N + moteur M620 + rider
 b = load_bcad(SRC)
 b.suspension = high_pivot_m620()
+b.suspension.belt_tension_method = "eccentric_bb"; b.suspension.dropout_adjust_mm = 12.0
 b.drivetrain.motor_key = "bafang_m620"
+b.drivetrain.transmission = "igh"; b.drivetrain.igh_model = "3x3_nine"
 b.saddle.a = 12.3; b.saddle.n = 4.5; b.saddle.angle = -2.0
 b.stem.x = 7.0; b.stem.y = -3.0
 b.seatpost.exposed = 173.0

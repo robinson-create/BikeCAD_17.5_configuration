@@ -655,6 +655,129 @@ def _draw_pivots(pres, sx, sy, ox, oy) -> str:
     return "".join(out)
 
 
+# Couleur par catégorie de visserie (cohérent avec le panneau Visserie)
+_FAST_CAT_COL = {
+    "Cockpit":       "#2980b9",
+    "Tige de selle": "#8e44ad",
+    "Freins":        "#c0392b",
+    "Roues":         "#16a085",
+    "Transmission":  "#d35400",
+    "Moteur":        "#2c3e50",
+    "Suspension":    "#e67e22",
+    "Divers":        "#7f8c8d",
+}
+
+
+def _bolt_glyph(cx: float, cy: float, r: float, col: str, drive: str) -> str:
+    """Tête de vis : empreinte étoile (Torx) ou hexagone (BTR/hex)."""
+    d = drive.lower()
+    out = [f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="{r:.1f}" fill="{col}" '
+           f'stroke="#0d0f12" stroke-width="0.9"/>']
+    if "torx" in d or "étoile" in d or "etoile" in d:
+        pts = []
+        for i in range(12):
+            rr = r * 0.60 if i % 2 == 0 else r * 0.28
+            a = math.pi * i / 6
+            pts.append(f"{cx + rr*math.cos(a):.1f},{cy + rr*math.sin(a):.1f}")
+        out.append(f'<polygon points="{" ".join(pts)}" fill="#0e1013"/>')
+    else:
+        pts = [f"{cx + r*0.55*math.cos(math.pi/6 + math.pi*i/3):.1f},"
+               f"{cy + r*0.55*math.sin(math.pi/6 + math.pi*i/3):.1f}" for i in range(6)]
+        out.append(f'<polygon points="{" ".join(pts)}" fill="#0e1013"/>')
+    return "".join(out)
+
+
+def _draw_fasteners(fres, sx, sy, ox, oy) -> str:
+    """Repère chaque point de vis/boulon (tête colorée par catégorie + empreinte
+    Torx/hex, quantité × N). `fres` = FastenerResult (compute_fasteners)."""
+    if not fres or not getattr(fres, "ok", False):
+        return ""
+    # Regrouper les glyphes au même point (BB, axe…) pour les décaler en étoile.
+    groups: dict = {}
+    for it in fres.items:
+        groups.setdefault((round(it.x), round(it.y)), []).append(it)
+    out = ['<g class="fasteners">']
+    for (_gx, _gy), its in groups.items():
+        n = len(its)
+        for i, it in enumerate(its):
+            cx, cy = _pt(it.x, it.y, sx, sy, ox, oy)
+            if n > 1:
+                a = 2 * math.pi * i / n
+                cx += 12 * math.cos(a)
+                cy += 12 * math.sin(a)
+            col = _FAST_CAT_COL.get(it.category, "#7f8c8d")
+            out.append(_bolt_glyph(cx, cy, 6.0, col, it.drive))
+            if it.qty > 1:
+                out.append(f'<text x="{cx + 7.5:.1f}" y="{cy - 5:.1f}" font-size="9" '
+                           f'font-family="sans-serif" font-weight="bold" fill="#111" '
+                           f'stroke="#fff" stroke-width="0.5" paint-order="stroke">×{it.qty}</text>')
+    # Légende compacte (catégories présentes) en haut à gauche
+    cats: list = []
+    for it in fres.items:
+        if it.category not in cats:
+            cats.append(it.category)
+    ly = 64
+    out.append(f'<rect x="10" y="{ly-14}" width="146" height="{len(cats)*16+10}" rx="5" '
+               f'fill="#ffffff" stroke="#c5ccd6" stroke-width="1" opacity="0.92"/>')
+    out.append(f'<text x="18" y="{ly}" font-size="10" font-family="sans-serif" '
+               f'font-weight="bold" fill="#333">Visserie</text>')
+    for c in cats:
+        ly += 16
+        out.append(f'<circle cx="24" cy="{ly-3:.0f}" r="5" fill="{_FAST_CAT_COL.get(c,"#7f8c8d")}" '
+                   f'stroke="#0d0f12" stroke-width="0.8"/>')
+        out.append(f'<text x="34" y="{ly:.0f}" font-size="10" font-family="sans-serif" '
+                   f'fill="#333">{c}</text>')
+    out.append('</g>')
+    return "".join(out)
+
+
+def _draw_dropout(rear_axle, bb, adjust_mm, method, sx, sy, ox, oy) -> str:
+    """Patte arrière RÉGLABLE pour tendre la courroie : glissière le long de la
+    base (axe AR → BB), de longueur `adjust_mm`, avec l'axe en bout et une cote ↔."""
+    if adjust_mm <= 0.1:
+        return ""
+    ax, ay = rear_axle
+    # Direction de la base (axe AR → BB) normalisée
+    dx, dy = bb[0] - ax, bb[1] - ay
+    L = math.hypot(dx, dy) or 1.0
+    ux, uy = dx / L, dy / L
+    # Extrémités de la glissière (l'axe coulisse de adjust_mm vers l'avant)
+    x0, y0 = ax, ay                       # position détendue (arrière)
+    x1, y1 = ax + ux * adjust_mm, ay + uy * adjust_mm   # position tendue (avant)
+    sx0, sy0 = _pt(x0, y0, sx, sy, ox, oy)
+    sx1, sy1 = _pt(x1, y1, sx, sy, ox, oy)
+    r_axle = max(4.0, 6.0 * abs(sx))      # rayon visuel de l'axe (~12mm)
+    # Perpendiculaire pour l'épaisseur de la lumière
+    px, py = -uy, ux
+    half = r_axle * 0.7
+    out = ['<g class="dropout">']
+    # corps de la patte (lumière oblongue)
+    p_sx, p_sy = px * half, -py * half
+    poly = (f'{sx0 + p_sx:.1f},{sy0 + p_sy:.1f} {sx1 + p_sx:.1f},{sy1 + p_sy:.1f} '
+            f'{sx1 - p_sx:.1f},{sy1 - p_sy:.1f} {sx0 - p_sx:.1f},{sy0 - p_sy:.1f}')
+    out.append(f'<polygon points="{poly}" fill="#cfd4da" stroke="#5d636b" stroke-width="1.2"/>')
+    # rails de la glissière
+    out.append(f'<line x1="{sx0 + p_sx:.1f}" y1="{sy0 + p_sy:.1f}" x2="{sx1 + p_sx:.1f}" '
+               f'y2="{sy1 + p_sy:.1f}" stroke="#5d636b" stroke-width="0.8"/>')
+    out.append(f'<line x1="{sx0 - p_sx:.1f}" y1="{sy0 - p_sy:.1f}" x2="{sx1 - p_sx:.1f}" '
+               f'y2="{sy1 - p_sy:.1f}" stroke="#5d636b" stroke-width="0.8"/>')
+    # axe (à mi-course, position de réglage)
+    mx, my = (sx0 + sx1) / 2, (sy0 + sy1) / 2
+    out.append(f'<circle cx="{mx:.1f}" cy="{my:.1f}" r="{r_axle:.1f}" fill="#33373d" '
+               f'stroke="#0e1013" stroke-width="1"/>')
+    out.append(f'<circle cx="{mx:.1f}" cy="{my:.1f}" r="{r_axle*0.4:.1f}" fill="#0e1013"/>')
+    # trait de réglage (course de tension) + cote
+    out.append(f'<line x1="{sx0:.1f}" y1="{sy0 - r_axle - 4:.1f}" x2="{sx1:.1f}" '
+               f'y2="{sy1 - r_axle - 4:.1f}" stroke="#e8851a" stroke-width="1.4"/>')
+    label = {"sliding_dropout": "patte coulissante", "eccentric_bb": "BB excentrique",
+             "eccentric_pivot": "pivot excentrique"}.get(method, method)
+    out.append(f'<text x="{(sx0+sx1)/2:.1f}" y="{(sy0+sy1)/2 - r_axle - 9:.1f}" '
+               f'font-size="9" font-family="sans-serif" fill="#e8851a" '
+               f'text-anchor="middle">↔ {adjust_mm:.0f}mm ({label})</text>')
+    out.append('</g>')
+    return "".join(out)
+
+
 def _draw_lugs(nodes, sx, sy, ox, oy, scale) -> str:
     """Lugs CNC aux jonctions : manchon (collar) le long de chaque douille +
     corps central usiné. Montre la construction lug-and-bond du cadre."""
@@ -879,7 +1002,7 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
                width: int = 1400, height: int = 750,
                show_dims: bool = True, fit=None,
                suspension=None, animate_suspension=False, lugs=None,
-               show_ground: bool = False, pivots=None) -> str:
+               show_ground: bool = False, pivots=None, fasteners=None) -> str:
     _TUBE_ID[0] = 0
     f = bike.frame
     fk = bike.fork
@@ -1101,7 +1224,7 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
     # === SELLE (profil VTT moderne : coque fine, bec effilé, arrière relevé) ==
     # Nez vers l'avant (+x = droite). Construit en coords monde (y-haut) puis projeté.
     L_sdl = max(250.0, bike.saddle.length)
-    H_sdl = max(16.0, min(30.0, bike.saddle.thickness))   # épaisseur de coque
+    H_sdl = max(14.0, min(20.0, bike.saddle.thickness))   # épaisseur de coque (fine)
     clampH = 24.0
     # setback = recul de la selle derrière l'axe de tige (réglage tige de selle)
     cxs = sp_end_x + 0.04 * L_sdl - max(0.0, bike.seatpost.setback)
@@ -1146,45 +1269,45 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
     parts.append(f'<rect x="{clx-5:.1f}" y="{cly-2:.1f}" width="10" height="9" rx="2" '
                  f'fill="{PALETTE["seatpost"]}" />')
 
-    # === POTENCE (corps + collier steerer + faceplate cintre) ================
+    # === POTENCE + CINTRE (poste de pilotage — formes propres) ================
     st = bike.stem
-    # Pivot/steerer exposé au-dessus du JDD (réglage tige de direction)
+    st_ang = math.radians(f.head_angle)
+    ux, uy = -math.cos(st_ang), math.sin(st_ang)        # axe de direction (haut-arrière)
+    # Steerer exposé au-dessus du JDD (tube fin sombre) si réglé
     steerer_exp = max(0.0, getattr(st, "steerer_exposed", 0.0))
-    if steerer_exp > 1:
-        st_ang = math.radians(f.head_angle)
-        # direction de l'axe de direction (vers le haut-arrière)
-        ux, uy = -math.cos(st_ang), math.sin(st_ang)
+    if steerer_exp > 5:
         parts.append(_draw_tube(ht.x, ht.y, ht.x + ux * steerer_exp, ht.y + uy * steerer_exp,
-                                28.6, PALETTE["stanchion"], sx, sy, ox, oy, scale_f, cap_r=14.0))
-    parts.append(_draw_tube(sb.x, sb.y, stip.x, stip.y, 26.0,
-                            PALETTE["stem"], sx, sy, ox, oy, scale_f, cap_r=13.0))
-    # collier steerer (à la base) — hauteur = collar_height
-    cmx, cmy = W(sb.x, sb.y)
-    coll_h = max(10.0, getattr(st, "collar_height", 25.0))
-    parts.append(f'<circle cx="{cmx:.1f}" cy="{cmy:.1f}" r="{coll_h*0.7*scale_f:.1f}" '
-                 f'fill="{PALETTE["stem"]}" stroke="#111" stroke-width="1"/>')
-    # faceplate au cintre — Ø = collar_diameter (serrage cintre)
-    fpx, fpy = W(stip.x, stip.y)
-    coll_d = max(20.0, getattr(st, "collar_diameter", 31.8))
-    parts.append(f'<circle cx="{fpx:.1f}" cy="{fpy:.1f}" r="{coll_d*0.6*scale_f:.1f}" '
-                 f'fill="{_shade(PALETTE["stem"],1.4)}" stroke="#111" stroke-width="1"/>')
+                                28.6, PALETTE["stem"], sx, sy, ox, oy, scale_f, cap_r=14.0))
+    # Corps de potence : du steerer (sb) au serrage cintre (stip)
+    parts.append(_draw_tube(sb.x, sb.y, stip.x, stip.y, 30.0,
+                            PALETTE["stem"], sx, sy, ox, oy, scale_f, cap_r=15.0))
+    # Collier de steerer (bloc le long de l'axe de direction, hauteur = collar_height)
+    coll_h = max(12.0, getattr(st, "collar_height", 25.0))
+    parts.append(_draw_tube(sb.x - ux * coll_h / 2, sb.y - uy * coll_h / 2,
+                            sb.x + ux * coll_h / 2, sb.y + uy * coll_h / 2, 36.0,
+                            _shade(PALETTE["stem"], 0.8), sx, sy, ox, oy, scale_f, cap_r=18.0))
+    # Faceplate (petit bloc de serrage du cintre, perpendiculaire au cintre)
+    coll_d = max(25.0, getattr(st, "collar_diameter", 31.8))
+    fcx, fcy = W(stip.x, stip.y)
+    parts.append(f'<circle cx="{fcx:.1f}" cy="{fcy:.1f}" r="{coll_d*0.55*scale_f:.1f}" '
+                 f'fill="{_shade(PALETTE["stem"],1.35)}" stroke="#111" stroke-width="0.8"/>')
 
-    # === CINTRE (riser MTB : montant + grip vers le pilote) ==================
-    rise = max(15.0, bike.handlebar.rise)
-    bar_cx, bar_cy = stip.x, stip.y + rise
-    grip_len = 95.0 + bike.handlebar.extend
-    grip_x = bar_cx - grip_len                 # vers l'arrière (pilote)
-    grip_y = bar_cy + 14.0                      # léger sweep/rise
-    bw = max(26.0, bike.handlebar.diameter + 4)
-    # montant (du collier de potence vers la barre)
-    parts.append(_draw_tube(stip.x, stip.y, bar_cx, bar_cy, bw * 0.85,
-                            PALETTE["handlebar"], sx, sy, ox, oy, scale_f, cap_r=bw*0.42))
-    # grip vers le pilote
-    parts.append(_draw_tube(bar_cx, bar_cy, grip_x, grip_y, bw,
+    # === CINTRE (riser MTB : montant + barre + grip) =========================
+    rise = max(0.0, bike.handlebar.rise)
+    bw = max(24.0, bike.handlebar.diameter - 3.0)        # Ø barre ≈ 28 mm
+    top_x, top_y = stip.x, stip.y + rise                 # haut du riser
+    sweep_back = 95.0 + max(0.0, getattr(bike.handlebar, "extend", 0.0))
+    grip_x, grip_y = top_x - sweep_back, top_y - 6.0     # grips vers le pilote (léger back-sweep bas)
+    if rise > 3:                                         # montant du riser
+        parts.append(_draw_tube(stip.x, stip.y, top_x, top_y, bw,
+                                PALETTE["handlebar"], sx, sy, ox, oy, scale_f, cap_r=bw/2))
+    # barre jusqu'au début du grip
+    parts.append(_draw_tube(top_x, top_y, grip_x, grip_y, bw,
                             PALETTE["handlebar"], sx, sy, ox, oy, scale_f, cap_r=bw/2))
-    gx, gy = W(grip_x, grip_y)
-    parts.append(f'<circle cx="{gx:.1f}" cy="{gy:.1f}" r="{bw*0.42*scale_f:.1f}" '
-                 f'fill="{PALETTE["grip"]}" stroke="#000" stroke-width="0.8"/>')
+    # grip (poignée caoutchouc, segment distinct ~110 mm vers l'arrière)
+    gw = bw + 5.0
+    parts.append(_draw_tube(grip_x, grip_y, grip_x - 110.0, grip_y - 4.0, gw,
+                            PALETTE["grip"], sx, sy, ox, oy, scale_f, cap_r=gw/2))
 
     # === COTES (dimensions) ==================================================
     if show_dims:
@@ -1262,6 +1385,17 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
     # === PIVOTS (roulements + axes, coupe) ===================================
     if pivots:
         parts.append(_draw_pivots(pivots, sx, sy, ox, oy))
+
+    # === VISSERIE (chaque point de vis/boulon + type) ========================
+    if fasteners:
+        parts.append(_draw_fasteners(fasteners, sx, sy, ox, oy))
+
+    # === PATTE RÉGLABLE (tension courroie) ===================================
+    if bike.drivetrain.drive_type == "belt" and bike.suspension.dropout_adjust_mm > 0:
+        parts.append(_draw_dropout(
+            (calc.rear_axle.x, calc.rear_axle.y), (0.0, 0.0),
+            bike.suspension.dropout_adjust_mm, bike.suspension.belt_tension_method,
+            sx, sy, ox, oy))
 
     # === PILOTE (squelette de fit) ===========================================
     if fit is not None and getattr(fit, "ok", False):

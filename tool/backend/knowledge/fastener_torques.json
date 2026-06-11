@@ -1,0 +1,20 @@
+[
+ {
+  "id": "fastener-cockpit-torques",
+  "title": "Visserie cockpit : potence, faceplate, top cap, collier de selle",
+  "tags": ["vis", "boulon", "fastener", "couple", "torque", "potence", "stem", "faceplate", "topcap", "collier", "selle", "cockpit"],
+  "text": "Couples de serrage de RÉFÉRENCE (specs constructeur agrégées, cf. Park Tool / Specialized Torque Matrix / Race Face / Thomson / ENVE) — toujours prioriser la valeur GRAVÉE sur la pièce. Serrage potence sur pivot de fourche : 2× M5 (Hex 4 ou Torx T25), 5–6 Nm (Specialized Road/MTN 5.1 ; Thomson 5.5 ; DH/direct-mount jusqu'à 9). Faceplate (serrage cintre) : 4× M5 (Hex 4 / Torx T25), 5–6 Nm — serrer le HAUT puis le BAS, jeu 0 mm en haut, en croix progressive. Variante faceplate 2 vis : 2× M6 (Torx T30 / Hex 5), 9 Nm (Specialized) à 13.6–16.3 (gamme générale). Top cap / capuchon de jeu de direction : 1× M6, 3–4 Nm — c'est une vis de PRÉCONTRAINTE du roulement, elle NE retient PAS la potence (serrer les vis de pivot APRÈS réglage, fourche alignée). Collier de selle (cadre) : 1× M5/M6 (Hex 4 / Torx T25), 5–6 Nm. Carbone (cintre/tige/collier sur tube carbone) : ne pas dépasser le couple mini + pâte de montage carbone (friction)."
+ },
+ {
+  "id": "fastener-saddle-brakes-wheels",
+  "title": "Visserie selle, freins à disque et roues (axes traversants)",
+  "tags": ["vis", "boulon", "fastener", "couple", "torque", "selle", "rails", "frein", "étrier", "caliper", "disque", "rotor", "axe", "traversant", "thru-axle", "porte-bidon"],
+  "text": "Chariot de rails de selle : 2× M6 (Hex 4/5), 9 Nm (Specialized S-Works/Pro) ; single-bolt M8 13.6 ; rails carbone = suivre la notice de la selle. Étrier de frein à disque POST-MOUNT (cadre/fourche) : 2× M6 (Hex 5), SRAM 9.5 / Shimano 6–8 Nm ; FLAT-MOUNT : 2× M5 (Hex 4), 5 Nm ; centrer l'étrier disque serré au levier. Disque 6 trous (rotor→moyeu) : 6× M5 Torx T25, 6.2 Nm (SRAM/Avid) ; Shimano vis pré-traitées 2–4 Nm ; alternative Center Lock = 1 bague cannelée 40 Nm. Axe traversant arrière 12 mm (Shimano E-Thru) : Hex 6, 5–7.5 Nm (Specialized 142×12 : 15). Axe avant 15 mm (RockShox Maxle) : fermeture par levier en zone verte, pas de couple chiffré. Porte-bidon : 2× M5 (Hex 4), 2.8–4 Nm (ne pas surserrer les inserts)."
+ },
+ {
+  "id": "fastener-drivetrain-motor-m620",
+  "title": "Visserie transmission, manivelles et moteur Bafang M620",
+  "tags": ["vis", "boulon", "fastener", "couple", "torque", "plateau", "chainring", "manivelle", "crank", "udh", "dérailleur", "moteur", "bafang", "m620", "g510", "motor-mount"],
+  "text": "Plateau direct-mount 3 vis (SRAM 3-bolt) : Torx T25, 9 Nm ; 4 vis MTB 9 Nm ; route 4 vis AXS Torx T30 12 Nm ; vis plateau acier Shimano 7.9–10.7 ; Race Face 11.3 ; spider 8 vis SRAM Torx T20 4 Nm. Boulon de manivelle auto-extracteur SRAM DUB : M30 cap, Hex 8, 54 Nm ; vis de pincement bras gauche Shimano Hollowtech II Hex 5 12–14 Nm + capuchon de précharge 0.7–1.5 Nm. Patte de dérailleur UDH (SRAM Universal Derailleur Hanger) : Hex 5, 25 Nm, FILETAGE À GAUCHE ; SRAM Eagle Transmission Full Mount (sans patte) Hex 8 35 Nm ; dérailleur sur patte Hex 5 8–10 Nm. MOTEUR BAFANG M620 (G510) → cadre : 3× M8 (boulons spéciaux + rondelles plates + écrous-frein), 35 Nm ; manivelles M620 sur axe Hex 8 45–50 Nm ; écrou de plateau cannelé (outil Bafang) 35 Nm ; capot moteur 3× M3×8 Torx 1.5 Nm ; capteur de vitesse 1.5–2 Nm. Pivots de suspension / œillets d'amortisseur : axes M6/M8, 10–24 Nm selon plateforme (voir aussi onglet Pivots pour les roulements). HORS PÉRIMÈTRE : specs d'assemblage uniquement ; le dimensionnement fatigue/impact de la visserie d'un engin motorisé reste au bureau d'études."
+ }
+]

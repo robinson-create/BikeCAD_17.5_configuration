@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte'
   import { activeTab, GROUPS, bike, scheduleRefresh, viewMode, showDims,
-           showSuspension, animateSuspension, showLugs, showPivots } from './lib/store.js'
+           showSuspension, animateSuspension, showLugs, showPivots, showFasteners } from './lib/store.js'
   import { fetchDefault, loadBcad, exportBcad, exportDxf, exportLugs, exportDrawing, listBikes,
            saveBikeLibrary, listLibrary, loadLibrary } from './lib/api.js'
   import BikeRenderer from './BikeRenderer.svelte'
@@ -25,6 +25,7 @@
   import Suspension from './panels/Suspension.svelte'
   import Battery    from './panels/Battery.svelte'
   import Rider      from './panels/Rider.svelte'
+  import Fasteners  from './panels/Fasteners.svelte'
 
   const PANELS = {
     frame:      Frame,
@@ -40,6 +41,7 @@
     suspension: Suspension,
     battery:    Battery,
     rider:      Rider,
+    fasteners:  Fasteners,
   }
 
   let bikes = []
@@ -187,6 +189,8 @@
             on:click={() => { $showLugs = !$showLugs; $bike && scheduleRefresh($bike) }}>Lugs</button>
           <button class="tg" class:on={$showPivots}
             on:click={() => { $showPivots = !$showPivots; $bike && scheduleRefresh($bike) }}>Pivots</button>
+          <button class="tg" class:on={$showFasteners}
+            on:click={() => { $showFasteners = !$showFasteners; $bike && scheduleRefresh($bike) }}>Visserie</button>
         </div>
       </div>
 

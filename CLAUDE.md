@@ -13,9 +13,10 @@ Deux choses cohabitent dans ce dépôt :
    couvre les fenêtres/calculs BikeCAD, ajoute cinématique suspension (3 topologies,
    levier/anti-squat/**anti-rise**/belt growth/kickback), enveloppe/dégagement carter moteur,
    mode lugs (jonctions tube↔lug → SolidWorks), **hardware de pivots (roulements + axes)**,
+   **visserie (chaque point de vis/boulon + type + couple)**,
    **transmission dérailleur OU moyeu à vitesses IGH (Rohloff / 3×3) + garde-fou couple**,
    **calculateur batterie/autonomie**, bibliothèque lossless, fit pilote, comparaison,
-   exports SVG/DXF/.bcad/lugs/pivots, et un **assistant conversationnel (Claude)**.
+   exports SVG/DXF/.bcad/lugs/pivots/visserie, et un **assistant conversationnel (Claude)**.
    Rendu **style BikeCAD** (fond gris, cadre détouré, formes RÉELLES de pièces extraites des
    exports BikeCAD : fourche, amortisseur, dérailleur, batterie ; moteur exact du JAR) +
    vue **« Rendu BikeCAD »** (import du SVG natif BikeCAD pour fidélité 100 %).
@@ -70,11 +71,26 @@ cd tool && ./start.sh          # backend :8000 (uvicorn) + frontend :5173 (vite)
   (modèle → calcul → svg `_draw_*` → endpoint → panneau/store).
 - `calculations/transmission.py` — `compute_transmission()` : dérailleur (cassette) OU IGH
   (Rohloff 130 Nm / 3×3 250 Nm). **Garde-fou couple** : couple moteur ÷ rapport primaire
-  (plateau/pignon) = couple entrée moyeu ≤ limite ; + rapport primaire mini. Endpoint `/api/transmission`.
+  (plateau/pignon) = couple entrée moyeu ≤ limite ; + rapport primaire mini. **Géométrie +
+  TENSION courroie** : une courroie est sans fin (pas de tendeur de dérailleur) → l'entraxe
+  doit être RÉGLABLE. `_belt_geometry()` calcule entraxe (≈ chainstay), longueur 2-poulies,
+  nb de dents Gates, et ΔC/dent ; `belt_tension_ok` = course de réglage `dropout_adjust_mm` ≥
+  un incrément de dent. `SuspensionConfig.belt_tension_method` (sliding_dropout | eccentric_bb |
+  eccentric_pivot) + `dropout_adjust_mm`. Rendu : `_draw_dropout()` (glissière + axe + cote ↔,
+  class="dropout", auto si drive=belt). Endpoint `/api/transmission`.
 - `calculations/pivots.py` — `compute_pivots()` : par pivot de la topologie → roulement
   (catalogue), axe, logement, nomenclature. Sélection GÉOMÉTRIQUE (charges/fatigue = bureau
   d'études). Pivot principal en **contact oblique 7902** (charges combinées e-MTB) ; amortisseur
   en **bague DU/rotule** (pas de roulement). Exports `io/pivot_export.py` (JSON/CSV/résumé).
+- `calculations/fasteners.py` — `compute_fasteners(bike, calc)` : **chaque point de vis/boulon**
+  du vélo (cockpit, tige de selle, freins, roues, transmission, moteur, suspension, divers) →
+  position monde + taille + empreinte (Torx/hex) + qté + couple de RÉFÉRENCE + nomenclature.
+  Couples = specs constructeur agrégées (Park Tool / Specialized Matrix / SRAM/Shimano / **manuel
+  Bafang M620** : fixation 3× M8 @ 35 Nm, manivelles 45–50). Toujours prioriser la valeur GRAVÉE
+  sur la pièce ; sélection GÉOMÉTRIQUE (fatigue/impact = bureau d'études). Rendu `_draw_fasteners`
+  (tête colorée par catégorie + empreinte + légende), export `io/fastener_export.py` (JSON/CSV/résumé).
+  Connaissance : `knowledge/fastener_torques.json` (3 entrées). Endpoints `/api/fasteners`,
+  `/api/export/fasteners` ; flag render `show_fasteners` ; panneau frontend `Visserie`.
 - `calculations/geometry.py` — `calculate()` géométrie exacte (reach, stack, trail, WB…).
 - `calculations/kinematics.py` — **DISPATCHER** `solve_kinematics()` : route par
   `suspension.linkage_type` vers `calculations/layouts/`. Piloté **par la course roue**.
@@ -142,14 +158,17 @@ cd tool && ./start.sh          # backend :8000 (uvicorn) + frontend :5173 (vite)
   se rejoignent au BB ; `_draw_motor`, **sans flip Y** — sinon carter à l'envers), formes RÉELLES
   des pièces (sprites `_PARTS` : fork/rear_shock/battery normalisés, derailleur), **courroie noire
   crantée / chaîne grise à rouleaux** (jamais un fil), `_draw_pivots` (coupe roulement), fourche
-  **rigide si travel=0 sinon sprite suspendu**. Flags : `show_dims/rider/suspension/lugs/ground/pivots`.
+  **rigide si travel=0 sinon sprite suspendu**. `_draw_fasteners` (têtes de vis colorées par
+  catégorie + empreinte Torx/hex + légende). Flags : `show_dims/rider/suspension/lugs/ground/pivots/fasteners`.
   PALETTE = thème clair. `_xform_path` place les sprites (M/L/Q/C/Z).
 - `io/dxf_export.py` — `export_dxf()` DXF R12 ASCII pour SolidWorks (calques GEOMETRY/TUBES/WHEELS/PIVOTS/DIMS_TEXT).
 - `io/pivot_export.py` — export hardware pivots (JSON/CSV table SolidWorks/résumé).
+- `io/fastener_export.py` — export visserie (JSON/CSV nomenclature d'assemblage/résumé).
 - `main.py` — FastAPI. Endpoints : `/api/default`, `/api/calc`, `/api/render/svg`,
   `/api/kinematics`, `/api/fit`, `/api/battery`, `/api/transmission`, `/api/igh`,
-  `/api/pivots`, `/api/bearings`, `/api/export/dxf`, `/api/export/bcad`, `/api/export/lugs`,
-  `/api/export/pivots`, `/api/export/drawing`, `/api/load/bcad`, `/api/library` (+`/save`,`/load`),
+  `/api/pivots`, `/api/bearings`, `/api/fasteners`, `/api/export/dxf`, `/api/export/bcad`,
+  `/api/export/lugs`, `/api/export/pivots`, `/api/export/fasteners`,
+  `/api/export/drawing`, `/api/load/bcad`, `/api/library` (+`/save`,`/load`),
   `/api/catalog…`, `/api/suspension/preset/{name}`, `/api/assistant` (+`/available`),
   `/api/motors`, `/api/bikes`, `/api/health`. Chemins relatifs résolus depuis la RACINE du dépôt
   (`_repo_path`, car CWD=tool/).

@@ -274,6 +274,7 @@ IGH_TYPES = {
                    "max_torque_nm": 250.0, "min_ratio": 1.60, "weight_g": 2000, "belt": True},
 }
 TransmissionType = Literal["derailleur", "igh"]
+BeltTensionMethod = Literal["sliding_dropout", "eccentric_bb", "eccentric_pivot"]
 
 
 # Roulements à cartouche standard pour pivots de suspension VTT/e-MTB
@@ -363,6 +364,15 @@ class SuspensionConfig(BaseModel):
     chainring_teeth:   int   = Field(36, description="Dents plateau")
     cog_teeth:         int   = Field(24, description="Dents pignon AR (moyeu)")
     belt_pitch:        float = Field(11.0, description="Pas courroie CDX (mm)")
+
+    # Tension de courroie (CONSTRUCTION) — une courroie est sans fin, sans tendeur
+    # de dérailleur : l'entraxe doit être RÉGLABLE pour la tendre. Patte coulissante
+    # (la plus simple sur bras oscillant), BB excentrique, ou pivot excentrique.
+    belt_tension_method: BeltTensionMethod = Field(
+        "sliding_dropout",
+        description="Méthode de tension courroie : patte coulissante / BB excentrique / pivot excentrique")
+    dropout_adjust_mm:   float = Field(
+        15.0, description="Course de réglage de l'axe AR pour tendre la courroie (mm)")
 
     # Anti-squat
     cog_height:        float = Field(1100.0, description="Hauteur centre de gravité / sol (mm)")
@@ -572,6 +582,26 @@ class PivotResult(BaseModel):
     notes:       list[str] = []
 
 
+class FastenerItem(BaseModel):
+    category:  str               # Cockpit / Freins / Roues / Transmission / Moteur / Suspension / Divers
+    name:      str               # ex. "Faceplate cintre"
+    where:     str               # repère de position (stem_faceplate, caliper_front…)
+    x:         float             # position monde (mm)
+    y:         float
+    size:      str               # M5 / M6 / M8 / 15 mm…
+    drive:     str               # empreinte : Torx T25, Hex 5, Centerlock…
+    qty:       int
+    torque_nm: str               # couple (ex. "5–6") ou "—"
+    note:      str = ""
+
+
+class FastenerResult(BaseModel):
+    ok:        bool = True
+    items:     list[FastenerItem] = []
+    bom:       list = []          # [{size, drive, qty}]
+    notes:     list[str] = []
+
+
 class TransmissionResult(BaseModel):
     ok:               bool = True
     kind:             str = "derailleur"     # derailleur | igh
@@ -586,6 +616,13 @@ class TransmissionResult(BaseModel):
     ratio_ok:         bool = True
     min_ratio:        float = 0.0
     belt_ok:          bool = True            # compat courroie
+    # Courroie : géométrie + tension (construction)
+    belt:             bool = False           # transmission par courroie ?
+    belt_teeth:       int = 0                # nb de dents courroie (entier Gates)
+    belt_center_mm:   float = 0.0            # entraxe effectif plateau/galet → pignon
+    belt_tension_method: str = ""            # patte coulissante / BB / pivot excentrique
+    dropout_adjust_mm:   float = 0.0         # course de réglage axe AR
+    belt_tension_ok:     bool = True         # le réglage couvre un incrément de courroie ?
     notes:            list[str] = []
 
 

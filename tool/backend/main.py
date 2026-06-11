@@ -86,6 +86,7 @@ class RenderRequest(BaseModel):
     animate_suspension: bool = False # animation SMIL de la course
     show_lugs: bool = False          # afficher les lugs CNC aux jonctions
     show_pivots: bool = False        # afficher roulements/axes aux pivots
+    show_fasteners: bool = False     # afficher chaque point de vis/boulon
 
 
 @app.post("/api/render/svg")
@@ -107,9 +108,13 @@ def render(req: RenderRequest):
             from .calculations.pivots import compute_pivots
             pr = compute_pivots(req.bike)
             pivots = pr if pr.ok else None
+        fasteners = None
+        if req.show_fasteners:
+            from .calculations.fasteners import compute_fasteners
+            fasteners = compute_fasteners(req.bike, calc)
         svg  = render_svg(req.bike, calc, req.width, req.height, req.show_dims, fit,
                           suspension=frames, animate_suspension=req.animate_suspension,
-                          lugs=lug_nodes, pivots=pivots)
+                          lugs=lug_nodes, pivots=pivots, fasteners=fasteners)
         return JSONResponse(content={"svg": svg, "calc": calc.model_dump()})
     except Exception as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -188,6 +193,39 @@ def bearings_list():
     """Catalogue de roulements de pivot sélectionnables."""
     from .models.bike import BEARING_CATALOG
     return [{"ref": k, **v} for k, v in BEARING_CATALOG.items()]
+
+
+@app.post("/api/fasteners")
+def fasteners_endpoint(bike: BikeDesign):
+    """Visserie : chaque point de vis/boulon (taille, empreinte, couple) + nomenclature."""
+    from .calculations.fasteners import compute_fasteners
+    try:
+        calc = calculate(bike)
+        return compute_fasteners(bike, calc)
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+class FastenersExportRequest(BaseModel):
+    bike: BikeDesign
+    fmt: str = "csv"   # csv | json | summary
+
+
+@app.post("/api/export/fasteners")
+def export_fasteners(req: FastenersExportRequest):
+    """Exporte la nomenclature de visserie en CSV/JSON/résumé."""
+    from .calculations.fasteners import compute_fasteners
+    from .io import fastener_export
+    try:
+        calc = calculate(req.bike)
+        fres = compute_fasteners(req.bike, calc)
+        if req.fmt == "json":
+            return PlainTextResponse(fastener_export.to_json(fres), media_type="application/json")
+        if req.fmt == "summary":
+            return PlainTextResponse(fastener_export.to_summary(fres), media_type="text/plain")
+        return PlainTextResponse(fastener_export.to_csv(fres), media_type="text/csv")
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 class PivotsExportRequest(BaseModel):

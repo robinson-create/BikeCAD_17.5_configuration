@@ -9,7 +9,7 @@ export async function fetchDefault() {
 export async function calcAndRender(bike, width = 1400, height = 750, showDims = true,
                                     showRider = false, showSuspension = false,
                                     animateSuspension = false, showLugs = false,
-                                    showPivots = false) {
+                                    showPivots = false, showFasteners = false) {
   const r = await fetch(`${BASE}/render/svg`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -17,11 +17,34 @@ export async function calcAndRender(bike, width = 1400, height = 750, showDims =
       bike, width, height,
       show_dims: showDims, show_rider: showRider,
       show_suspension: showSuspension, animate_suspension: animateSuspension,
-      show_lugs: showLugs, show_pivots: showPivots,
+      show_lugs: showLugs, show_pivots: showPivots, show_fasteners: showFasteners,
     }),
   })
   if (!r.ok) throw new Error(await r.text())
   return r.json()  // { svg: string, calc: CalcResult }
+}
+
+export async function fetchFasteners(bike) {
+  const r = await fetch(`${BASE}/fasteners`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(bike),
+  })
+  if (!r.ok) return null
+  return r.json()  // FastenerResult
+}
+
+export async function exportFasteners(bike, fmt = 'csv') {
+  const r = await fetch(`${BASE}/export/fasteners`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ bike, fmt }),
+  })
+  if (!r.ok) throw new Error(await r.text())
+  const text = await r.text()
+  const blob = new Blob([text], { type: fmt === 'json' ? 'application/json' : 'text/plain' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url; a.download = `visserie.${fmt === 'summary' ? 'txt' : fmt}`; a.click()
+  URL.revokeObjectURL(url)
 }
 
 export async function fetchPivots(bike) {
