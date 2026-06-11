@@ -120,9 +120,12 @@ TOOLS = [
     },
     {
         "name": "search_knowledge",
-        "description": ("Interroger la banque de connaissances vélo (specs M620, amortisseurs, courroie "
-                        "Gates, gearbox, concepts cinématique, cibles du projet DOM) ET le catalogue de "
-                        "pièces BikeCAD du dépôt. Utiliser pour des specs, des pièces, ou des rappels de méthode."),
+        "description": ("Interroger la banque de connaissances vélo (récupération RAG BM25) : specs M620, "
+                        "amortisseurs, courroie Gates, gearbox, concepts cinématique, cibles du projet DOM, "
+                        "catalogue de pièces BikeCAD du dépôt, ET les DOCUMENTS sources ingérés (PDF/txt/md "
+                        "déposés dans knowledge/docs/, ex. exports NotebookLM). Utiliser pour toute spec, "
+                        "pièce, ou rappel de méthode. Quand un extrait vient d'un document (champ 'source'), "
+                        "CITER la source et la page dans la réponse."),
         "input_schema": {
             "type": "object",
             "properties": {
@@ -168,8 +171,10 @@ def _system_prompt(state_summary: str) -> str:
         "un preset, recalculer l'état (get_state), calculer le SAG (compute_sag), lire l'état en "
         "COMPRESSION (compression_state : au sag, à un %, ou à une course mm), lire les AXES de roue + "
         "chemin d'axe (wheel_axles), interroger la BANQUE DE CONNAISSANCES vélo + le catalogue de pièces "
-        "BikeCAD (search_knowledge), et gérer la bibliothèque. Pour des specs (moteur M620, amortisseurs, "
-        "courroie, pièces) ou un rappel de méthode, appelle search_knowledge plutôt que d'inventer. "
+        "BikeCAD + les DOCUMENTS sources ingérés (search_knowledge, récupération RAG BM25), et gérer la "
+        "bibliothèque. Pour des specs (moteur M620, amortisseurs, courroie, pièces) ou un rappel de "
+        "méthode, appelle search_knowledge plutôt que d'inventer ; si un extrait porte une 'source' "
+        "(document ingéré), CITE-la (nom + page). "
         "Après une modification, VÉRIFIE le résultat (get_state) et explique brièvement l'impact.\n\n"
         "Convention monde : BB=(0,0), x=avant +, y=haut +, mm. Angles depuis l'horizontale.\n\n"
         "Sections et champs éditables (set_parameters) :\n" + fields + "\n\n"
@@ -289,7 +294,11 @@ def _exec_tool(name: str, inp: dict, data: dict, actions: list) -> str:
         hits = knowledge.search(inp.get("query", ""), int(inp.get("k", 4)))
         if not hits:
             return "Aucune entrée pertinente dans la banque de connaissances."
-        return "\n\n".join(f"### {h['title']}\n{h['text']}" for h in hits)
+        blocks = []
+        for h in hits:
+            cite = f"  [source: {h['source']}" + (f", p.{h['page']}" if h.get("page") else "") + "]" if h.get("source") else ""
+            blocks.append(f"### {h['title']}{cite}\n{h['text']}")
+        return "\n\n".join(blocks)
 
     if name == "list_library":
         items = library.list_bikes()

@@ -457,6 +457,9 @@ class CalcResult(BaseModel):
     reach:             float
     stack:             float
     trail:             float
+    trail_sag:         float = 0.0   # trail dynamique à sag fourche (mm)
+    head_angle_sag:    float = 0.0   # angle de direction à sag (°, plus raide)
+    wheelbase_sag:     float = 0.0   # empattement à sag fourche (mm)
     wheelbase:         float
     bb_height:         float
     front_center:      float

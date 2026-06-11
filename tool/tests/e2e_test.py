@@ -536,6 +536,35 @@ parts = [e for e in KN.entries() if e["id"].startswith("parts-")]
 check(any("manivelles" in e["title"] for e in parts), "catalogue pièces scanné depuis le dépôt (CRANKS)")
 check(KN.search("zzzznotaword", 2) == [], "knowledge: requête sans match → vide")
 
+# 10d-bis. RAG BM25 : index, ingestion documents, citation source
+from backend.knowledge import bm25, ingest
+_bm = bm25.BM25([["belt", "growth", "courroie"], ["sag", "ressort"], ["belt", "sag"]])
+_sc = _bm.scores(["belt"])
+check(_sc[0] > 0 and _sc[1] == 0 and _sc[2] > 0, "BM25: terme présent scoré, absent = 0")
+check(all(s >= 0 for s in _bm.scores(["belt", "growth", "sag"])), "BM25: scores toujours positifs")
+# pondération IDF : un score curé doit dépasser un simple recouvrement de 1 token
+top = KN.search("belt growth courroie gates", 1)
+check(top and "Gates" in top[0]["title"], f"BM25: top-hit pertinent ({top[0]['title'] if top else None})")
+# ingestion d'un document temporaire → chunk + récupération + citation
+import os as _os
+_docp = _os.path.join(_os.path.dirname(ingest.__file__), "docs", "_e2e_probe.txt")
+with open(_docp, "w", encoding="utf-8") as _f:
+    _f.write("Procédure de test XÉNOBARK-9 : le couple de serrage du pivot vaut 42 N·m. "
+             "Belt growth maximal toléré 1.8 mm pour la courroie Gates CDX.")
+try:
+    KN.reindex()
+    st = KN.stats()
+    check(st["ingest"]["chunks"] >= 1 and "_e2e_probe.txt" in st["ingest"]["by_source"],
+          f"RAG: document ingéré ({st['ingest']['chunks']} chunks)")
+    probe = KN.search("procédure XÉNOBARK serrage pivot", 1)
+    check(probe and probe[0].get("source") == "_e2e_probe.txt", "RAG: terme unique remonte le document")
+    check(probe and probe[0].get("page") is not None, "RAG: citation page présente")
+    check(ingest.stats()["pdf_support"], "RAG: support PDF (pypdf) disponible")
+finally:
+    _os.remove(_docp)
+    KN.reindex()  # nettoie l'index
+check("_e2e_probe.txt" not in KN.stats()["ingest"]["by_source"], "RAG: réindex après retrait du document")
+
 # 10e. assistant expose les nouveaux outils + les exécute
 from backend import assistant as ASSIST
 names = {t["name"] for t in ASSIST.TOOLS}

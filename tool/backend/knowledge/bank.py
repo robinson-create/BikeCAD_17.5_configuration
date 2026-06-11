@@ -1,18 +1,33 @@
-"""Banque de connaissances vélo + recherche lexicale.
+"""Banque de connaissances vélo + récupération RAG (BM25).
 
-Entrées curées (domaine vélo + projet DOM e-MTB M620) + catalogue de pièces
-BikeCAD scanné dans le dépôt. `search(query, k)` retourne les k entrées les plus
-pertinentes par recouvrement de tokens (tags pondérés ×3).
+Sources fusionnées dans un seul corpus :
+  - entrées CURÉES (specs M620, courroie Gates, gearbox, concepts cinématique, cibles DOM) ;
+  - fichiers JSON du dossier knowledge/ (ex. geometry_dh.json) ;
+  - catalogue de pièces BikeCAD scanné dans le dépôt ;
+  - CHUNKS de documents déposés dans knowledge/docs/ (PDF/txt/md exportés du NotebookLM),
+    via `ingest.doc_chunks()`.
 
-Pour brancher une VRAIE base vectorielle plus tard : remplacer `_score()` par un
-appel d'embeddings + similarité cosinus ; l'API `search()`/`entries()` ne change pas.
+`search(query, k)` score TOUT le corpus avec **BM25 Okapi** (cf. bm25.py) : pondération
+IDF (termes rares = plus discriminants) + saturation de fréquence normalisée par la
+longueur. Bien supérieur au simple recouvrement de tokens sur du vocabulaire technique.
+
+Pour brancher une vraie base vectorielle plus tard : remplacer l'index BM25 par un
+index d'embeddings ; l'API `search()`/`entries()` ne change pas.
 """
 
 import re
 from functools import lru_cache
 from pathlib import Path
 
+from .bm25 import BM25
+from . import ingest
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
+
+# Les tokens de tags/titre sont injectés N fois dans le flux indexé → BM25 les
+# pondère naturellement (un match sur un tag pèse plus qu'un match dans le corps).
+TAG_WEIGHT = 3
+TITLE_WEIGHT = 2
 
 # ── Connaissances curées ─────────────────────────────────────────────────────
 CURATED = [
@@ -184,25 +199,79 @@ def _loaded_entries() -> list:
 
 
 def entries() -> list:
-    return CURATED + _loaded_entries() + _parts_catalogue()
+    """Corpus complet : curé + JSON + catalogue pièces + chunks de documents."""
+    return CURATED + _loaded_entries() + _parts_catalogue() + ingest.doc_chunks()
 
 
 def _tokens(s: str) -> list:
     return re.findall(r"[a-zà-ÿ0-9]+", s.lower())
 
 
-def _score(query_tokens: set, entry: dict) -> int:
-    body = _tokens(entry["title"] + " " + entry["text"])
-    tagtok = _tokens(" ".join(entry.get("tags", [])))
-    return sum(1 for t in body if t in query_tokens) + 3 * sum(1 for t in tagtok if t in query_tokens)
+def _index_tokens(entry: dict) -> list:
+    """Flux de tokens indexé pour une entrée : titre×2 + corps + tags×3."""
+    toks = _tokens(entry.get("title", "")) * TITLE_WEIGHT
+    toks += _tokens(entry.get("text", ""))
+    for _ in range(TAG_WEIGHT):
+        toks += _tokens(" ".join(entry.get("tags", [])))
+    return toks
+
+
+# Cache de l'index BM25, invalidé quand le corpus change (empreinte = nb d'entrées
+# + empreinte mtime des documents ingérés).
+_INDEX_CACHE: dict = {}
+
+
+def _build_index() -> tuple:
+    ents = entries()
+    bm = BM25([_index_tokens(e) for e in ents])
+    return bm, ents
+
+
+def _index() -> tuple:
+    fp = (len(CURATED), len(_loaded_entries()), len(_parts_catalogue()), ingest._docs_fingerprint())
+    if _INDEX_CACHE.get("fp") != fp:
+        bm, ents = _build_index()
+        _INDEX_CACHE.update(fp=fp, bm=bm, ents=ents)
+    return _INDEX_CACHE["bm"], _INDEX_CACHE["ents"]
 
 
 def search(query: str, k: int = 4) -> list:
-    """Récupération lexicale : retourne les k entrées les plus pertinentes."""
-    qt = set(_tokens(query))
+    """Récupération RAG (BM25) : retourne les k entrées les plus pertinentes.
+
+    Chaque résultat = {title, text, score, source?, page?}. `source` est présent
+    pour les chunks de documents ingérés (citation), absent pour le curé.
+    """
+    qt = _tokens(query)
     if not qt:
         return []
-    scored = [(_score(qt, e), e) for e in entries()]
-    scored = [(s, e) for s, e in scored if s > 0]
-    scored.sort(key=lambda x: -x[0])
-    return [{"title": e["title"], "text": e["text"], "score": s} for s, e in scored[:k]]
+    bm, ents = _index()
+    out = []
+    for i, score in bm.top_k(qt, k):
+        e = ents[i]
+        hit = {"title": e["title"], "text": e["text"], "score": round(score, 3)}
+        if e.get("source"):
+            hit["source"] = e["source"]
+            hit["page"] = e.get("page")
+        out.append(hit)
+    return out
+
+
+def reindex() -> dict:
+    """Force la reconstruction de l'index (après ajout de documents). Renvoie les stats."""
+    _loaded_entries.cache_clear()
+    _parts_catalogue.cache_clear()
+    ingest._chunks_for.cache_clear()
+    _INDEX_CACHE.clear()
+    _index()  # reconstruit immédiatement
+    return stats()
+
+
+def stats() -> dict:
+    """État de la banque : nombre d'entrées par source + ingestion documents."""
+    return {
+        "curated": len(CURATED),
+        "json_entries": len(_loaded_entries()),
+        "parts_categories": len(_parts_catalogue()),
+        "total_entries": len(entries()),
+        "ingest": ingest.stats(),
+    }

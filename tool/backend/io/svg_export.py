@@ -708,6 +708,16 @@ def _draw_brakes(bike, calc, sx, sy, ox, oy) -> str:
         # araignée centrale (carrier) sombre
         parts.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{sr*0.34:.1f}" '
                      f'fill="{_shade(PALETTE["rotor"],0.7)}" stroke="{PALETTE["rim_dark"]}" stroke-width="0.6" />')
+        # Étrier : posé sur la piste (haut-arrière du disque), dimensionné par le
+        # corps d'étrier (bl × bh) → ces réglages agissent sur l'aperçu.
+        bl = max(28.0, getattr(bk, "bl", 0.0) or 50.0)   # longueur corps étrier
+        bh = max(20.0, getattr(bk, "bh", 0.0) or 38.0)   # hauteur corps étrier
+        cax = axle.x - rotor / 2 * 0.32
+        cay = axle.y + rotor / 2 * 0.86
+        ccx, ccy = _pt(cax, cay, sx, sy, ox, oy)
+        parts.append(f'<rect x="{ccx-bl/2*abs(sx):.1f}" y="{ccy-bh/2*abs(sx):.1f}" '
+                     f'width="{bl*abs(sx):.1f}" height="{bh*abs(sx):.1f}" rx="{4*abs(sx):.1f}" '
+                     f'fill="{PALETTE["crank"]}" stroke="#000" stroke-width="0.6"/>')
     return '<g class="brakes">' + "".join(parts) + '</g>'
 
 
@@ -1096,8 +1106,14 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
     # setback = recul de la selle derrière l'axe de tige (réglage tige de selle)
     cxs = sp_end_x + 0.04 * L_sdl - max(0.0, bike.seatpost.setback)
     ty  = sp_end_y + clampH                # ligne d'assise (haut de coque)
-    def Wp(x, y):                          # raccourci monde→px
-        return f"{W(x, y)[0]:.1f},{W(x, y)[1]:.1f}"
+    # Inclinaison de selle (réglage) : on tourne toute la coque autour de la pince.
+    _sa = math.radians(getattr(bike.saddle, "angle", 0.0) or 0.0)
+    _ca, _sn = math.cos(_sa), math.sin(_sa)
+    def Wp(x, y):                          # rotation autour de (cxs,ty) puis monde→px
+        dx, dy = x - cxs, y - ty
+        xr = cxs + dx * _ca - dy * _sn
+        yr = ty + dx * _sn + dy * _ca
+        return f"{W(xr, yr)[0]:.1f},{W(xr, yr)[1]:.1f}"
     # Profil supérieur : arrière relevé → creux d'assise → bec relevé
     tailT = (cxs - 0.46 * L_sdl, ty + 0.060 * L_sdl)
     sit   = (cxs - 0.06 * L_sdl, ty)
@@ -1130,12 +1146,28 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
     parts.append(f'<rect x="{clx-5:.1f}" y="{cly-2:.1f}" width="10" height="9" rx="2" '
                  f'fill="{PALETTE["seatpost"]}" />')
 
-    # === POTENCE (corps + collier + faceplate) ===============================
+    # === POTENCE (corps + collier steerer + faceplate cintre) ================
+    st = bike.stem
+    # Pivot/steerer exposé au-dessus du JDD (réglage tige de direction)
+    steerer_exp = max(0.0, getattr(st, "steerer_exposed", 0.0))
+    if steerer_exp > 1:
+        st_ang = math.radians(f.head_angle)
+        # direction de l'axe de direction (vers le haut-arrière)
+        ux, uy = -math.cos(st_ang), math.sin(st_ang)
+        parts.append(_draw_tube(ht.x, ht.y, ht.x + ux * steerer_exp, ht.y + uy * steerer_exp,
+                                28.6, PALETTE["stanchion"], sx, sy, ox, oy, scale_f, cap_r=14.0))
     parts.append(_draw_tube(sb.x, sb.y, stip.x, stip.y, 26.0,
                             PALETTE["stem"], sx, sy, ox, oy, scale_f, cap_r=13.0))
+    # collier steerer (à la base) — hauteur = collar_height
     cmx, cmy = W(sb.x, sb.y)
-    parts.append(f'<circle cx="{cmx:.1f}" cy="{cmy:.1f}" r="{18*scale_f:.1f}" '
+    coll_h = max(10.0, getattr(st, "collar_height", 25.0))
+    parts.append(f'<circle cx="{cmx:.1f}" cy="{cmy:.1f}" r="{coll_h*0.7*scale_f:.1f}" '
                  f'fill="{PALETTE["stem"]}" stroke="#111" stroke-width="1"/>')
+    # faceplate au cintre — Ø = collar_diameter (serrage cintre)
+    fpx, fpy = W(stip.x, stip.y)
+    coll_d = max(20.0, getattr(st, "collar_diameter", 31.8))
+    parts.append(f'<circle cx="{fpx:.1f}" cy="{fpy:.1f}" r="{coll_d*0.6*scale_f:.1f}" '
+                 f'fill="{_shade(PALETTE["stem"],1.4)}" stroke="#111" stroke-width="1"/>')
 
     # === CINTRE (riser MTB : montant + grip vers le pilote) ==================
     rise = max(15.0, bike.handlebar.rise)
@@ -1187,6 +1219,7 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
         info_y = height - 30
         info_items = [
             f"Trail {calc.trail:.0f}mm",
+            f"Trail@sag {calc.trail_sag:.0f}mm",
             f"CS {f.cs:.0f}mm",
             f"FCD {f.fcd:.0f}mm",
             f"TT {calc.tt_effective:.0f}mm",

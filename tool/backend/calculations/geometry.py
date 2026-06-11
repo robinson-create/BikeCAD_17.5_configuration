@@ -63,8 +63,20 @@ def calculate(bike: BikeDesign) -> CalcResult:
     stack    = ht_top_y
     wheelbase = front_axle_x - rear_axle_x
 
-    # Trail (formule BikeCAD)
+    # Trail (formule canonique : trail = (R·cos(HTA) − offset)/sin(HTA))
+    # Source : Wikipedia "Bicycle and motorcycle geometry".
     trail = (wheel_r_f * math.cos(hta) - fk.offset) / math.sin(hta)
+
+    # Trail DYNAMIQUE au sag fourche : la fourche se comprime de `fk.sag`, le nez
+    # plonge → le vélo tangue (pitch) autour du contact AR → l'angle de direction
+    # se REDRESSE et le trail + l'empattement DIMINUENT (cf. Wikipedia). Approx
+    # petit-angle, fourche seule : pitch ≈ Δ·sin(HTA)/empattement.
+    sag_f = max(0.0, fk.sag)
+    pitch = (sag_f * math.sin(hta) / wheelbase) if wheelbase > 1 else 0.0   # rad, nez bas
+    hta_sag = hta + pitch                                                   # plus raide
+    trail_sag = (wheel_r_f * math.cos(hta_sag) - fk.offset) / math.sin(hta_sag)
+    head_angle_sag = math.degrees(hta_sag)
+    wheelbase_sag = wheelbase - sag_f * math.cos(hta)                       # le front recule
 
     # Trail normal (perpendiculaire à la route) et arctangente
     front_normal_trail = trail * math.sin(hta)
@@ -130,6 +142,9 @@ def calculate(bike: BikeDesign) -> CalcResult:
         reach=round(reach, 1),
         stack=round(stack, 1),
         trail=round(trail, 1),
+        trail_sag=round(trail_sag, 1),
+        head_angle_sag=round(head_angle_sag, 2),
+        wheelbase_sag=round(wheelbase_sag, 1),
         wheelbase=round(wheelbase, 1),
         bb_height=round(bb_height, 1),
         front_center=round(front_axle_x, 1),

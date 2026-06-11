@@ -1,0 +1,4 @@
+# Sources de connaissances locales (exportées du NotebookLM, etc.) — pas dans git.
+*
+!.gitignore
+!README.md

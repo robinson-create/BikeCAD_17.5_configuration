@@ -1,0 +1,172 @@
+[
+ {
+  "id": "norme-en-15194",
+  "title": "EN 15194:2017+A1:2023 — EPAC (cycles a assistance electrique)",
+  "tags": [
+   "norme",
+   "EPAC",
+   "CE",
+   "electrique",
+   "securite",
+   "batterie",
+   "perimetre"
+  ],
+  "text": "PERIMETRE : norme europeenne harmonisee pour les EPAC (Electrically Power Assisted Cycles = pedelecs deux roues). Definit exigences ET methodes d'essai mecaniques + electriques pour la conception et l'assemblage des cycles et sous-ensembles, support de circuits electriques (dont charge) de tension nominale jusqu'a 48 V c.c. inclus. Conformite = presomption de conformite a la directive Machines -> marquage CE.\n\nDOMAINE EPAC (limites legales UE reprises) : puissance nominale continue maximale du moteur 0,25 kW (250 W) ; assistance progressivement reduite puis coupee a 25 km/h, ou plus tot si le cycliste arrete de pedaler (pedal-assist uniquement) ; tension nominale <= 48 V c.c. Couvre exigences mecaniques, electriques, CEM/EMC, performance, marquage, etiquetage et notice. NOTE : au-dela de ces limites (>250 W ou >25 km/h, ex. S-pedelec 45 km/h) le vehicule N'EST PAS un EPAC au sens EN 15194 et releve d'une homologation vehicule.\n\nAMENDEMENT A1:2023 (publie 24/08/2023) : la securite batterie passe d'une simple note (essai selon EN 62133 ou EN 50604-1 'suffisant') a une EXIGENCE obligatoire de conformite a EN 50604-1+A1 (version renforcee). Periode de transition prolongee jusqu'au 15 mai 2026.\n\nIMPLICATION DOM (engin motorise performant) : la base de securite, mais EN 15194 seule ne couvre PAS les charges renforcees du VTT/VTTAE -> completer par EN 17404 (cote MTB) et ISO 4210-2/-6 (cadre/fourche). Sources : iteh.ai EN 15194:2017 ; LEVA-EU ; bike-eu.com."
+ },
+ {
+  "id": "norme-en-17404",
+  "title": "EN 17404:2022 — EPAC VTT / VTTAE (charges renforcees)",
+  "tags": [
+   "norme",
+   "EPAC",
+   "VTT",
+   "VTTAE",
+   "MTB",
+   "mecanique",
+   "structurel",
+   "perimetre"
+  ],
+  "text": "PERIMETRE : norme europeenne specifique aux EPAC Mountain bikes (VTT a assistance electrique). Publiee le 30/05/2022, 22 pages. Le perimetre d'EN 15194:2017 reste applicable ; EN 17404 AJOUTE des exigences specifiques aux VTTAE, plus sollicites mecaniquement que les e-bikes conventionnels. Concretement, elle complete EN 15194 par un jeu d'essais aux criteres plus severes, surtout sur la partie MECANIQUE/STRUCTURELLE (cadre, fourche, roues, transmission soumis a des charges off-road plus elevees).\n\nEXCLUSION IMPORTANTE : la categorie EPAC-MTB 5 (selon EN 17406:2020+A1:2021, Table 1 — usage extreme type descente/DH, sauts > ~120 cm, vitesses elevees) N'EST PAS couverte par EN 17404. Un engin destine a cet usage extreme sort du champ et exige une demarche d'essais dediee (cf. EFBE Tri-Test condition 5 / ISO 4210-2 categories severes).\n\nLa verification de conformite integre aussi la batterie lithium (renvoi EN 15194 -> EN 50604-1+A1).\n\nIMPLICATION DOM : pour un e-MTB haute performance, EN 17404 est la norme cote 'produit fini' la plus pertinente ; mais si l'usage cible est DH/extreme (cat. 5), elle ne suffit pas reglementairement. Le dimensionnement structurel/fatigue reste a valider par un bureau d'etudes (hors perimetre outil). Sources : iteh.ai EN 17404:2022 ; ANSI webstore BSI preview ; entecerma.it ; AFNOR NF EN 17404."
+ },
+ {
+  "id": "norme-iso-4210-6",
+  "title": "ISO 4210-6:2023 — Methodes d'essai cadre et fourche (cas de charge)",
+  "tags": [
+   "norme",
+   "ISO-4210",
+   "cadre",
+   "fourche",
+   "essais",
+   "fatigue",
+   "impact",
+   "chiffre"
+  ],
+  "text": "PERIMETRE : ISO 4210-6 (3e edition 2023-01, annule ISO 4210-6:2015 ; elaboree par ISO/TC 149/SC 1 avec CEN/TC 333) specifie les METHODES D'ESSAI cadre et fourche. Les CRITERES d'acceptation (valeurs de force / nb de cycles par categorie) sont definis dans ISO 4210-2. Suspension AV testee fourche detendue ; suspension AR bloquee en position equivalente a un pilote 80 kg (40 kg pour young adult). Reference systeme : ISO 4210-1/-2/-3/-5.\n\nTYPES D'ESSAI CADRE (4.x) :\n- 4.1 Cadre — Impact (masse tombante) : roller <= 1 kg dans les pattes/fourche, striker 22,5 kg lache d'une hauteur h1 selon Table 1 : VTT 360 mm ; route 212 mm ; ville/trekking et young adult 180 mm. Critere = pas de fissure, deformation permanente bornee.\n- 4.2 Cadre + fourche AV — Impact (cadre tombant) : masses fixees a m1 tige de selle, m2 douille de direction, m3 boitier de pedalier ; hauteur de chute h2 (Table 2). VTT : m1=30 kg, m2=10 kg, m3=50 kg, h2=300 mm. Route : 30/10/50 kg, h2=200 mm. Ville/trekking : 50/10/30 kg, h2=200 mm. Young adult : 40/10/20 kg, h2=200 mm.\n- 4.3 Cadre — Fatigue avec forces de PEDALAGE : pedales inclinees 45 deg (+/-2 deg), L1 = longueur de manivelle reelle ou 175 mm par defaut. (force/cycles -> ISO 4210-2, typiquement 100 000 cycles).\n- 4.4 Cadre — Fatigue avec forces HORIZONTALES (force alternee, ISO 4210-2).\n- 4.5 Cadre — Fatigue avec force VERTICALE (ISO 4210-2).\n- 4.6 Essais fatigue des supports de frein (dont 4.6.3 support frein arriere).\n\nTYPES D'ESSAI FOURCHE (5.x) : 5.1 degagement pneu (fourche suspendue) ; 5.2 methodes (fourche suspendue / rigide non soudee) ; 5.4 Impact arriere (rearward impact) ; 5.5 Fatigue en flexion + impact arriere ; 5.6.3 fatigue support frein (frein moyeu) ; 5.7 Fatigue ensemble tube pivot + potence (NOUVEAU en 2023). Nb de cycles de fatigue de reference = 100 000.\n\nIMPLICATION DOM : ce sont les cas de charge a reproduire en simulation/banc avant fabrication. NOTE : valeurs de drop/masses verifiees verbatim dans le PDF ISO 4210-6:2023 ; forces de fatigue (N) a lire dans ISO 4210-2 selon categorie. Sources : iteh.ai ISO-4210-6-2023 (PDF officiel sample) ; TBIS 4210-6 (miroir) ; act-lab.com (essai pedalage 100 000 cycles)."
+ },
+ {
+  "id": "categories-usage-astm-f2043-efbe",
+  "title": "Categories d'usage ASTM F2043 (cond. 1-5) et EFBE Tri-Test",
+  "tags": [
+   "categorie",
+   "usage",
+   "ASTM-F2043",
+   "EFBE",
+   "Tri-Test",
+   "MTB",
+   "chiffre",
+   "poids"
+  ],
+  "text": "ASTM F2043 (Standard Classification for Bicycle Usage, ed. F2043-13(2018)) classe l'usage en Conditions 0 a 5 ; reprise par EN 17406 et EFBE. Hauteurs de saut/drop maxi :\n- Condition 0 : enfants, sous surveillance, sans circulation.\n- Condition 1 : surfaces revetues uniquement, contact pneu/sol conserve (route/TT). Drop max ~15 cm (6 in).\n- Condition 2 : revetu + chemins/graviers a pente moderee (city/gravel/cyclo-cross). Drop max 15 cm (6 in).\n- Condition 3 : terrain accidente, sentiers techniques (XC/Marathon MTB). Drop max 61 cm (24 in).\n- Condition 4 : descente technique, sauts eleves, vitesse < 40 km/h (All-Mountain/Trail/Enduro modere). Drop max 122 cm (48 in).\n- Condition 5 : extreme, sauts > 122 cm, descentes a > 40 km/h (Downhill/Freeride/Dirt). Drop > 122 cm.\n\nEFBE TRI-TEST (reference industrielle, va AU-DELA des normes) : 3 modules par cas de charge — (1) essai de FATIGUE (vie complete du velo simulee en accelere, jusqu'a ~100 000 cycles, jusqu'a 8 etapes pour un cadre) ; (2) essai de CHARGE MAXIMALE (deformation permanente / securite a charge max admissible, critique pour carbone) ; (3) essai de SURCHARGE (rupture benigne et non catastrophique a la limite). Mappe ses categories sur ASTM F2043-13 / EN 17406 (cond. 1-5 identiques ci-dessus).\n\nPOIDS TOTAUX SYSTEME EFBE par defaut : 120 kg velo conventionnel ; 130 kg EPAC ; 135 kg S-pedelec (extensibles a des poids superieurs). EFBE souligne que le poids pilote joue un role mineur vs style de conduite, kilometrage et terrain.\n\nIMPLICATION DOM : un e-MTB performant cible typiquement Condition 4 (Trail/Enduro) voire 5 (DH/Freeride) ; base de masse pertinente 130 kg (EPAC). La Condition 5 sort du champ EN 17404 -> validation par essais dedies. Sources : ASTM F2043-13(2018) (astm.org / iteh.ai) ; nextie.com (drops par condition) ; efbe.de Tri-Test + service (modules, poids 120/130/135 kg)."
+ },
+ {
+  "id": "legal-eu-epac-spedelec-vs-moped-motorcycle",
+  "title": "Catégorie légale UE d'un cycle à assistance électrique selon la vitesse de coupure (EPAC / L1e-A / L1e-B / L3e)",
+  "tags": [
+   "legal",
+   "homologation",
+   "UE",
+   "168/2013",
+   "EN15194",
+   "EPAC",
+   "pedelec",
+   "speed-pedelec",
+   "L1e-A",
+   "L1e-B",
+   "L3e",
+   "cyclomoteur",
+   "motocycle",
+   "reception-par-type",
+   "securite",
+   "DOM-eMTB"
+  ],
+  "text": "Le règlement (UE) 168/2013 (homologation des véhicules à 2/3 roues et quadricycles) classe tout engin motorisé par seuils de vitesse et de puissance. La catégorie change avec la vitesse de coupure de l'assistance — déterminant pour un e-MTB DOM. SEUILS PRÉCIS :\n\n1) EPAC / pedelec classique = VÉLO, EXEMPT du 168/2013 (art. 2(2)(h)). Conditions cumulatives : assistance uniquement en pédalant (pas d'accélérateur seul) ; puissance nominale continue ≤ 250 W ; assistance progressivement réduite puis COUPÉE à ≤ 25 km/h. Norme produit applicable : EN 15194:2017 (EPAC), qui couvre moteur ≤ 0,25 kW, coupure 25 km/h, tension ≤ 48 V DC, hauteur de selle ≥ 635 mm. Pas de réception par type véhicule, pas de plaque, pas de permis/casque moto.\n\n2) L1e — « véhicule léger à 2 roues à moteur » : critères communs L1e = vitesse maxi par construction ≤ 45 km/h ET puissance nominale continue/nette ≤ 4 000 W. Subdivisé en :\n   - L1e-A « cycle à moteur » (powered cycle) : cycle conçu pour être pédalé, à propulsion auxiliaire d'appoint au pédalage ; assistance coupée à ≤ 25 km/h ; puissance nominale continue ≤ 1 000 W. (Au-delà de 250 W mais ≤ 1000 W et coupure 25 km/h → sort de l'exemption vélo et devient L1e-A, réception par type requise.)\n   - L1e-B « cyclomoteur » 2 roues (= speed-pedelec / S-pedelec à 45 km/h) : vitesse maxi par construction ≤ 45 km/h ; puissance nominale continue ≤ 4 000 W ; (si thermique : cylindrée ≤ 50 cm³ PI / ≤ 500 cm³ CI). Un S-pedelec 45 km/h N'EST PAS un vélo : réception par type obligatoire, plaque d'immatriculation, assurance, casque (et permis selon l'État membre).\n\n3) L3e — « motocycle » à 2 roues : tout 2-roues non classable en L1e, c.-à-d. cylindrée > 50 cm³ OU vitesse maxi par construction > 50 km/h. Sous-catégories par puissance : L3e-A1 (≤ 125 cm³, ≤ 11 kW, ≤ 0,1 kW/kg), L3e-A2 (≤ 35 kW, ≤ 0,2 kW/kg), L3e-A3 (au-delà). Réception par type véhicule complète, immatriculation, assurance, permis et casque moto homologué.\n\nIMPLICATION POUR UN ENGIN ~45–80 km/h (cas du projet DOM, ~80 km/h) : il dépasse les seuils EPAC (25 km/h / 250 W) ET le plafond L1e (45 km/h, 4000 W). Il N'EST DONC PAS un vélo et N'EST PAS couvert par les normes vélo (EN 15194 hors champ). Selon vitesse/cylindrée il relève au minimum de L1e-B (≤45 km/h) et, à ~80 km/h, de la catégorie MOTOCYCLE L3e : réception par type véhicule OBLIGATOIRE (freinage, éclairage, EMC, structure, etc.), immatriculation, assurance, casque, permis. La conformité et la validation structurelle/fatigue/impact relèvent d'un bureau d'études et d'un organisme de réception qualifiés — hors périmètre d'une simple itération de géométrie/cinématique."
+ },
+ {
+  "id": "validation-bikinematicsolver",
+  "title": "bikinematicsolver (mark-bak) — oracle Python pour cinématique suspension MTB",
+  "tags": [
+   "validation",
+   "cinematique",
+   "suspension",
+   "python",
+   "anti-squat",
+   "leverage",
+   "open-source"
+  ],
+  "text": "Repo: https://github.com/mark-bak/bikinematicsolver (MIT, 100% Python, créé 2021-05, maj 2024-07). Module pip (`pip install bikinematicsolver`) qui alimente l'app bikinematics.herokuapp.com. CE QU'IL CALCULE (vérifié dans bikinematicsolver/bike.py, méthode calculate_suspension_characteristics): Leverage Ratio (= dérivée numérique de la longueur d'amorto par rapport au débattement vertical), Axle Path X (trajet d'axe), Anti-Squat % (via IFC = intersection de la ligne de chaîne supérieure et de la 'effective swingarm' entre roue arrière et centre instantané; supporte un GALET/idler — la ligne de chaîne est ordonnée plateau→galet→cassette, l'entrée AS = avant-dernier cog, sortie = dernier). NON calculés actuellement: anti-rise et pedal kickback (cohérent avec 'idler+kickback sur roadmap'). SOLVEUR: classe Kinematic_Solver_Scipy_Min utilisant scipy.optimize.minimize, résolution de la boucle cinématique pas-à-pas (n_solver_steps=100 par défaut) en 'link space'; dépendances setup.py = dijkstar (graphe, pour find_kinematic_loop), numpy, scipy. Géométrie en JSON (format dans test_data.json: points, links, shock, wheels, chainline). TOPOLOGIES: solveur générique de liens — single-pivot et four-bar (pivots placés différemment couvrent >80% des systèmes commerciaux selon l'auteur), Horst/DW/split-pivot exprimables comme placements de pivots. USAGE VALIDATION: oracle de référence pour la méthode anti-squat (le repo local indique déjà une cross-validation verbatim de la méthode IC: tool/backend/calculations/layouts/common.py cite 'github mark-bak/bikinematicsolver (méthode IC)' et four_bar.py cite 'BiKinematics chainline[-2:]'). Comparer courbes leverage/axle-path/AS sur une même géométrie d'entrée."
+ },
+ {
+  "id": "validation-open-kinematics",
+  "title": "open-kinematics (nickmccleery) — solveur de contraintes Levenberg-Marquardt + Jacobiens",
+  "tags": [
+   "validation",
+   "solveur-contraintes",
+   "levenberg-marquardt",
+   "jacobien",
+   "instant-centre",
+   "mechanical-trail",
+   "python",
+   "apache-2.0"
+  ],
+  "text": "Repo: https://github.com/nickmccleery/open-kinematics (Apache-2.0, Python). Blog technique: https://www.nickmccleery.com/posts/11-suspension-kinematic-simulation/ . SOLVEUR: problème de moindres carrés non linéaires via scipy.optimize.least_squares (Levenberg-Marquardt), minimise ||F(x)||² au lieu de F(x)=0 — gère systèmes sur/sous-déterminés. Jacobien par différences finies à l'origine, Jacobiens ANALYTIQUES prévus pour la performance. Contraintes implémentées avec une méthode residual(): DistanceConstraint (||p1-p2|| - d_cible), AngleConstraint (angle entre vecteurs - angle cible), PointOnLineConstraint (distance perpendiculaire point↔ligne) — résidu = valeur_courante - valeur_cible. POINTS: hard points (montures fixes), free points (mobiles, optimisés), derived points (centre roue, contact patch) gérés par DerivedPointsManager = DAG avec tri topologique et détection de cycle DFS. Itération par balayage (sweep), chaque pas réutilise la solution précédente comme point de départ pour la convergence. TYPE SUPPORTÉ: double wishbone (auto, modèles par templates YAML — hard points, specs pneu, CG, empattement). MÉTRIQUES (orientées auto): camber, caster, toe, kingpin inclination (KPI), scrub radius, mechanical trail, centres instantanés side-view/front-view. Export CSV + Apache Parquet, plots PNG + animations MP4/GIF. USAGE VALIDATION: référence d'ARCHITECTURE de solveur — valide l'approche Newton/contraintes du solveur générique Python local (generic.py par Newton-Raphson); le pattern résidu de contraintes + Jacobien analytique est directement transposable comme golden test du solveur. Marqué 'expérimental, ne pas utiliser en critique'."
+ },
+ {
+  "id": "validation-mtbgraphs-linkage",
+  "title": "mtbgraphs.com + Linkage X3 — oracles de courbes leverage/AS/anti-rise/kickback",
+  "tags": [
+   "validation",
+   "oracle",
+   "leverage",
+   "anti-squat",
+   "anti-rise",
+   "pedal-kickback",
+   "linkage",
+   "mtbgraphs"
+  ],
+  "text": "Deux oracles 'boîte noire' pour comparer les COURBES, pas du code à cross-valider mais des références numériques. mtbgraphs.com (https://mtbgraphs.com/): saisie géométrie + débattement, sort Leverage Ratio (mvt roue / mvt amorto, idéalement décroissant en fin de course pour support et anti-bottom-out), Anti-Squat % (0–100, effet de la chaîne sur la suspension au pédalage), Anti-Rise % (0–100, effet du couple de frein arrière; 0% = aucun effet/extension de l'amorto, 100% = contre l'inertie, cibles usuelles 20% à >100%), Pedal Kickback en DEGRÉS (rotation des manivelles due au chain growth + variation des angles d'enroulement plateau/cassette) + animation dynamique. Linkage X3 (bikechecker.com, Windows, versions Free/Personal/Professional/Demo): logiciel 2D de simulation/conception de suspension MTB, templates de types de cadre, comparaison de courbes de suspension, bibliothèque web extensible de modèles à publier/partager. USAGE VALIDATION: oracles de comparaison de courbes ±tolérance (leverage, AS, anti-rise, kickback) sur une géométrie identique; particulièrement utile pour valider l'anti-rise et le pedal kickback que bikinematicsolver ne calcule pas. Le CLAUDE.md local rappelle: l'anti-squat IC est INDICATIF, à valider dans Linkage avant fabrication."
+ },
+ {
+  "id": "validation-bikegeo",
+  "title": "bikegeo.net (Yellow-Me/bikegeo) — stack/reach open source, comparateur géométrie",
+  "tags": [
+   "validation",
+   "geometrie",
+   "stack",
+   "reach",
+   "javascript",
+   "open-source",
+   "agpl"
+  ],
+  "text": "Site: https://www.bikegeo.net/ — Repo: https://github.com/Yellow-Me/bikegeo (AGPL-3.0, JavaScript 74% / HTML 19% / CSS 7%, client-side pur, aucun serveur; 21 stars). Outil de COMPARAISON de géométrie vélo + sorties additionnelles pour frame building; calcule stack et reach et compare plusieurs géométries. Auteurs/copyright: Juha Virtakoivu (2014), Scott Phillips (2020), Valentin Chirikov (2022). Le site précise que reach/stack sont des valeurs APPROXIMATIVES (contacter le fabricant pour l'exact). USAGE VALIDATION: oracle open source pour la géométrie statique (stack/reach) du module calculations/geometry.py local; comme le code JS est lisible, sert de référence de formule (et non seulement de valeurs) pour reach/stack/empattement. NB: famille de forks bikegeo (bdcheung, ancker010, smopucilowski) + alternatives Open-Bike-Geo (bmiller1881) et geometrygeeks.bike."
+ },
+ {
+  "id": "validation-bicycleparameters",
+  "title": "moorepants/BicycleParameters — modèle Whipple/Meijaard 2007, masses/inerties/stabilité",
+  "tags": [
+   "validation",
+   "whipple",
+   "meijaard-2007",
+   "stabilite",
+   "valeurs-propres",
+   "inertie",
+   "python",
+   "benchmark"
+  ],
+  "text": "Repo: https://github.com/moorepants/BicycleParameters (Python, licence BSD 2-clauses). Docs: https://bicycleparameters.readthedocs.io . Calcule géométrie, masses, centres de masse et moments d'inertie du système vélo+pilote, charge des jeux de paramètres depuis fichier texte, génère le jeu de paramètres benchmark à partir de données expérimentales. MODÈLE: Carvallo-Whipple linéarisé autour de la position verticale, produit les matrices canoniques M, C1, K0, K2 (et A/B) conformes à Meijaard2007, puis valeurs/vecteurs propres en fonction de la vitesse v (root locus, analyse de stabilité). RÉFÉRENCE NORMATIVE/BENCHMARK: J.P. Meijaard, J.M. Papadopoulos, A. Ruina, A.L. Schwab, 2007, 'Linearized dynamics equations for the balance and steer of a bicycle: a benchmark and review', Proc. R. Soc. A 463:1955–1982 — paramètres adoptés comme étalon de l'industrie. MODES PROPRES (vérifiés docs): weave (oscillatoire roll-steer, instable à basse vitesse), capsize (roll, instable à haute vitesse), caster (steer, stable). Exemples chiffrés du benchmark: à v=0 pendule inversé instable; v=2 m/s weave instable; v=5 m/s auto-stable (valeurs propres listées: -0.323, -0.775±4.465j, -14.078); v=8 m/s capsize instable. USAGE VALIDATION: étalon NUMÉRIQUE reproductible (valeurs propres benchmark) pour toute brique de dynamique/stabilité; périmètre = dynamique de conduite (hors cinématique suspension), mais valide masses/inerties/CG si on les calcule. ATTENTION périmètre projet: la dynamique haute vitesse d'un engin motorisé ~80 km/h reste hors validation structurelle (CLAUDE.md: dimensionnement délégué à un BE)."
+ },
+ {
+  "id": "validation-strategie",
+  "title": "Stratégie de validation du solveur Python (golden tests, cross-val courbes, property-based, round-trip)",
+  "tags": [
+   "validation",
+   "strategie",
+   "golden-test",
+   "property-based",
+   "hypothesis",
+   "round-trip",
+   "bcad",
+   "cross-validation"
+  ],
+  "text": "Quatre couches de validation pour le solveur cinématique/géométrie local, complémentaires. (1) GOLDEN TESTS vs charts ±1 mm: figer des géométries d'entrée connues et comparer reach/stack/WB/trail aux valeurs de bikegeo.net (formules JS lisibles) et aux faits de référence du dépôt (roue 752 mm → reach ≈482 mm cible ≈480, stack ≈622, WB ≈1254); tolérance serrée (±1 mm géométrie). (2) CROSS-VALIDATION DE COURBES: superposer leverage ratio, axle path et anti-squat à bikinematicsolver (oracle code Python MIT, même méthode IC déjà reprise verbatim dans common.py/four_bar.py — brin moteur = dernier segment galet→pignon) et à mtbgraphs.com / Linkage X3 (oracles boîte noire pour leverage, AS, ET surtout anti-rise + pedal kickback que bikinematicsolver ne calcule pas). Valider la PROXIMITÉ DE FORME des courbes (RMS / corrélation) plutôt que l'égalité point-à-point; rappeler que l'AS-IC reste indicatif (valider dans Linkage avant fabrication). (3) ÉQUIVALENCE INTERNE DE SOLVEUR: le solveur générique par contraintes Newton-Raphson (generic.py) prouvé ≡ four_bar.py — c'est un golden test interne; le pattern résidu de contraintes + Jacobien d'open-kinematics (least_squares LM) sert d'architecture de référence et de second solveur indépendant pour recouper les états. (4) PROPERTY-BASED (hypothesis): invariants à fuzzer sur des géométries aléatoires valides — pas de NaN, points dans le canvas, longueurs de liens conservées à chaque pas, monotonie/positivité du leverage, débattement borné, continuité (pas de saut au point mort du four-bar). (5) ROUND-TRIP .bcad: charger→sauver doit préserver les ~6195 clés (vérifié 6195→6195, 0 perdue/0 ajoutée car save_bcad recharge la source et ne modifie que les clés gérées); test sur BIKE/eMTB_DOM_Engineering.bcad = 0 junk; les champs sans équivalent BikeCAD (suspension, offsets) se valident plutôt via le round-trip JSON lossless de library.py. Lancer tests/e2e_test.py après toute modif backend."
+ }
+]

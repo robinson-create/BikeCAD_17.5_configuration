@@ -449,6 +449,32 @@ def assistant_endpoint(req: AssistantRequest):
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
+class KnowledgeQuery(BaseModel):
+    query: str
+    k: int = 4
+
+
+@app.get("/api/knowledge/stats")
+def knowledge_stats():
+    """État de la banque RAG : entrées par source + ingestion documents."""
+    from . import knowledge
+    return knowledge.stats()
+
+
+@app.post("/api/knowledge/search")
+def knowledge_search(req: KnowledgeQuery):
+    """Récupération BM25 dans la banque de connaissances (debug / usage direct)."""
+    from . import knowledge
+    return {"hits": knowledge.search(req.query, req.k)}
+
+
+@app.post("/api/knowledge/reindex")
+def knowledge_reindex():
+    """Réindexe après ajout de documents dans knowledge/docs/. Renvoie les stats."""
+    from . import knowledge
+    return knowledge.reindex()
+
+
 @app.get("/api/health")
 def health():
     return {"status": "ok", "tool": "DOM Engineering Bike Tool v1.0"}
