@@ -1139,9 +1139,48 @@ def _draw_susp_analysis(frames, sx, sy, ox, oy) -> str:
     return '<g class="susp-analysis">' + "".join(out) + '</g>'
 
 
+def _draw_shock(lo, up, sx, sy, ox, oy, scale) -> str:
+    """Amortisseur à air RÉALISTE le long de l'axe lo→up (œillet bas → haut) :
+    œillet + tige argent + bonbonne (air can) + bague de sag + œillet haut +
+    petite molette. Lisible comme un vrai amorto quelle que soit l'orientation."""
+    L = math.hypot(up[0] - lo[0], up[1] - lo[1]) or 1.0
+    ux, uy = (up[0] - lo[0]) / L, (up[1] - lo[1]) / L      # axe (vers le haut)
+    px, py = -uy, ux                                       # perpendiculaire
+    def at(t, off=0.0):
+        return (lo[0] + ux * L * t + px * off, lo[1] + uy * L * t + py * off)
+    out = []
+    # tige (damper shaft) : fin, argent, de l'œillet bas vers le corps
+    s0, s1 = at(0.08), at(0.46)
+    out.append(_draw_tube(s0[0], s0[1], s1[0], s1[1], 12.0, "#c7ccd3",
+                          sx, sy, ox, oy, scale, cap_r=5.0))
+    # corps / bonbonne air (air can) : gros cylindre, ~42 % à ~90 % de l'entraxe
+    b0, b1 = at(0.40), at(0.90)
+    out.append(_draw_tube(b0[0], b0[1], b1[0], b1[1], 40.0, "#3b4047",
+                          sx, sy, ox, oy, scale, cap_r=20.0))
+    # reflet sur la bonbonne
+    h0, h1 = at(0.46, 9.0), at(0.86, 9.0)
+    out.append(_draw_tube(h0[0], h0[1], h1[0], h1[1], 6.0, "#5b626b",
+                          sx, sy, ox, oy, scale, cap_r=3.0))
+    # bague de sag (o-ring) sur la tige
+    rcx, rcy = _pt(*at(0.40), sx, sy, ox, oy)
+    out.append(f'<circle cx="{rcx:.1f}" cy="{rcy:.1f}" r="{8.5*scale:.1f}" fill="none" '
+               f'stroke="#e74c3c" stroke-width="{2.4*scale:.1f}"/>')
+    # molette de réglage (détente) en tête, décalée
+    kcx, kcy = _pt(*at(0.93, 13.0), sx, sy, ox, oy)
+    out.append(f'<circle cx="{kcx:.1f}" cy="{kcy:.1f}" r="{6.0*scale:.1f}" fill="#1d6fa5" '
+               f'stroke="#10324a" stroke-width="0.8"/>')
+    # œillets bas/haut (anneaux DU)
+    for pt in (lo, up):
+        ex, ey = _pt(*pt, sx, sy, ox, oy)
+        out.append(f'<circle cx="{ex:.1f}" cy="{ey:.1f}" r="{9.0*scale:.1f}" fill="#2b2f35" '
+                   f'stroke="#14171b" stroke-width="1.1"/>')
+        out.append(f'<circle cx="{ex:.1f}" cy="{ey:.1f}" r="{4.0*scale:.1f}" fill="#0e1013"/>')
+    return "".join(out)
+
+
 def _draw_susp_links_static(bike, calc, sx, sy, ox, oy, scale) -> str:
     """Rendu RÉALISTE (non-debug) de l'arrière suspendu en position topout :
-    biellette (rocker) en plaque métal + amortisseur (sprite réel) + axes de pivot.
+    biellette (rocker) en plaque métal + amortisseur paramétrique + axes de pivot.
     Les bras (base/hauban) sont dessinés comme tubes de cadre dans render_svg."""
     su = bike.suspension
     topo = su.linkage_type
@@ -1157,29 +1196,24 @@ def _draw_susp_links_static(bike, calc, sx, sy, ox, oy, scale) -> str:
 
     out = ['<g class="rear-susp">']
 
-    # ── Biellette / rocker : plaque métallique (triangle C–D–œillet amorto) ──
+    # ── Biellette / rocker = bellcrank COMPACT : bras métal du pivot cadre (D)
+    # vers le pivot hauban (C) [+ vers l'œillet d'amorto si montage sur biellette].
+    # (PAS un grand triangle vers l'ancrage fixe d'amorto — c'était le « slab ».)
     is_four_bar = str(topo).startswith("four_bar")
     if is_four_bar:
-        tri = [W(C), W(D), W(up)]
-        pts = " ".join(f"{p[0]:.1f},{p[1]:.1f}" for p in tri)
-        out.append(f'<polygon points="{pts}" fill="{PALETTE["lug"]}" '
-                   f'stroke="{PALETTE["lug_edge"]}" stroke-width="2.2" '
-                   f'stroke-linejoin="round"/>')
+        mount = getattr(su, "shock_mount", "auto")
+        if mount == "auto":
+            mount = "chainstay" if su.shock_on_chainstay else "coupler"
+        rocker_ends = [C] + ([lo] if mount == "rocker" else [])
+        for e in rocker_ends:
+            out.append(_draw_tube(D[0], D[1], e[0], e[1], 20.0, PALETTE["lug"],
+                                  sx, sy, ox, oy, scale, cap_r=10.0))
+        dcx, dcy = W(D)                                   # moyeu central de la biellette
+        out.append(f'<circle cx="{dcx:.1f}" cy="{dcy:.1f}" r="{13.0*scale:.1f}" '
+                   f'fill="{PALETTE["lug"]}" stroke="{PALETTE["lug_edge"]}" stroke-width="1"/>')
 
-    # ── Amortisseur : FORME RÉELLE BikeCAD (sprite normalisé) lo → up ───────
-    shock_part = _PARTS.get("rear_shock_norm")
-    eye = math.hypot(up[0] - lo[0], up[1] - lo[1]) or 1.0
-    if shock_part and shock_part.get("paths"):
-        sang = math.degrees(math.atan2(up[1] - lo[1], up[0] - lo[0]))
-        ax_len = shock_part.get("axis_len", 182.0) or 182.0
-        out.append(_draw_sprite("rear_shock_norm", lo[0], lo[1], sx, sy, ox, oy,
-                                scale=eye / ax_len, angle_deg=sang - 90.0,
-                                empty_fill="#8a929c", klass="shock"))
-    else:
-        lx, ly = W(lo); ux, uy = W(up)
-        out.append(f'<line x1="{lx:.1f}" y1="{ly:.1f}" x2="{ux:.1f}" y2="{uy:.1f}" '
-                   f'stroke="#41474f" stroke-width="{max(8.0, eye*0.10*abs(sx)):.1f}" '
-                   f'stroke-linecap="round"/>')
+    # ── Amortisseur paramétrique (air can + tige + œillets) lo → up ─────────
+    out.append(f'<g class="shock">{_draw_shock(lo, up, sx, sy, ox, oy, scale)}</g>')
 
     # ── Axes de pivot (hardware propre : alésage sombre cerclé acier) ───────
     pivots = [A, C, D]
@@ -1494,33 +1528,33 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
     if steerer_exp > 5:
         parts.append(_draw_tube(ht.x, ht.y, ht.x + ux * steerer_exp, ht.y + uy * steerer_exp,
                                 28.6, PALETTE["stem"], sx, sy, ox, oy, scale_f, cap_r=14.0))
-    # Corps de potence : du steerer (sb) au serrage cintre (stip)
-    parts.append(_draw_tube(sb.x, sb.y, stip.x, stip.y, 30.0,
-                            PALETTE["stem"], sx, sy, ox, oy, scale_f, cap_r=15.0))
-    # Collier de steerer (le long de l'axe de direction, hauteur = collar_height)
-    coll_h = max(12.0, getattr(st, "collar_height", 25.0))
-    parts.append(_draw_tube(sb.x - ux * coll_h / 2, sb.y - uy * coll_h / 2,
-                            sb.x + ux * coll_h / 2, sb.y + uy * coll_h / 2, 36.0,
-                            _shade(PALETTE["stem"], 0.8), sx, sy, ox, oy, scale_f, cap_r=18.0))
-    # Faceplate (serrage cintre)
+    # Corps de potence : du steerer (sb) au serrage cintre (stip), tube propre et fin
+    parts.append(_draw_tube(sb.x, sb.y, stip.x, stip.y, 26.0,
+                            PALETTE["stem"], sx, sy, ox, oy, scale_f, cap_r=13.0))
+    # Faceplate (serrage cintre) — petit bloc rond
     coll_d = max(25.0, getattr(st, "collar_diameter", 31.8))
     fcx, fcy = W(stip.x, stip.y)
-    parts.append(f'<circle cx="{fcx:.1f}" cy="{fcy:.1f}" r="{coll_d*0.55*scale_f:.1f}" '
-                 f'fill="{_shade(PALETTE["stem"],1.35)}" stroke="#111" stroke-width="0.8"/>')
+    parts.append(f'<circle cx="{fcx:.1f}" cy="{fcy:.1f}" r="{coll_d*0.5*scale_f:.1f}" '
+                 f'fill="{_shade(PALETTE["stem"],1.25)}" stroke="#111" stroke-width="0.8"/>')
 
-    # === CINTRE riser (compact, vue de côté) =================================
+    # === CINTRE riser (vue de côté : montant VERTICAL court + barre ~horizontale) ===
+    # En profil un riser plat se voit : un petit montant (le rise) puis le grip qui
+    # part vers le PILOTE (arrière), quasi à plat — surtout PAS une barre à 45°.
     rise = max(0.0, bike.handlebar.rise)
-    bw = max(22.0, bike.handlebar.diameter)
+    bw = max(22.0, bike.handlebar.diameter - 2.0)
     half_w = max(280.0, getattr(bike.handlebar, "width", 780.0) / 2.0)
-    back = half_w * math.sin(math.radians(8.0))          # backsweep projeté
-    up = rise + half_w * math.sin(math.radians(5.0))     # rise + upsweep projeté
-    gx, gy = stip.x - back, stip.y + up                  # centre du grip
-    # montant + barre (tube de stip vers le grip)
-    parts.append(_draw_tube(stip.x, stip.y, gx, gy, bw, PALETTE["handlebar"],
+    top_x, top_y = stip.x, stip.y + rise                 # haut du montant (rise)
+    if rise > 3:                                         # montant vertical court
+        parts.append(_draw_tube(stip.x, stip.y, top_x, top_y, bw, PALETTE["handlebar"],
+                                sx, sy, ox, oy, scale_f, cap_r=bw/2))
+    back = half_w * math.sin(math.radians(8.0))          # recul (backsweep projeté)
+    lift = 10.0 + half_w * math.sin(math.radians(5.0)) * 0.35   # léger up (barre ~ à plat)
+    bx, by = top_x - back, top_y + lift                  # début du grip
+    parts.append(_draw_tube(top_x, top_y, bx, by, bw, PALETTE["handlebar"],
                             sx, sy, ox, oy, scale_f, cap_r=bw/2))
-    # grip : moignon court (caoutchouc), légère remontée
-    gw = bw + 8.0
-    parts.append(_draw_tube(gx, gy, gx - 14.0, gy + 7.0, gw, PALETTE["grip"],
+    # grip caoutchouc : moignon vers le pilote (quasi horizontal)
+    gw = bw + 7.0
+    parts.append(_draw_tube(bx, by, bx - 34.0, by + 4.0, gw, PALETTE["grip"],
                             sx, sy, ox, oy, scale_f, cap_r=gw/2))
 
     # === ÉTRIERS DE FREIN (par-dessus la fourche/le cadre, donc visibles) ====

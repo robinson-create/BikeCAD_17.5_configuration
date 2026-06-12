@@ -48,16 +48,17 @@ def kavenz_vhp_style() -> SuspensionConfig:
     """Façon KAVENZ VHP (Virtual High Pivot) : pivot HAUT + galet collé au pivot
     → chemin d'axe RECULÉ (franchissement) avec belt growth ~0 et pedal kickback
     quasi nul (la signature Kavenz, cf. knowledge/docs Kavenz VHP12-18). Métriques
-    (solveur cross-validé) : axe reculé ~20 mm, kickback ~1.7°, belt growth ~1.8 mm,
-    AS sag ~88 %, levier 3.30→2.93. INDICATIVE — affiner dans l'outil / bureau d'études.
-    (Le vrai VHP est un 4-barres à pivot VIRTUEL haut ; ici single-pivot haut + galet
-    qui reproduit le COMPORTEMENT ; passer en four_bar_horst pour un IC mobile.)"""
+    (solveur cross-validé) : kickback ~1.7°, belt growth ~1.9 mm (signature ami-courroie),
+    levier 3.20→2.63, AS sag ~73 %, axe reculé ~4 mm. Pivot à hauteur RÉALISTE (~95 mm).
+    INDICATIVE — affiner dans l'outil / bureau d'études. (Le vrai VHP est un 4-barres à pivot
+    VIRTUEL haut → plus de recul ; ici single-pivot haut + galet qui reproduit la signature
+    kickback/belt growth ; passer en four_bar_horst avec IC haut pour un vrai pivot virtuel.)"""
     return SuspensionConfig(
         linkage_type="high_pivot_idler",
-        main_pivot=Pivot(x=50.0, y=170.0),      # pivot TRÈS haut → axe reculé marqué
-        idler=Pivot(x=66.0, y=166.0),           # galet AU pivot → belt growth ~0, kickback ~0
-        shock_lower=Pivot(x=-230.0, y=110.0),
-        shock_upper=Pivot(x=50.0, y=370.0),
+        main_pivot=Pivot(x=35.0, y=95.0),       # pivot haut RÉALISTE (≈ vrais high-pivots)
+        idler=Pivot(x=47.0, y=89.0),            # galet AU pivot → belt growth ~0, kickback ~0
+        shock_lower=Pivot(x=-200.0, y=30.0),
+        shock_upper=Pivot(x=40.0, y=340.0),
         use_idler=True,
         idler_dia=34.0,
         rear_travel=160.0,
@@ -66,8 +67,31 @@ def kavenz_vhp_style() -> SuspensionConfig:
     )
 
 
+def scott_ransom_style() -> SuspensionConfig:
+    """Façon SCOTT RANSOM (enduro 170 mm, single-pivot à biellette + amorto NUDE/TwinLoc) :
+    biellette compacte, amorto bas dans le triangle avant. Métriques (solveur cross-validé,
+    SANS galet → vélo à chaîne) : course 170 mm, levier 2.77→2.62, AS sag ~92 %, kickback ~21°
+    (élevé car pas de galet — normal sur un enduro à chaîne). INDICATIVE — affiner / bureau d'études.
+    ⚠ Sur un vélo à COURROIE, ce kickback tirerait sur la courroie → préférer un high-pivot+galet."""
+    return SuspensionConfig(
+        linkage_type="four_bar_horst",
+        main_pivot=Pivot(x=6.0, y=45.0),
+        horst_pivot=Pivot(x=-405.0, y=5.0),
+        upper_ss_pivot=Pivot(x=-115.0, y=222.0),
+        upper_frame_pivot=Pivot(x=34.0, y=252.0),
+        shock_lower=Pivot(x=-150.0, y=25.0),
+        shock_upper=Pivot(x=-88.0, y=252.0),
+        shock_mount="auto",
+        use_idler=False,
+        rear_travel=170.0,
+        shock_stroke=62.5,
+        shock_eye_to_eye=210.0,
+    )
+
+
 PRESETS = {
     "high_pivot_m620": high_pivot_m620,
     "high_pivot_emtb_tuned": high_pivot_emtb_tuned,
     "kavenz_vhp_style": kavenz_vhp_style,
+    "scott_ransom_style": scott_ransom_style,
 }

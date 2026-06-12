@@ -61,7 +61,10 @@
       ⤓ Charger preset eMTB ACCORDÉ (levier 3.3→2.7, AS 97%, kickback 3.8°)
     </button>
     <button class="preset" on:click={() => applySuspensionPreset('kavenz_vhp_style')}>
-      ⤓ Charger preset façon KAVENZ VHP (axe reculé 20mm, kickback 1.7°, belt growth 1.8mm)
+      ⤓ Charger preset façon KAVENZ VHP (kickback 1.7°, belt growth 1.9mm, levier 3.2→2.6)
+    </button>
+    <button class="preset" on:click={() => applySuspensionPreset('scott_ransom_style')}>
+      ⤓ Charger preset façon SCOTT RANSOM (enduro 170mm, levier 2.8→2.6, AS 92%)
     </button>
   </fieldset>
 

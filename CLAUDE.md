@@ -170,8 +170,11 @@ cd tool && ./start.sh          # backend :8000 (uvicorn) + frontend :5173 (vite)
 - `presets.py` — presets `SuspensionConfig` : `high_pivot_m620` (dégage le carter) ;
   `high_pivot_emtb_tuned` (accordé belt+M620 : levier 3.3→2.7, AS sag ~97 %, kickback 3.8°,
   belt growth ~4.2 mm) ; `kavenz_vhp_style` (façon Kavenz VHP : galet AU pivot haut → axe reculé
-  ~20 mm, **kickback ~1.7°, belt growth ~1.8 mm**, AS sag ~90 %). Boutons dans le panneau
-  Suspension ; sélectionnables via `/api/suspension/preset/{name}`.
+  ~20 mm, **kickback ~1.7°, belt growth ~1.8 mm**, AS sag ~90 %) ; `scott_ransom_style`
+  (enduro 170 mm à chaîne, levier 2.8→2.6, AS 92 %, kickback ~21° — pas de galet). Boutons dans
+  le panneau Suspension ; sélectionnables via `/api/suspension/preset/{name}`. **Vélo complet
+  Scott Ransom 900 (L)** (géométrie constructeur taille L : HA 63.8°, reach 483, WB 1270, BB 350,
+  cs 440, 170 mm, dérailleur 29") enregistré dans la bibliothèque (`tool/bikes/`, sélecteur 📁).
 - `lugs/` — mode lug-and-bond : `joint_model.build_joints()` (graphe cadre → 5 nœuds-lugs
   avec douilles {axe, alésage, profondeur, out_of_plane}), `miter.py`, `export_cad.py` (JSON /
   CSV table de conception SolidWorks / résumé).
@@ -219,10 +222,12 @@ cd tool && ./start.sh          # backend :8000 (uvicorn) + frontend :5173 (vite)
   **Contours RÉELS** (`_OUTLINE_*` + `_norm_path` : recherche web de profils de pièces) pour la
   **selle** (court e-MTB : nez fin/queue relevée), les **étriers** (`_draw_calipers`, contour
   4-pistons enjambant le disque, dessinés PAR-DESSUS la fourche → visibles, AV φ≈158° / AR φ≈48°),
-  et le **carter M620**. **Cockpit** repensé (vue de côté) : potence + riser COMPACT (le backsweep
-  8° projette le grip ~50 mm en arrière du collier, pas une longue barre ; grip = moignon).
+  et le **carter M620**. **Cockpit** (vue de côté) : potence fine + **montant VERTICAL court** (le
+  rise) + barre quasi à plat vers le pilote + grip caoutchouc (PAS de barre à 45° / ape-hanger).
   **TOUT-SUSPENDU rendu par défaut** (`full_susp`) : l'arrière devient bras oscillant +
-  hauban→biellette + **amortisseur** (sprite) + axes de pivot via `_draw_susp_links_static` (l'overlay
+  hauban→biellette + **amortisseur PARAMÉTRIQUE** (`_draw_shock` : bonbonne air + tige argent +
+  bague de sag rouge + molette + œillets — lisible comme un vrai amorto, PLUS le sprite-slab) +
+  axes de pivot via `_draw_susp_links_static` (l'overlay
   `show_suspension` n'ajoute que bielles colorées + animation). **Fixation moteur** visible
   (`_draw_motor_mount` : 3 bossages + boulons M8 + brides vers les tubes).
 - `io/dxf_export.py` — `export_dxf()` DXF R12 ASCII pour SolidWorks (calques GEOMETRY/TUBES/WHEELS/PIVOTS/DIMS_TEXT).
