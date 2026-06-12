@@ -201,7 +201,10 @@ for lt, setup in [
     check(kk.ok and len(kk.frames) >= 10, f"{lt}: frames d'animation produites ({len(kk.frames)})")
     svg_st = render_svg(bk, cc, 1400, 750, True, None, suspension=kk.frames, animate_suspension=False)
     svg_an = render_svg(bk, cc, 1400, 750, True, None, suspension=kk.frames, animate_suspension=True)
-    check('class="suspension"' in svg_st, f"{lt}: overlay suspension statique présent")
+    # Statique : linkage réaliste TOUJOURS dessiné (rear-susp) + analyse propre
+    # (trajectoire d'axe) à la place de l'ancien overlay debug.
+    check('class="rear-susp"' in svg_st and 'class="susp-analysis"' in svg_st,
+          f"{lt}: suspension réaliste + analyse trajectoire d'axe")
     check('<animate' in svg_an and svg_finite(svg_an), f"{lt}: animation SMIL valide")
     # cohérence frames : course croissante de 0 à ~cible
     tr = [fr["travel"] for fr in kk.frames]
@@ -355,15 +358,29 @@ from backend.lugs.miter import miter_angle, saddle_depth
 
 b = load_bcad(SRC)
 calc = calculate(b)
+
+# HARDTAIL (suspension OFF) : cadre entièrement bondé → 5 nœuds dont le triangle AR.
+bh = load_bcad(SRC); bh.suspension.enabled = False
+nodes_h = build_joints(bh, calculate(bh))
+names_h = {n.name for n in nodes_h}
+check(names_h == {"head_top", "head_bottom", "bb", "seat_cluster", "dropout"},
+      f"hardtail : 5 nœuds-lugs (got {names_h})")
+bb_h = next(n for n in nodes_h if n.name == "bb")
+check(len(bb_h.sockets) == 3, "hardtail : lug BB 3 douilles (down/seat/chainstay)")
+cs_oop = any(s.out_of_plane for n in nodes_h for s in n.sockets if s.member in ("chainstay", "seatstay"))
+check(cs_oop, "hardtail : bases/haubans marqués out_of_plane (triangle fendu 3D)")
+
+# TOUT-SUSPENDU : l'arrière est un bras oscillant articulé → lugs sur le TRIANGLE
+# AVANT seulement (pas de dropout bondé, BB sans douille de base).
 nodes = build_joints(b, calc)
 names = {n.name for n in nodes}
-check(names == {"head_top", "head_bottom", "bb", "seat_cluster", "dropout"},
-      f"5 nœuds-lugs attendus (got {names})")
-
+check(names == {"head_top", "head_bottom", "bb", "seat_cluster"},
+      f"suspendu : 4 nœuds-lugs triangle avant (got {names})")
 bb_node = next(n for n in nodes if n.name == "bb")
-check(len(bb_node.sockets) == 3, "lug BB : 3 douilles (down/seat/chainstay)")
+check(len(bb_node.sockets) == 2, "suspendu : lug BB 2 douilles (down/seat, pas de base)")
+
 # Tous les alésages > Ø tube (jeu de collage) et profondeurs > 0
-for n in nodes:
+for n in nodes_h:
     for s in n.sockets:
         check(s.bore_dia > s.tube_od and s.depth > 0,
               f"{n.name}/{s.member}: bore>{s.tube_od} & depth>0")
@@ -384,10 +401,6 @@ check(svg_finite(plan), "plan technique : SVG valide")
 for tok in ("Empattement", "Reach", "HTA", "Axe AR", "Pivot principal",
             "POINTS CLÉS", "DOM ENGINEERING", "BB (0,0)", "LUG "):
     check(tok in plan, f"plan technique contient : {tok}")
-
-# Le triangle arrière (bases/haubans) marqué hors-plan
-cs_oop = any(s.out_of_plane for n in nodes for s in n.sockets if s.member in ("chainstay", "seatstay"))
-check(cs_oop, "bases/haubans marqués out_of_plane (triangle fendu 3D)")
 
 # Exports valides
 import json as _json
@@ -560,6 +573,19 @@ check(KN.search("manivelle crank", 3), "knowledge: trouve les manivelles")
 parts = [e for e in KN.entries() if e["id"].startswith("parts-")]
 check(any("manivelles" in e["title"] for e in parts), "catalogue pièces scanné depuis le dépôt (CRANKS)")
 check(KN.search("zzzznotaword", 2) == [], "knowledge: requête sans match → vide")
+
+# 10d-ter. source DISTANTE (QDRANT latelier) : repli gracieux SANS config
+import os as _os2
+_had = {k: _os2.environ.pop(k, None) for k in ("LATELIER_QDRANT_URL", "VOYAGE_API_KEY")}
+try:
+    check(KN.remote_available() is False, "distante: désactivée sans config")
+    check(KN.remote_search("anything", 3) == [], "distante: search renvoie [] sans config (pas d'erreur)")
+    rst = KN.remote_stats()
+    check(rst["available"] is False and "collection" in rst, "distante: stats cohérentes sans config")
+finally:
+    for k, v in _had.items():
+        if v is not None:
+            _os2.environ[k] = v
 
 # 10d-bis. RAG BM25 : index, ingestion documents, citation source
 from backend.knowledge import bm25, ingest

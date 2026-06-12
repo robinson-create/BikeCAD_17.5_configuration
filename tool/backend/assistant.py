@@ -136,6 +136,24 @@ TOOLS = [
         },
     },
     {
+        "name": "search_velo_db",
+        "description": ("Interroger la BASE VÉLO DISTANTE (QDRANT du projet latelier, ~1,7 M de chunks : "
+                        "manuels, docs SAV, fiches produits — Shimano, SRAM, Gates, Rohloff, Bafang, etc.). "
+                        "Recherche SÉMANTIQUE (embeddings Voyage). À utiliser SI BESOIN quand la banque locale "
+                        "(search_knowledge) ne suffit pas : spec composant précise, compatibilité, procédure SAV, "
+                        "valeur constructeur. Formuler la requête en ANGLAIS de préférence (corpus surtout EN). "
+                        "Chaque hit porte source/page/marque/modèle → CITER. Indisponible si non configuré "
+                        "(renvoie un message ; ne pas réessayer en boucle)."),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string"},
+                "k": {"type": "integer"},
+            },
+            "required": ["query"],
+        },
+    },
+    {
         "name": "list_library",
         "description": "Lister les vélos sauvegardés en bibliothèque.",
         "input_schema": {"type": "object", "properties": {}},
@@ -174,7 +192,10 @@ def _system_prompt(state_summary: str) -> str:
         "BikeCAD + les DOCUMENTS sources ingérés (search_knowledge, récupération RAG BM25), et gérer la "
         "bibliothèque. Pour des specs (moteur M620, amortisseurs, courroie, pièces) ou un rappel de "
         "méthode, appelle search_knowledge plutôt que d'inventer ; si un extrait porte une 'source' "
-        "(document ingéré), CITE-la (nom + page). "
+        "(document ingéré), CITE-la (nom + page). Si la banque LOCALE ne suffit pas (spec composant "
+        "précise, compatibilité, procédure SAV constructeur), interroge la BASE VÉLO DISTANTE avec "
+        "search_velo_db (QDRANT latelier, ~1,7 M de chunks ; requête en anglais de préférence) et cite "
+        "la source. "
         "Après une modification, VÉRIFIE le résultat (get_state) et explique brièvement l'impact.\n\n"
         "Convention monde : BB=(0,0), x=avant +, y=haut +, mm. Angles depuis l'horizontale.\n\n"
         "Sections et champs éditables (set_parameters) :\n" + fields + "\n\n"
@@ -298,6 +319,23 @@ def _exec_tool(name: str, inp: dict, data: dict, actions: list) -> str:
         for h in hits:
             cite = f"  [source: {h['source']}" + (f", p.{h['page']}" if h.get("page") else "") + "]" if h.get("source") else ""
             blocks.append(f"### {h['title']}{cite}\n{h['text']}")
+        return "\n\n".join(blocks)
+
+    if name == "search_velo_db":
+        if not knowledge.remote_available():
+            return ("Base vélo distante non configurée (LATELIER_QDRANT_URL + VOYAGE_API_KEY absents). "
+                    "S'appuyer sur search_knowledge (banque locale).")
+        hits = knowledge.remote_search(inp.get("query", ""), int(inp.get("k", 5)))
+        if not hits:
+            return "Aucun résultat dans la base vélo distante."
+        blocks = []
+        for h in hits:
+            meta = " · ".join(filter(None, [
+                ", ".join(h.get("brands") or []),
+                ", ".join(h.get("component_types") or [])]))
+            cite = f"  [{h['source']}" + (f", p.{h['page']}" if h.get("page") else "") + "]" if h.get("source") else ""
+            head = h["title"] or (h.get("source") or "extrait")
+            blocks.append(f"### {head}{cite}\n" + (f"_{meta}_\n" if meta else "") + h["text"][:600])
         return "\n\n".join(blocks)
 
     if name == "list_library":

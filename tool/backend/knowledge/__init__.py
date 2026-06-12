@@ -10,3 +10,10 @@ cf. `bm25.py`) — pur Python, zéro dépendance lourde. L'index BM25 peut être
 par un index d'embeddings plus tard sans changer l'API.
 """
 from .bank import search, entries, reindex, stats  # noqa: F401
+# Source DISTANTE optionnelle : base vectorielle QDRANT du projet latelier (~1,7 M chunks
+# vélo). Configurée par env (LATELIER_QDRANT_URL + VOYAGE_API_KEY) — voir latelier.py.
+from .latelier import (  # noqa: F401
+    remote_search,
+    available as remote_available,
+    stats as remote_stats,
+)

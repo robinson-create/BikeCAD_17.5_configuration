@@ -133,9 +133,21 @@ def _draw_wheel(cx: float, cy: float, r_tire: float,
     cross_off = cross * 0.06                 # croisement → décalage tangentiel (rad)
 
     L = [f'<g class="wheel">']
-    # Pneu : anneau noir UNI (pas de sculpture) + liseré BikeCAD
+    # Pneu : carcasse noire + CRAMPONS MTB (couronne de pavés au bord + bande
+    # centrale) → lecture « pneu enduro cranté » plutôt qu'un simple anneau lisse.
     L.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{sr_tire:.1f}" fill="{PALETTE["tire"]}" '
-             f'stroke="#333333" stroke-width="1.0"/>')
+             f'stroke="#2a2d31" stroke-width="1.0"/>')
+    knob = max(2.5, tire_w * 0.32)                       # hauteur de crampon
+    circ = 2 * math.pi * sr_tire
+    n_knob = max(28, int(circ / max(8.0, knob * 2.0)))   # ~1 pavé tous les 2·hauteur
+    dash = circ / n_knob
+    L.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{sr_tire - knob*0.45:.1f}" fill="none" '
+             f'stroke="{PALETTE["tread"]}" stroke-width="{knob:.1f}" '
+             f'stroke-dasharray="{dash*0.55:.1f} {dash*0.45:.1f}"/>')
+    # bande centrale (crampons moins hauts, décalés) pour le relief
+    L.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{sr_tire - tire_w*0.5:.1f}" fill="none" '
+             f'stroke="{PALETTE["tread"]}" stroke-width="{knob*0.7:.1f}" opacity="0.7" '
+             f'stroke-dasharray="{dash*0.4:.1f} {dash*0.9:.1f}"/>')
     # Creux (entre les rayons) = couleur de fond → roue ajourée comme BikeCAD
     L.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{r_bed:.1f}" fill="{PALETTE["wheel_gap"]}"/>')
     # Rayons : du flasque (décalé selon le croisement) vers le cercle d'accroche
@@ -439,6 +451,56 @@ def _draw_sprite(name, ax, ay, sx, sy, ox, oy, *, scale=1.0, angle_deg=0.0,
     return "".join(out)
 
 
+# ── Contours RÉELS de composants (vues de côté, recherche web) ───────────────
+# Points normalisés (x,y) ∈ [0,1]², x=+avant/droite, y=+haut. Tracés d'après des
+# dessins techniques / vues de profil de pièces réelles (Specialized Power /
+# Fizik Terra, Shimano XT 4-pistons, Bafang M620 manuel BF-DM-C-MM G510).
+def _parse_outline(s):
+    return [tuple(float(v) for v in p.split(",")) for p in s.split(";") if p.strip()]
+
+_OUTLINE_SADDLE = _parse_outline(
+    "0.02,0.62; 0.06,0.78; 0.12,0.86; 0.20,0.90; 0.30,0.86; 0.42,0.80; 0.55,0.76; "
+    "0.68,0.74; 0.80,0.72; 0.90,0.70; 0.96,0.67; 1.00,0.60; 0.99,0.53; 0.95,0.50; "
+    "0.88,0.51; 0.80,0.52; 0.70,0.53; 0.62,0.50; 0.58,0.42; 0.55,0.34; 0.53,0.30; "
+    "0.49,0.30; 0.46,0.36; 0.44,0.44; 0.40,0.49; 0.30,0.50; 0.20,0.51; 0.12,0.52; "
+    "0.06,0.55; 0.02,0.62")
+# Étrier 4-pistons : corps qui enjambe la piste + 2 oreilles post-mount.
+_OUTLINE_CALIPER = _parse_outline(
+    "0.50,0.06; 0.60,0.06; 0.66,0.10; 0.70,0.18; 0.72,0.30; 0.74,0.40; 0.82,0.42; "
+    "0.92,0.44; 0.97,0.48; 0.99,0.55; 0.97,0.62; 0.92,0.66; 0.82,0.68; 0.74,0.70; "
+    "0.72,0.82; 0.68,0.90; 0.60,0.95; 0.50,0.96; 0.40,0.95; 0.33,0.90; 0.29,0.82; "
+    "0.27,0.70; 0.18,0.68; 0.08,0.66; 0.03,0.62; 0.01,0.55; 0.03,0.48; 0.08,0.44; "
+    "0.18,0.42; 0.27,0.40; 0.29,0.30; 0.32,0.18; 0.37,0.10; 0.43,0.06; 0.50,0.06")
+# Carter Bafang M620 (galet ovoïde 234×140, manuel G510). BB ≈ (0.27,0.42).
+_OUTLINE_M620 = _parse_outline(
+    "0.747,0.965; 0.500,1.000; 0.390,0.965; 0.308,0.930; 0.199,0.948; 0.089,0.878; "
+    "0.014,0.739; 0.000,0.565; 0.034,0.383; 0.116,0.191; 0.253,0.070; 0.418,0.009; "
+    "0.582,0.000; 0.719,0.043; 0.842,0.122; 0.932,0.209; 0.979,0.348; 1.000,0.522; "
+    "0.986,0.696; 0.932,0.835; 0.863,0.922")
+
+
+def _norm_path(points, anchor_world, w, h, anchor_n=(0.0, 0.0), angle_deg=0.0,
+               *, sx, sy, ox, oy, close=True):
+    """Mappe un contour normalisé (0..1) en coords écran : place `anchor_n` du
+    contour sur `anchor_world` (monde), échelle (w,h) en mm, rotation angle_deg
+    (CCW, repère monde y-haut). Renvoie un `d` SVG."""
+    a = math.radians(angle_deg)
+    ca, sa_ = math.cos(a), math.sin(a)
+    axw, ayw = anchor_world
+    anx, any_ = anchor_n
+    d = []
+    for i, (nx, ny) in enumerate(points):
+        lx = (nx - anx) * w
+        ly = (ny - any_) * h
+        wx = axw + lx * ca - ly * sa_
+        wy = ayw + lx * sa_ + ly * ca
+        px, py = _pt(wx, wy, sx, sy, ox, oy)
+        d.append(f"{'M' if i == 0 else 'L'} {px:.1f} {py:.1f}")
+    if close:
+        d.append("Z")
+    return " ".join(d)
+
+
 def _draw_motor(bike, calc, sx, sy, ox, oy, scale) -> str:
     """Carter moteur central, dessiné DERRIÈRE le cadre (les tubes se rejoignent
     par-dessus, au BB — le moteur est la jonction d'un mid-drive). Forme exacte
@@ -456,11 +518,46 @@ def _draw_motor(bike, calc, sx, sy, ox, oy, scale) -> str:
                        (_pt(bb[0] + ex, bb[1] + ey, sx, sy, ox, oy) for ex, ey in env))
         return (f'<polygon class="motor" points="{pts}" fill="{PALETTE["motor"]}" '
                 f'stroke="#1a2530" stroke-width="1.5"/>')
-    mw, mh = 130.0, 150.0
-    mx, my = bb[0] + dt.motor_x, bb[1] + dt.motor_y
-    x0, y0 = _pt(mx - mw / 2, my + mh / 2, sx, sy, ox, oy)
-    return (f'<rect class="motor" x="{x0:.1f}" y="{y0:.1f}" width="{mw*scale:.1f}" '
-            f'height="{mh*scale:.1f}" rx="{18*scale:.1f}" fill="{PALETTE["motor"]}"/>')
+    # Fallback : CONTOUR RÉEL du carter M620 (manuel, 234×140 ; BB ≈ norm (0.27,0.42)).
+    anchor = (bb[0] + dt.motor_x, bb[1] + dt.motor_y)
+    d = _norm_path(_OUTLINE_M620, anchor, -234.0, 140.0, anchor_n=(0.27, 0.42),
+                   sx=sx, sy=sy, ox=ox, oy=oy)   # w<0 : x=0 du contour = avant (+x monde)
+    return (f'<path class="motor" d="{d}" fill="{PALETTE["motor"]}" '
+            f'stroke="#1a2530" stroke-width="1.5" stroke-linejoin="round"/>')
+
+
+def _draw_motor_mount(bike, calc, sx, sy, ox, oy, scale) -> str:
+    """Interface de FIXATION du moteur au cadre (3 points M8, manuel Bafang M620) :
+    bossages + boulons aux 3 ancrages + brides reliant le carter aux tubes, pour
+    qu'on voie que le moteur est tenu par le cadre (et non posé dans le vide)."""
+    dt = bike.drivetrain
+    if not dt.use_motor or dt.motor_key == "none":
+        return ""
+    bbx, bby = calc.bb.x, calc.bb.y
+    # 3 points de fixation relatifs au BB (avant-haut vers down tube, avant-bas,
+    # arrière vers tube de selle / base) — d'après l'agencement M620.
+    pts = [(58.0, 46.0), (66.0, -20.0), (-70.0, 30.0)]
+    # cibles cadre (vers quel tube la bride pointe)
+    tgt = [(calc.crown.x, calc.crown.y), (bbx + 90, bby - 6), (calc.seat_tube_top.x, calc.seat_tube_top.y)]
+    out = ['<g class="motor-mount">']
+    for (mx, my), (tx, ty) in zip(pts, tgt):
+        wx, wy = bbx + mx, bby + my
+        # bride : court tronçon métal du carter vers le tube le plus proche
+        dx, dy = tx - wx, ty - wy
+        L = math.hypot(dx, dy) or 1.0
+        ex, ey = wx + dx / L * 26.0, wy + dy / L * 26.0
+        out.append(_draw_tube(wx, wy, ex, ey, 18.0, _shade(PALETTE["motor"], 1.5),
+                              sx, sy, ox, oy, scale, cap_r=9.0))
+        # bossage + boulon M8 (tête hex)
+        cx, cy = _pt(wx, wy, sx, sy, ox, oy)
+        out.append(f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="{8.5*scale:.1f}" '
+                   f'fill="{_shade(PALETTE["motor"],1.35)}" stroke="#10161c" stroke-width="1"/>')
+        r = 5.2 * scale
+        hexp = " ".join(f"{cx + r*math.cos(math.pi/6 + math.pi*k/3):.1f},"
+                        f"{cy + r*math.sin(math.pi/6 + math.pi*k/3):.1f}" for k in range(6))
+        out.append(f'<polygon points="{hexp}" fill="#2c3137" stroke="#10161c" stroke-width="0.7"/>')
+    out.append('</g>')
+    return "".join(out)
 
 
 def _draw_drivetrain(bike, calc, sx, sy, ox, oy, scale) -> str:
@@ -795,9 +892,9 @@ def _draw_lugs(nodes, sx, sy, ox, oy, scale) -> str:
             ey = ny + math.sin(a) * s.depth
             parts.append(_draw_tube(nx, ny, ex, ey, s.bore_dia + 6.0, metal,
                                     sx, sy, ox, oy, scale, cap_r=(s.bore_dia + 6.0) / 2))
-        # Corps central du lug (boule usinée)
+        # Corps central du lug (boule usinée) — padding réduit pour ne pas noyer le nœud
         cxp, cyp = _pt(nx, ny, sx, sy, ox, oy)
-        r_hub = (max(bores) / 2 + 7.0) * abs(sx)
+        r_hub = (max(bores) / 2 + 4.0) * abs(sx)
         parts.append(f'<circle cx="{cxp:.1f}" cy="{cyp:.1f}" r="{r_hub:.1f}" '
                      f'fill="{metal}" stroke="{PALETTE["lug_edge"]}" stroke-width="0.8"/>')
         # reflet
@@ -808,7 +905,8 @@ def _draw_lugs(nodes, sx, sy, ox, oy, scale) -> str:
 
 
 def _draw_brakes(bike, calc, sx, sy, ox, oy) -> str:
-    """Disques de frein aux deux axes (si freins à disque)."""
+    """Disques de frein (rotors) aux deux axes. Les étriers sont dessinés
+    séparément (_draw_calipers), PAR-DESSUS la fourche/le cadre, pour rester visibles."""
     bk = bike.brakes
     if not str(bk.style).startswith("disc"):
         return ""
@@ -831,17 +929,40 @@ def _draw_brakes(bike, calc, sx, sy, ox, oy) -> str:
         # araignée centrale (carrier) sombre
         parts.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{sr*0.34:.1f}" '
                      f'fill="{_shade(PALETTE["rotor"],0.7)}" stroke="{PALETTE["rim_dark"]}" stroke-width="0.6" />')
-        # Étrier : posé sur la piste (haut-arrière du disque), dimensionné par le
-        # corps d'étrier (bl × bh) → ces réglages agissent sur l'aperçu.
-        bl = max(28.0, getattr(bk, "bl", 0.0) or 50.0)   # longueur corps étrier
-        bh = max(20.0, getattr(bk, "bh", 0.0) or 38.0)   # hauteur corps étrier
-        cax = axle.x - rotor / 2 * 0.32
-        cay = axle.y + rotor / 2 * 0.86
-        ccx, ccy = _pt(cax, cay, sx, sy, ox, oy)
-        parts.append(f'<rect x="{ccx-bl/2*abs(sx):.1f}" y="{ccy-bh/2*abs(sx):.1f}" '
-                     f'width="{bl*abs(sx):.1f}" height="{bh*abs(sx):.1f}" rx="{4*abs(sx):.1f}" '
-                     f'fill="{PALETTE["crank"]}" stroke="#000" stroke-width="0.6"/>')
     return '<g class="brakes">' + "".join(parts) + '</g>'
+
+
+def _draw_calipers(bike, calc, sx, sy, ox, oy) -> str:
+    """Étriers 4-pistons (CONTOUR RÉEL) enjambant la périphérie du disque, dessinés
+    PAR-DESSUS la fourche/le cadre. AV = posé au bord arrière du fourreau (visible) ;
+    AR = près du hauban/de la base. Oreilles post-mount + 2 vis M6."""
+    bk = bike.brakes
+    if not str(bk.style).startswith("disc"):
+        return ""
+    # angle (math, repère monde y-haut) sur la périphérie du disque.
+    caliper_phi = {"front": math.radians(158.0), "rear": math.radians(48.0)}
+    parts = []
+    for which, axle, rotor in (("front", calc.front_axle, bk.rotor_front),
+                               ("rear", calc.rear_axle, bk.rotor_rear)):
+        phi = caliper_phi[which]
+        cw_box, ch_box = 60.0, 66.0          # mm (tangentiel × radial)
+        rr = rotor / 2.0
+        anchor = (axle.x + rr * math.cos(phi), axle.y + rr * math.sin(phi))
+        cal_d = _norm_path(_OUTLINE_CALIPER, anchor, cw_box, ch_box,
+                           anchor_n=(0.50, 0.78), angle_deg=math.degrees(phi) - 90.0,
+                           sx=sx, sy=sy, ox=ox, oy=oy)
+        parts.append(f'<path d="{cal_d}" fill="{PALETTE["crank"]}" stroke="#0a0c0f" '
+                     f'stroke-width="1.0" stroke-linejoin="round"/>')
+        # 2 vis post-mount (oreilles tangentielles)
+        for tn in (0.03, 0.97):
+            bx = anchor[0] + (tn - 0.50) * cw_box * math.cos(phi - math.pi/2) \
+                 + (0.55 - 0.78) * ch_box * math.cos(phi)
+            by = anchor[1] + (tn - 0.50) * cw_box * math.sin(phi - math.pi/2) \
+                 + (0.55 - 0.78) * ch_box * math.sin(phi)
+            bpx, bpy = _pt(bx, by, sx, sy, ox, oy)
+            parts.append(f'<circle cx="{bpx:.1f}" cy="{bpy:.1f}" r="3.0" fill="#15181c" '
+                         f'stroke="#0a0c0f" stroke-width="0.5"/>')
+    return '<g class="calipers">' + "".join(parts) + '</g>'
 
 
 def _draw_rider(fit, sx, sy, ox, oy) -> str:
@@ -998,6 +1119,87 @@ def _draw_suspension(frames, wheel_r_r, sx, sy, ox, oy, scale,
     return "".join(parts)
 
 
+def _draw_susp_analysis(frames, sx, sy, ox, oy) -> str:
+    """Overlay d'ANALYSE propre (toggle Suspension, hors animation) : trajectoire
+    de l'axe AR à travers la course + repères topout/bottom-out. Pas de bielles
+    debug ni de carrés — le linkage réaliste est déjà dessiné en statique."""
+    if not frames or len(frames) < 2:
+        return ""
+    pts = [_pt(fr["axle"][0], fr["axle"][1], sx, sy, ox, oy) for fr in frames if "axle" in fr]
+    if len(pts) < 2:
+        return ""
+    d = "M " + " L ".join(f"{p[0]:.1f} {p[1]:.1f}" for p in pts)
+    out = [f'<path d="{d}" fill="none" stroke="#e84393" stroke-width="2.6" '
+           f'stroke-dasharray="2 3" opacity="0.9"/>']
+    for p, col, lbl in ((pts[0], "#0e6b57", "topout"), (pts[-1], "#c0392b", "fond")):
+        out.append(f'<circle cx="{p[0]:.1f}" cy="{p[1]:.1f}" r="4" fill="{col}" '
+                   f'stroke="#fff" stroke-width="1"/>')
+    out.append(f'<text x="{pts[-1][0]+6:.1f}" y="{pts[-1][1]:.1f}" font-size="11" '
+               f'font-family="sans-serif" fill="#c0392b">trajectoire d\'axe</text>')
+    return '<g class="susp-analysis">' + "".join(out) + '</g>'
+
+
+def _draw_susp_links_static(bike, calc, sx, sy, ox, oy, scale) -> str:
+    """Rendu RÉALISTE (non-debug) de l'arrière suspendu en position topout :
+    biellette (rocker) en plaque métal + amortisseur (sprite réel) + axes de pivot.
+    Les bras (base/hauban) sont dessinés comme tubes de cadre dans render_svg."""
+    su = bike.suspension
+    topo = su.linkage_type
+    A  = (su.main_pivot.x, su.main_pivot.y)
+    C  = (su.upper_ss_pivot.x, su.upper_ss_pivot.y)
+    D  = (su.upper_frame_pivot.x, su.upper_frame_pivot.y)
+    B  = (su.horst_pivot.x, su.horst_pivot.y)
+    lo = (su.shock_lower.x, su.shock_lower.y)
+    up = (su.shock_upper.x, su.shock_upper.y)
+
+    def W(p):
+        return _pt(p[0], p[1], sx, sy, ox, oy)
+
+    out = ['<g class="rear-susp">']
+
+    # ── Biellette / rocker : plaque métallique (triangle C–D–œillet amorto) ──
+    is_four_bar = str(topo).startswith("four_bar")
+    if is_four_bar:
+        tri = [W(C), W(D), W(up)]
+        pts = " ".join(f"{p[0]:.1f},{p[1]:.1f}" for p in tri)
+        out.append(f'<polygon points="{pts}" fill="{PALETTE["lug"]}" '
+                   f'stroke="{PALETTE["lug_edge"]}" stroke-width="2.2" '
+                   f'stroke-linejoin="round"/>')
+
+    # ── Amortisseur : FORME RÉELLE BikeCAD (sprite normalisé) lo → up ───────
+    shock_part = _PARTS.get("rear_shock_norm")
+    eye = math.hypot(up[0] - lo[0], up[1] - lo[1]) or 1.0
+    if shock_part and shock_part.get("paths"):
+        sang = math.degrees(math.atan2(up[1] - lo[1], up[0] - lo[0]))
+        ax_len = shock_part.get("axis_len", 182.0) or 182.0
+        out.append(_draw_sprite("rear_shock_norm", lo[0], lo[1], sx, sy, ox, oy,
+                                scale=eye / ax_len, angle_deg=sang - 90.0,
+                                empty_fill="#8a929c", klass="shock"))
+    else:
+        lx, ly = W(lo); ux, uy = W(up)
+        out.append(f'<line x1="{lx:.1f}" y1="{ly:.1f}" x2="{ux:.1f}" y2="{uy:.1f}" '
+                   f'stroke="#41474f" stroke-width="{max(8.0, eye*0.10*abs(sx)):.1f}" '
+                   f'stroke-linecap="round"/>')
+
+    # ── Axes de pivot (hardware propre : alésage sombre cerclé acier) ───────
+    pivots = [A, C, D]
+    if is_four_bar:
+        pivots.append(B)
+    for p in pivots:
+        cx, cy = W(p)
+        out.append(f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="6.5" fill="#8b9099" '
+                   f'stroke="#3a3f46" stroke-width="1.4"/>')
+        out.append(f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="2.4" fill="#23272d"/>')
+    # œillets d'amortisseur
+    for p in (lo, up):
+        cx, cy = W(p)
+        out.append(f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="4.2" fill="#3a3f46" '
+                   f'stroke="#1a1d22" stroke-width="1"/>')
+
+    out.append('</g>')
+    return "".join(out)
+
+
 def render_svg(bike: BikeDesign, calc: CalcResult,
                width: int = 1400, height: int = 750,
                show_dims: bool = True, fit=None,
@@ -1131,10 +1333,29 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
 
     # === CADRE (technique BikeCAD : remplissages groupés → fillets aux nœuds →
     #     liseré #333 en dernière passe → silhouette « objet peint » sans coutures)
-    # bases, haubans, tube de selle, top tube, down tube, tube de direction
-    frame_tubes = [
-        (bb.x, bb.y, ra.x, ra.y, f.chainstay_d),
-        (ra.x, ra.y, stt.x, stt.y, f.seatstay_d),
+    # bases, haubans, tube de selle, top tube, down tube, tube de direction.
+    # TOUT-SUSPENDU : l'arrière devient un bras oscillant (pivote au main_pivot) +
+    # hauban → biellette, au lieu du triangle arrière rigide d'un hardtail.
+    su = bike.suspension
+    full_susp = su.enabled and str(su.linkage_type) in (
+        "four_bar_horst", "high_pivot_idler", "four_bar_generic")
+    if full_susp:
+        A_piv = (su.main_pivot.x, su.main_pivot.y)        # pivot principal (cadre)
+        C_piv = (su.upper_ss_pivot.x, su.upper_ss_pivot.y)  # hauban ↔ biellette
+        # Bras oscillant MASSIF (pièce moulée) : base nettement plus épaisse que les
+        # tubes du triangle avant + hauban renforcé → look enduro (et non tubes fins).
+        cs_d = max(46.0, f.chainstay_d * 1.4)
+        ss_d = max(32.0, f.seatstay_d * 1.5)
+        rear_tubes = [
+            (A_piv[0], A_piv[1], ra.x, ra.y, cs_d),   # base (bras oscillant massif)
+            (ra.x, ra.y, C_piv[0], C_piv[1], ss_d),   # hauban → biellette
+        ]
+    else:
+        rear_tubes = [
+            (bb.x, bb.y, ra.x, ra.y, f.chainstay_d),
+            (ra.x, ra.y, stt.x, stt.y, f.seatstay_d),
+        ]
+    frame_tubes = rear_tubes + [
         (bb.x, bb.y, stt.x, stt.y, f.seat_tube_fd),
         (stt.x, stt.y, ht.x, ht.y, f.top_tube_d),
         (bb.x, bb.y, cr.x, cr.y, f.down_tube_d),
@@ -1155,6 +1376,16 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
                            ((ht.x, ht.y), f.head_tube_d), ((cr.x, cr.y), f.head_tube_d)]:
         ncx, ncy, _ = _circle(nx_, ny_, dd / 2, sx, sy, ox, oy)
         parts.append(f'<circle cx="{ncx:.1f}" cy="{ncy:.1f}" r="{dd/2*abs(sx):.1f}" fill="{FRAME_FILL}"/>')
+
+    # === SUSPENSION ARRIÈRE (amortisseur + biellette + pivots, RÉALISTE) =====
+    # Rendu réaliste statique (position topout) SAUF en animation (où le linkage
+    # bouge). L'overlay d'analyse `suspension` n'ajoute qu'une trajectoire d'axe
+    # PROPRE (pas de bielles debug ni de carrés blancs).
+    if full_susp and not animate_suspension:
+        parts.append(_draw_susp_links_static(bike, calc, sx, sy, ox, oy, scale_f))
+
+    # === FIXATION MOTEUR (bossages + boulons M8 vers le cadre) ===============
+    parts.append(_draw_motor_mount(bike, calc, sx, sy, ox, oy, scale_f))
 
     # === FOURCHE ============================================================
     # Forme RÉELLE BikeCAD (sprite normalisé) si dispo, sinon silhouette tubulaire.
@@ -1221,59 +1452,44 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
     parts.append(_draw_tube(stt.x, stt.y, sp_end_x, sp_end_y, bike.seatpost.diameter,
                             PALETTE["seatpost"], sx, sy, ox, oy, scale_f, cap_r=bike.seatpost.diameter/2))
 
-    # === SELLE (profil VTT moderne : coque fine, bec effilé, arrière relevé) ==
-    # Nez vers l'avant (+x = droite). Construit en coords monde (y-haut) puis projeté.
-    L_sdl = max(250.0, bike.saddle.length)
-    H_sdl = max(14.0, min(20.0, bike.saddle.thickness))   # épaisseur de coque (fine)
-    clampH = 24.0
-    # setback = recul de la selle derrière l'axe de tige (réglage tige de selle)
-    cxs = sp_end_x + 0.04 * L_sdl - max(0.0, bike.seatpost.setback)
-    ty  = sp_end_y + clampH                # ligne d'assise (haut de coque)
-    # Inclinaison de selle (réglage) : on tourne toute la coque autour de la pince.
-    _sa = math.radians(getattr(bike.saddle, "angle", 0.0) or 0.0)
-    _ca, _sn = math.cos(_sa), math.sin(_sa)
-    def Wp(x, y):                          # rotation autour de (cxs,ty) puis monde→px
-        dx, dy = x - cxs, y - ty
-        xr = cxs + dx * _ca - dy * _sn
-        yr = ty + dx * _sn + dy * _ca
-        return f"{W(xr, yr)[0]:.1f},{W(xr, yr)[1]:.1f}"
-    # Profil supérieur : arrière relevé → creux d'assise → bec relevé
-    tailT = (cxs - 0.46 * L_sdl, ty + 0.060 * L_sdl)
-    sit   = (cxs - 0.06 * L_sdl, ty)
-    noseT = (cxs + 0.56 * L_sdl, ty + 0.045 * L_sdl)
-    # Dessous (concave, fin)
-    noseB = (cxs + 0.55 * L_sdl, ty + 0.045 * L_sdl - H_sdl * 0.55)
-    sitB  = (cxs - 0.04 * L_sdl, ty - H_sdl)
-    tailB = (cxs - 0.44 * L_sdl, ty + 0.060 * L_sdl - H_sdl * 0.65)
-    shell = (
-        f'M {Wp(*tailT)} '
-        f'C {Wp(cxs-0.30*L_sdl, ty+0.05*L_sdl)} {Wp(cxs-0.20*L_sdl, ty+0.004*L_sdl)} {Wp(*sit)} '
-        f'C {Wp(cxs+0.18*L_sdl, ty-0.004*L_sdl)} {Wp(cxs+0.42*L_sdl, ty+0.055*L_sdl)} {Wp(*noseT)} '
-        f'L {Wp(*noseB)} '
-        f'C {Wp(cxs+0.20*L_sdl, ty-H_sdl*0.7)} {Wp(cxs+0.05*L_sdl, ty-H_sdl)} {Wp(*sitB)} '
-        f'C {Wp(cxs-0.22*L_sdl, ty-H_sdl*0.9)} {Wp(cxs-0.40*L_sdl, ty-0.0*L_sdl)} {Wp(*tailB)} Z'
-    )
-    parts.append(f'<path d="{shell}" fill="{PALETTE["saddle"]}" stroke="#000" stroke-width="0.8" stroke-linejoin="round"/>')
-    # liseré clair sur le dessus (matière/coutures)
-    parts.append(
-        f'<path d="M {Wp(cxs-0.40*L_sdl, ty+0.045*L_sdl)} '
-        f'C {Wp(cxs-0.20*L_sdl, ty+0.01*L_sdl)} {Wp(cxs+0.20*L_sdl, ty+0.005*L_sdl)} {Wp(cxs+0.50*L_sdl, ty+0.04*L_sdl)}" '
-        f'stroke="{PALETTE["saddle_hi"]}" stroke-width="1.6" fill="none" opacity="0.65"/>'
-    )
-    # rails + pince de tige
-    rail_y = ty - H_sdl - 4.0
-    parts.append(f'<line x1="{Wp(cxs-0.30*L_sdl, rail_y).split(",")[0]}" y1="{Wp(cxs-0.30*L_sdl, rail_y).split(",")[1]}" '
-                 f'x2="{Wp(cxs+0.34*L_sdl, rail_y).split(",")[0]}" y2="{Wp(cxs+0.34*L_sdl, rail_y).split(",")[1]}" '
-                 f'stroke="{PALETTE["rim_dark"]}" stroke-width="1.6"/>')
-    clx, cly = W(sp_end_x, sp_end_y)
-    parts.append(f'<rect x="{clx-5:.1f}" y="{cly-2:.1f}" width="10" height="9" rx="2" '
-                 f'fill="{PALETTE["seatpost"]}" />')
+    # === SELLE (CONTOUR RÉEL e-MTB court : nez fin, queue relevée) ============
+    # Profil réel (Specialized Power / Fizik Terra). Boîte normalisée : x=0 queue
+    # (arrière), x=1 nez (avant, +x monde) ; pince de tige ≈ (0.50, 0.31).
+    L_sdl = max(240.0, bike.saddle.length)
+    H_box = L_sdl * 0.34
+    tilt = -(getattr(bike.saddle, "angle", 0.0) or 0.0)   # nez bas → angle négatif
+    setback = max(0.0, bike.seatpost.setback)
+    clamp_w = (sp_end_x - setback, sp_end_y + 16.0)       # ancrage = pince sur la tige
 
-    # === POTENCE + CINTRE (poste de pilotage — formes propres) ================
+    def _sdlpt(nx, ny):                                   # boîte selle → écran
+        a = math.radians(tilt); ca = math.cos(a); sn = math.sin(a)
+        lx = (nx - 0.50) * L_sdl; ly = (ny - 0.31) * H_box
+        return _pt(clamp_w[0] + lx*ca - ly*sn, clamp_w[1] + lx*sn + ly*ca, sx, sy, ox, oy)
+
+    sdl_d = _norm_path(_OUTLINE_SADDLE, clamp_w, L_sdl, H_box, anchor_n=(0.50, 0.31),
+                       angle_deg=tilt, sx=sx, sy=sy, ox=ox, oy=oy)
+    parts.append(f'<path d="{sdl_d}" fill="{PALETTE["saddle"]}" stroke="#000" '
+                 f'stroke-width="0.9" stroke-linejoin="round"/>')
+    # liseré clair (matière) sur le dessus
+    hi = _norm_path([(0.10, 0.81), (0.32, 0.83), (0.55, 0.75), (0.80, 0.71), (0.95, 0.665)],
+                    clamp_w, L_sdl, H_box, anchor_n=(0.50, 0.31), angle_deg=tilt,
+                    sx=sx, sy=sy, ox=ox, oy=oy, close=False)
+    parts.append(f'<path d="{hi}" stroke="{PALETTE["saddle_hi"]}" stroke-width="1.6" '
+                 f'fill="none" opacity="0.55"/>')
+    # rails (saillie sous la coque) + pince de tige
+    r0 = _sdlpt(0.34, 0.255); r1 = _sdlpt(0.60, 0.245)
+    parts.append(f'<line x1="{r0[0]:.1f}" y1="{r0[1]:.1f}" x2="{r1[0]:.1f}" y2="{r1[1]:.1f}" '
+                 f'stroke="{PALETTE["rim_dark"]}" stroke-width="2.2"/>')
+    clx, cly = W(sp_end_x, sp_end_y)
+    parts.append(f'<rect x="{clx-5:.1f}" y="{cly-3:.1f}" width="10" height="11" rx="2" '
+                 f'fill="{PALETTE["seatpost"]}"/>')
+
+    # === POTENCE + CINTRE (poste de pilotage) =================================
+    # Recherche : en vue de côté le backsweep (8°) projette le grip ~50 mm en
+    # ARRIÈRE du collier (pas une longue barre) ; le grip se voit en MOIGNON.
     st = bike.stem
     st_ang = math.radians(f.head_angle)
     ux, uy = -math.cos(st_ang), math.sin(st_ang)        # axe de direction (haut-arrière)
-    # Steerer exposé au-dessus du JDD (tube fin sombre) si réglé
     steerer_exp = max(0.0, getattr(st, "steerer_exposed", 0.0))
     if steerer_exp > 5:
         parts.append(_draw_tube(ht.x, ht.y, ht.x + ux * steerer_exp, ht.y + uy * steerer_exp,
@@ -1281,33 +1497,34 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
     # Corps de potence : du steerer (sb) au serrage cintre (stip)
     parts.append(_draw_tube(sb.x, sb.y, stip.x, stip.y, 30.0,
                             PALETTE["stem"], sx, sy, ox, oy, scale_f, cap_r=15.0))
-    # Collier de steerer (bloc le long de l'axe de direction, hauteur = collar_height)
+    # Collier de steerer (le long de l'axe de direction, hauteur = collar_height)
     coll_h = max(12.0, getattr(st, "collar_height", 25.0))
     parts.append(_draw_tube(sb.x - ux * coll_h / 2, sb.y - uy * coll_h / 2,
                             sb.x + ux * coll_h / 2, sb.y + uy * coll_h / 2, 36.0,
                             _shade(PALETTE["stem"], 0.8), sx, sy, ox, oy, scale_f, cap_r=18.0))
-    # Faceplate (petit bloc de serrage du cintre, perpendiculaire au cintre)
+    # Faceplate (serrage cintre)
     coll_d = max(25.0, getattr(st, "collar_diameter", 31.8))
     fcx, fcy = W(stip.x, stip.y)
     parts.append(f'<circle cx="{fcx:.1f}" cy="{fcy:.1f}" r="{coll_d*0.55*scale_f:.1f}" '
                  f'fill="{_shade(PALETTE["stem"],1.35)}" stroke="#111" stroke-width="0.8"/>')
 
-    # === CINTRE (riser MTB : montant + barre + grip) =========================
+    # === CINTRE riser (compact, vue de côté) =================================
     rise = max(0.0, bike.handlebar.rise)
-    bw = max(24.0, bike.handlebar.diameter - 3.0)        # Ø barre ≈ 28 mm
-    top_x, top_y = stip.x, stip.y + rise                 # haut du riser
-    sweep_back = 95.0 + max(0.0, getattr(bike.handlebar, "extend", 0.0))
-    grip_x, grip_y = top_x - sweep_back, top_y - 6.0     # grips vers le pilote (léger back-sweep bas)
-    if rise > 3:                                         # montant du riser
-        parts.append(_draw_tube(stip.x, stip.y, top_x, top_y, bw,
-                                PALETTE["handlebar"], sx, sy, ox, oy, scale_f, cap_r=bw/2))
-    # barre jusqu'au début du grip
-    parts.append(_draw_tube(top_x, top_y, grip_x, grip_y, bw,
-                            PALETTE["handlebar"], sx, sy, ox, oy, scale_f, cap_r=bw/2))
-    # grip (poignée caoutchouc, segment distinct ~110 mm vers l'arrière)
-    gw = bw + 5.0
-    parts.append(_draw_tube(grip_x, grip_y, grip_x - 110.0, grip_y - 4.0, gw,
-                            PALETTE["grip"], sx, sy, ox, oy, scale_f, cap_r=gw/2))
+    bw = max(22.0, bike.handlebar.diameter)
+    half_w = max(280.0, getattr(bike.handlebar, "width", 780.0) / 2.0)
+    back = half_w * math.sin(math.radians(8.0))          # backsweep projeté
+    up = rise + half_w * math.sin(math.radians(5.0))     # rise + upsweep projeté
+    gx, gy = stip.x - back, stip.y + up                  # centre du grip
+    # montant + barre (tube de stip vers le grip)
+    parts.append(_draw_tube(stip.x, stip.y, gx, gy, bw, PALETTE["handlebar"],
+                            sx, sy, ox, oy, scale_f, cap_r=bw/2))
+    # grip : moignon court (caoutchouc), légère remontée
+    gw = bw + 8.0
+    parts.append(_draw_tube(gx, gy, gx - 14.0, gy + 7.0, gw, PALETTE["grip"],
+                            sx, sy, ox, oy, scale_f, cap_r=gw/2))
+
+    # === ÉTRIERS DE FREIN (par-dessus la fourche/le cadre, donc visibles) ====
+    parts.append(_draw_calipers(bike, calc, sx, sy, ox, oy))
 
     # === COTES (dimensions) ==================================================
     if show_dims:
@@ -1375,12 +1592,15 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
     if bike.battery.enabled:
         parts.append(_draw_battery(bike, calc, sx, sy, ox, oy))
 
-    # === SUSPENSION (overlay pivots/bielles/amorto, animée ou non) ===========
+    # === SUSPENSION (overlay) : animation OU analyse propre (trajectoire d'axe) =
     if suspension:
         frames = suspension if isinstance(suspension, list) else getattr(suspension, "frames", None)
         if frames:
-            parts.append(_draw_suspension(frames, wheel_r_r, sx, sy, ox, oy, scale_f,
-                                          animate=animate_suspension))
+            if animate_suspension:
+                parts.append(_draw_suspension(frames, wheel_r_r, sx, sy, ox, oy, scale_f,
+                                              animate=True))
+            else:
+                parts.append(_draw_susp_analysis(frames, sx, sy, ox, oy))
 
     # === PIVOTS (roulements + axes, coupe) ===================================
     if pivots:

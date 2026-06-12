@@ -41,6 +41,12 @@ def solve_four_bar(bike: BikeDesign):
         return KinematicsResult(ok=False, message="Pivots dégénérés (longueur nulle).")
 
     theta0 = math.atan2(B0[1] - A[1], B0[0] - A[0])
+    # Membre portant l'œillet bas d'amortisseur (cf. SuspensionConfig.shock_mount).
+    # 'auto' → comportement hérité (chainstay si shock_on_chainstay sinon coupler).
+    mount = getattr(s, "shock_mount", "auto")
+    if mount == "auto":
+        mount = "chainstay" if s.shock_on_chainstay else "coupler"
+    rocker_ang0 = math.atan2(C0[1] - D[1], C0[0] - D[0])   # angle biellette (rotule en D)
 
     # ── Géométrie roue / sol / transmission ─────────────────────────────────
     wheel_r_r = f.wheel_r / 2.0
@@ -73,10 +79,13 @@ def solve_four_bar(bike: BikeDesign):
         tf = common.coupler_transform(B0, C0, B, C)
         axle = tf(rear_axle0)
         idler = common.rotate_about(idler0, A, theta - theta0)
-        if s.shock_on_chainstay:
-            lo = common.rotate_about(shock_lo0, A, theta - theta0)
+        if mount == "chainstay":
+            lo = common.rotate_about(shock_lo0, A, theta - theta0)   # rigide bras AB (rotule A)
+        elif mount == "rocker":
+            rk = math.atan2(C[1] - D[1], C[0] - D[0])                # angle biellette courant
+            lo = common.rotate_about(shock_lo0, D, rk - rocker_ang0)  # rigide biellette CD (rotule D)
         else:
-            lo = tf(shock_lo0)
+            lo = tf(shock_lo0)                                        # rigide hauban/coupler BC
         shock_len = common.dist(lo, shock_up)
         return B, C, axle, idler, shock_len, lo
 
@@ -128,7 +137,7 @@ def solve_four_bar(bike: BikeDesign):
         r_drive = r_idler if s.use_idler else r_cr
         as_pct = common.anti_squat(
             ic, axle, ground_y, drive_pt, r_drive, r_cog, s.cog_height,
-            front_axle_x=f.fcd,
+            front_axle_x=f.fcd, wheel_radius=f.wheel_r / 2,
         )
         ar_pct = common.anti_rise(ic, axle, ground_y, s.cog_height, front_axle_x=f.fcd)
         states.append({

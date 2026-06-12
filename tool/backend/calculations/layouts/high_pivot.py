@@ -85,7 +85,7 @@ def solve_high_pivot(bike: BikeDesign):
     for axle, idler, shock_len, lo in sweep:
         as_pct = common.anti_squat(
             P, axle, ground_y, drive_pt, r_drive, r_cog, s.cog_height,
-            front_axle_x=f.fcd,
+            front_axle_x=f.fcd, wheel_radius=f.wheel_r / 2,
         )
         ar_pct = common.anti_rise(P, axle, ground_y, s.cog_height, front_axle_x=f.fcd)
         states.append({

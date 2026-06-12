@@ -79,7 +79,7 @@ def belt_length(chainring, idler, cog, use_idler):
 
 
 def anti_squat(ic, axle, ground_y, drive_pt, r_drive, r_cog, cog_height,
-               front_axle_x):
+               front_axle_x, wheel_radius=0.0):
     """Anti-squat % par la méthode du centre instantané + ligne motrice.
 
     Paramétrable par :
@@ -101,15 +101,24 @@ def anti_squat(ic, axle, ground_y, drive_pt, r_drive, r_cog, cog_height,
     dd = math.hypot(dx, dy)
     if dd < 1e-6:
         return 0.0
-    nx, ny = -dy / dd, dx / dd
-    if ny < 0:                      # forcer la normale vers le haut (brin supérieur)
-        nx, ny = -nx, -ny
+    # Tangente commune EXTERNE supérieure aux 2 poulies (méthode bikinematicsolver) :
+    # la normale n vérifie (axle−drive)·n = r_drive − r_cog (radii parallèles, même
+    # côté). Pour r_drive=r_cog on retombe sur la perpendiculaire à l'entraxe.
+    ux, uy = dx / dd, dy / dd
+    cost = max(-1.0, min(1.0, (r_drive - r_cog) / dd))
+    perp = math.sqrt(max(0.0, 1.0 - cost * cost))
+    cand = [(ux * cost - uy * perp * sgn, uy * cost + ux * perp * sgn) for sgn in (1, -1)]
+    nx, ny = max(cand, key=lambda n: n[1])      # brin SUPÉRIEUR (normale vers le haut)
     p_drive = (drive_pt[0] + r_drive * nx, drive_pt[1] + r_drive * ny)
     p_cog = (axle[0] + r_cog * nx, axle[1] + r_cog * ny)
     ifc = line_intersection(p_drive, p_cog, axle, ic)
     if ifc is None:
         ifc = ic
-    rear_contact = (axle[0], ground_y)
+    # Contact pneu AR : INSTANTANÉ (axle_y − rayon roue) dans le repère cadre — il
+    # remonte quand la suspension s'enfonce (méthode bikinematicsolver). Datum de
+    # hauteur = sol fixe topout (`ground_y`). Si wheel_radius=0 → ancien repère fixe.
+    contact_y = (axle[1] - wheel_radius) if wheel_radius > 0 else ground_y
+    rear_contact = (axle[0], contact_y)
     fx0, fy0 = rear_contact
     fx1, fy1 = ifc
     if abs(fx1 - fx0) < 1e-6:

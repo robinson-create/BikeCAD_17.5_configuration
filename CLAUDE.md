@@ -29,14 +29,29 @@ Deux choses cohabitent dans ce dépôt :
 cd tool && ./start.sh          # backend :8000 (uvicorn) + frontend :5173 (vite)
 ```
 - Backend seul : `cd tool && PYTHONPATH=. .venv/bin/uvicorn backend.main:app --reload`
-- venv Python : `tool/.venv` (fastapi, uvicorn, pydantic, pyyaml, **anthropic**)
+- venv Python : `tool/.venv` (fastapi, uvicorn, pydantic, pyyaml, **anthropic**, **pypdf** pour le RAG)
 - Frontend : `cd tool/frontend && npm run dev` (ou `npm run build` pour vérifier la compilation)
 - App : http://localhost:5173 — API docs : http://localhost:8000/docs
+- **Base vélo distante** (optionnelle) : copier `tool/.env.latelier.example` → `tool/.env.latelier`
+  (gitignoré, sourcé auto par `start.sh`) avec `LATELIER_QDRANT_URL` + `VOYAGE_API_KEY` (récup via
+  `railway variables -s latelier/qdrant`). Active `search_velo_db` / `/api/knowledge/remote/*`. Sans
+  ce fichier, l'outil tourne normalement (recherche distante désactivée).
 - **Tests E2E** (11 sections, sans serveur) : `cd tool && PYTHONPATH=. .venv/bin/python tests/e2e_test.py`
 - **Tests de FIABILISATION** (`tests/validation.py`) : golden (eMTB ≈ cotes documentées),
   cohérence interne (trail = formule canonique, reach/stack = points clés), **round-trip .bcad
   lossless** (6195→6195), **cross-validation anti-squat** (recalcul indépendant ≡ méthode
   `bikinematicsolver`), trail dynamique, plausibilité sur tous les vélos du dépôt.
+- **Cross-validation cinématique** (`tests/crossval_kinematics.py`) : notre four-bar Horst comparé,
+  géométrie IDENTIQUE, à la VRAIE librairie `mark-bak/bikinematicsolver` exécutée indépendamment.
+  Deux cas : (1) four-bar synthétique → **levier ±0.003**, **chemin d'axe ±0.1 mm**, **anti-squat ±0.2 %** ;
+  (2) **vélo de SÉRIE Vitus Sommet** (enduro, pivots tracés réels, amortisseur sur biellette) →
+  **levier ±0.004**, **axe ±0.08 mm**, **anti-squat ±0.2 %**. Notre moteur ≡ la référence. Oracle
+  capturé en GOLDEN (pur Python, pas de numpy/scipy en dépendance).
+  ⚠ L'anti-squat utilise le **contact pneu INSTANTANÉ** (axe − rayon roue, repère cadre — il remonte
+  au tassement, méthode bikinematicsolver), datum de hauteur = sol topout fixe (`common.anti_squat`,
+  param `wheel_radius`). La tangente de chaîne est la **tangente commune externe** des 2 poulies.
+  `SuspensionConfig.shock_mount` (rocker | chainstay | coupler | auto) : membre portant l'œillet bas
+  d'amortisseur — **rocker = cas standard des enduros modernes** (géré dans `four_bar.py`).
 - **Tests E2E « parcours interface »** (HTTP, backend en route) : `.venv/bin/python tests/e2e_interface.py`
   — construit le vélo aux specs projet via les mêmes endpoints que le frontend, vérifie
   fonctionnel + graphique (13 composants, rien hors-canvas, pas de NaN, cotes).
@@ -101,8 +116,9 @@ cd tool && ./start.sh          # backend :8000 (uvicorn) + frontend :5173 (vite)
   **pedal kickback**, **anti-rise**, synthèse). `four_bar.py` (Horst, 4 pivots),
   `high_pivot.py` (single-pivot haut + galet fixe — cas M620), `generic.py` (solveur
   **par contraintes Newton-Raphson** pur Python, prouvé ≡ four_bar — fondation 6-bar).
-  Anti-squat CROSS-VALIDÉ verbatim vs `mark-bak/bikinematicsolver` ; brin moteur = dernier
-  segment (galet→pignon si galet présent).
+  Levier + chemin d'axe + anti-squat CROSS-VALIDÉS vs `mark-bak/bikinematicsolver` (±0.003 /
+  ±0.1 mm / ±0.2 % — cf. `tests/crossval_kinematics.py`) ; brin moteur = dernier segment
+  (galet→pignon si galet présent).
 - `calculations/motor.py` — enveloppes carter (polygone **M620** du manuel : 234×140,
   bossages R78.5/R58), `motor_envelope_world()`, `point_in_polygon()`, `clearance_check()`.
 - `calculations/fit.py` — `compute_fit()` bike-fit 2D (IK 2-barres) : angles articulaires, KOPS, reach/drop.
@@ -123,9 +139,28 @@ cd tool && ./start.sh          # backend :8000 (uvicorn) + frontend :5173 (vite)
     chunk = `{id, title, tags, text, source, page}`. `README.md`/`.gitignore` ignorés.
   - `knowledge/docs/` — dossier où **déposer les sources** (PDF/txt/md exportés du **NotebookLM** :
     le notebook n'est PAS accessible par l'outil — privé/Google ; exporter les sources en fichiers).
-    Non suivi par git (`.gitignore`). Voir `docs/README.md` pour la procédure d'export.
+    Non suivi par git (`.gitignore`). Voir `docs/README.md` pour la procédure d'export. **Docs déjà
+    ingérés** (juin 2026, ~112 chunks) : `SPEC_eMTB_DOM_Engineering.md` (spec projet faisant autorité),
+    `RECAP DE LECHANGE DE BASE.md` (préco géométrie BikeCAD), `BF-DM-C-MM G510-EN.pdf` (manuel moteur
+    M620), `AM.150_GeoChart.pdf` (géométrie Atherton, benchmark), `Kavenz+Kinematics+VHP.pdf` (courbes
+    AS/kickback), `Kavenz_videos_recap_ep0-1.md` + `Kavenz_fabrication_collage_EFBE.md` (lugs CNC,
+    carbone Compotech, collage 3M DP490, tests EFBE Cat 5). Les **vidéos YouTube** ne sont ingérables
+    que via leur transcript collé en `.txt`/`.md`.
   - Endpoints : `GET /api/knowledge/stats`, `POST /api/knowledge/search`, `POST /api/knowledge/reindex`.
-  - **Pour brancher une vraie base vectorielle** (embeddings) plus tard : remplacer l'index BM25 par
+  - **Source DISTANTE optionnelle** (`knowledge/latelier.py`) : base vectorielle **QDRANT du projet
+    « latelier »** (~1,7 M chunks vélo : manuels, docs SAV, fiches produits ; collection `mecano_chunks`,
+    embeddings **Voyage `voyage-3` 1024-dim cosine**). `remote_search(query,k)` = embed Voyage → search
+    QDRANT → hits {title,text,score,source,page,brands,models,component_types}. **Config par ENV** (jamais
+    de secret en dur) : `LATELIER_QDRANT_URL` (proxy TCP public du service qdrant Railway), `VOYAGE_API_KEY`,
+    `LATELIER_QDRANT_COLLECTION` (défaut mecano_chunks), `LATELIER_EMBED_MODEL` (défaut voyage-3). Repli
+    gracieux : `remote_available()` False + `remote_search()` → [] si non configuré (l'outil reste 100 %
+    fonctionnel hors-ligne). Secrets dans `tool/.env.latelier` (gitignoré, sourcé par `start.sh` ;
+    modèle `.env.latelier.example` ; récup via `railway variables -s latelier/qdrant`). Endpoints
+    `GET /api/knowledge/remote/stats`, `POST /api/knowledge/remote/search` (503 si non configuré).
+    Outil assistant **`search_velo_db`** (requête EN de préférence). C'est un COMPLÉMENT à la banque
+    locale (curée/projet) ; l'assistant l'interroge « si besoin » (spec composant, compatibilité, SAV).
+    NB : certains chunks de leur corpus ont une extraction PDF brouillée (cipher) — qualité variable.
+  - **Pour brancher une vraie base vectorielle** locale (embeddings) plus tard : remplacer l'index BM25 par
     un index ANN ; l'API `search()` ne change pas. NB : caches `lru_cache` → après ajout d'un JSON
     curé, relancer le backend ; après ajout d'un **document**, `reindex()` suffit (détecte le mtime).
 - `presets.py` — presets `SuspensionConfig` (ex. `high_pivot_m620`, dégage le carter).
@@ -134,6 +169,15 @@ cd tool && ./start.sh          # backend :8000 (uvicorn) + frontend :5173 (vite)
   CSV table de conception SolidWorks / résumé).
 - `library.py` — bibliothèque LOSSLESS : sauve/charge le BikeDesign COMPLET (suspension
   comprise) en JSON dans `tool/bikes/*.bike.json`. Anti path-traversal.
+  - **Vélo de référence assemblé** : `eMTB_DOM_complet.bike.json` = build cohérent complet
+    (juin 2026). Géométrie aux cibles RECAP/SPEC (reach 478, stack 619, WB 1248, HA 64°, STA eff
+    77.5°, CS 435, douille 122 ; fcd résolu pour reach). Suspension `high_pivot_m620` avec
+    **ancrages d'amortisseur RETUNÉS** (`shock_lower(-220,105)` / `shock_upper(-54,244)` → levier
+    3.18→2.92 au lieu de ~7, course amorto exploitée ; cf. leçon dans « Faits vérifiés »). Drivetrain
+    **M620 150 Nm + courroie Gates + moyeu 3X3 NINE** (plateau 39/pignon 24 → primaire 1.62 ≥ 1.60 ;
+    couple moyeu 92/250 Nm) + **patte coulissante 15 mm** (tension courroie). AS 112 %, belt growth
+    4.7 mm, kickback 4°, carter dégagé. ⚠ Progressivité ~8 % (limite du single-pivot à amorto direct ;
+    vraie progression = biellette/6-barres).
 - `catalog.py` — catalogue EXHAUSTIF fusionnant TOUTES les configs BikeCAD de $HOME
   (Pro 16.0 + Free 17.5, surchargeable via `BIKECAD_CONFIG_DIR`). Union des pièces par
   fichier, taguées par version (`sources`). Catégories mappables : fork, saddle, wheel,
@@ -145,8 +189,10 @@ cd tool && ./start.sh          # backend :8000 (uvicorn) + frontend :5173 (vite)
   preset vélo), `Settings.svelte` (vue « Réglages (réf.) » cherchable).
 - `assistant.py` — assistant Claude (`claude-opus-4-8`, SDK `anthropic`, boucle tool-use
   manuelle côté serveur). Outils : `set_parameters`, `apply_preset`, `get_state`, `compute_sag`,
-  `compression_state`, `wheel_axles`, `search_knowledge`, `save_bike`/`load_bike`/`list_library`.
-  Garde-fou structurel dans le system prompt.
+  `compression_state`, `wheel_axles`, `search_knowledge` (RAG BM25 LOCAL : banque curée + docs ingérés),
+  **`search_velo_db`** (base vélo DISTANTE QDRANT latelier, ~1,7 M chunks — voir `knowledge/latelier.py`),
+  `save_bike`/`load_bike`/`list_library`. L'assistant cite les sources ; il interroge la distante « si
+  besoin » quand la locale ne suffit pas. Garde-fou structurel dans le system prompt.
 - `io/bcad_io.py` — `load_bcad()` / `save_bcad()`. **Voir section .bcad ci-dessous.**
   `load_bcad` charge un vélo **GÉNÉRIQUE** : batterie **OFF** (concept DOM), `transmission`
   déduite de l'entraînement (courroie→igh, chaîne→dérailleur), roues lues du fichier — sinon
@@ -154,13 +200,23 @@ cd tool && ./start.sh          # backend :8000 (uvicorn) + frontend :5173 (vite)
 - `io/svg_export.py` — `render_svg()` vue de côté **style BikeCAD** : fond gris, cadrage plein
   cadre + recentré, **dégradé global de cadre 2-stops + liseré #333 + cercles de fillet aux nœuds**
   (jonctions fondues), roues détaillées **pilotées par WheelConfig** (BSD+profil, croisement,
-  flasque, cercle de croisement), pneu noir uni, **moteur dessiné DERRIÈRE le cadre** (les tubes
+  flasque, cercle de croisement), **pneu cranté MTB** (couronne de pavés + bande centrale, look
+  enduro), **bras oscillant épaissi** (pièce moulée) en tout-suspendu, **moteur dessiné DERRIÈRE le cadre** (les tubes
   se rejoignent au BB ; `_draw_motor`, **sans flip Y** — sinon carter à l'envers), formes RÉELLES
   des pièces (sprites `_PARTS` : fork/rear_shock/battery normalisés, derailleur), **courroie noire
   crantée / chaîne grise à rouleaux** (jamais un fil), `_draw_pivots` (coupe roulement), fourche
   **rigide si travel=0 sinon sprite suspendu**. `_draw_fasteners` (têtes de vis colorées par
   catégorie + empreinte Torx/hex + légende). Flags : `show_dims/rider/suspension/lugs/ground/pivots/fasteners`.
   PALETTE = thème clair. `_xform_path` place les sprites (M/L/Q/C/Z).
+  **Contours RÉELS** (`_OUTLINE_*` + `_norm_path` : recherche web de profils de pièces) pour la
+  **selle** (court e-MTB : nez fin/queue relevée), les **étriers** (`_draw_calipers`, contour
+  4-pistons enjambant le disque, dessinés PAR-DESSUS la fourche → visibles, AV φ≈158° / AR φ≈48°),
+  et le **carter M620**. **Cockpit** repensé (vue de côté) : potence + riser COMPACT (le backsweep
+  8° projette le grip ~50 mm en arrière du collier, pas une longue barre ; grip = moignon).
+  **TOUT-SUSPENDU rendu par défaut** (`full_susp`) : l'arrière devient bras oscillant +
+  hauban→biellette + **amortisseur** (sprite) + axes de pivot via `_draw_susp_links_static` (l'overlay
+  `show_suspension` n'ajoute que bielles colorées + animation). **Fixation moteur** visible
+  (`_draw_motor_mount` : 3 bossages + boulons M8 + brides vers les tubes).
 - `io/dxf_export.py` — `export_dxf()` DXF R12 ASCII pour SolidWorks (calques GEOMETRY/TUBES/WHEELS/PIVOTS/DIMS_TEXT).
 - `io/pivot_export.py` — export hardware pivots (JSON/CSV table SolidWorks/résumé).
 - `io/fastener_export.py` — export visserie (JSON/CSV nomenclature d'assemblage/résumé).
@@ -223,9 +279,12 @@ sont déjà convertis (`x_monde = -x_linkage`).
 ## Faits vérifiés sur le fichier de référence
 
 - Roue réelle = **752 mm** (pas 736) → **reach ≈ 482 mm** (cible projet ≈ 480 ✓), stack ≈ 622, WB ≈ 1254.
-- Cinématique des pivots actuels (linkage approximatif) : course 160 mm, levier 2.7–3.1 (cible 2.8–3.2),
-  mais **belt growth 16 mm** (cible <2), **progressivité ~−1 %** (cible 20–30).
-  → pivots à retravailler ; position de conception proche du point mort du four-bar.
+- Défaut four-bar Horst **assaini** (mai 2026) pour un rendu cohérent : bras oscillant
+  (main_pivot→axe), hauban→biellette (rocker), amortisseur **~vertical** dans le triangle avant
+  (œillet bas sur le bras, haut sur le triangle avant ; entraxe 230 mm). Levier ≈ **2.9→2.75**
+  (cible 2.8–3.2 ✓), kinématique qui résout proprement. **Toujours INDICATIF** — AS/progressivité/
+  belt growth à affiner et **valider dans Linkage** (bureau d'études). L'ancien défaut était proche
+  du point mort (levier 2.7–3.1 mais belt growth 16 mm, progressivité −1 %).
 - Anti-squat = méthode IC + ligne de courroie, **INDICATIVE — à valider dans Linkage** avant fabrication.
   Méthode **cross-validée verbatim** vs `mark-bak/bikinematicsolver` ; le brin moteur pris en compte est
   le **dernier segment** (galet→pignon si galet présent). Avec ce calcul correct, l'AS du four-bar
@@ -233,6 +292,18 @@ sont déjà convertis (`x_monde = -x_linkage`).
   haut + galet près du pivot, dégage le carter) donne AS≈112 %, belt growth≈4.7 mm, kickback≈4.3°.
 - **Anti-rise** (freinage) = même méthode mais via le **centre instantané** (le couple de frein passe
   par le bras, pas la chaîne) : four-bar placeholder ≈ 14 %, high-pivot ≈ 96 %. Cible affichée 50–130 %.
+- **Leçon ancrages d'amortisseur (single-pivot high_pivot_idler)** : le levier = L_bras_roue / (taux de
+  compression amorto) ; le taux dépend de la **distance ET de l'orientation** de l'ancrage bas (sur le
+  bras) par rapport au pivot. Le preset d'origine plaçait l'axe d'amorto presque radial au pivot → seul
+  ~39 % de la vitesse tangentielle compressait l'amorto → **levier ~7, 23 mm de course sur 60** (amorto
+  inerte). Fix par **recherche numérique** des ancrages (objectif : course amorto ≈ 60 mm) → levier
+  ~2.9–3.2. ⚠ Un single-pivot à amorto **direct** reste quasi LINÉAIRE (progressivité ~8 %) : pour
+  20–30 % de progression il faut une **biellette/rocker** (topologie 6-barres via le solveur générique).
+- **Tension courroie (construction)** : une courroie Gates est sans fin → pas de tendeur de dérailleur →
+  l'entraxe doit être **réglable** (`belt_tension_method` : patte coulissante / BB ou pivot excentrique
+  + `dropout_adjust_mm`). `compute_transmission` calcule l'entraxe (≈ chainstay), le nb de dents Gates
+  (~111 pour CS 435), et vérifie que la course de réglage couvre **un incrément de dent** (ΔC/dent ≈
+  pas/2 ≈ 5.5 mm) — sinon aucune longueur entière ne tombe juste. Patte coulissante 15 mm = OK (2.7 dents).
 - **Moteur M620** = `bafang_m620` dans `GEARBOX_TYPES` (string BikeCAD `"BafangM620"` best-guess, à vérifier
   dans BikeCAD 17.5). Le fichier de référence utilise encore `bafang_mm520`.
 - **Trail dynamique** : la fourche se comprime au sag → le nez plonge → l'angle de direction se REDRESSE,

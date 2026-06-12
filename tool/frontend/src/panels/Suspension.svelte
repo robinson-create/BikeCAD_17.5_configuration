@@ -85,10 +85,14 @@
       <input type="number" step="2.5" value={su.shock_stroke ?? 60}
         on:change={e => upd({ shock_stroke: +e.target.value })} />
     </label>
-    <label class="check">
-      <input type="checkbox" checked={su.shock_on_chainstay ?? true}
-        on:change={e => upd({ shock_on_chainstay: e.target.checked })} />
-      Montage bas sur les bases (sinon rocker)
+    <label>Œillet bas monté sur
+      <select value={su.shock_mount ?? 'auto'}
+        on:change={e => upd({ shock_mount: e.target.value })}>
+        <option value="rocker">Biellette / rocker (enduro moderne)</option>
+        <option value="chainstay">Bras oscillant (base)</option>
+        <option value="coupler">Hauban</option>
+        <option value="auto">Auto (hérité)</option>
+      </select>
     </label>
   </fieldset>
 

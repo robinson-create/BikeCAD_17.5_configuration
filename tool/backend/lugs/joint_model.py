@@ -81,6 +81,14 @@ def build_joints(bike: BikeDesign, calc: CalcResult,
                          ("seatstay",  "seat_cluster", True)],
     }
 
+    # TOUT-SUSPENDU : l'arrière n'est PAS un triangle bondé mais un bras oscillant
+    # articulé (pivots → onglet Pivots). On ne pose donc des lugs que sur le
+    # TRIANGLE AVANT (les bases/haubans ne sont pas collés au cadre).
+    if getattr(bike.suspension, "enabled", False):
+        topology.pop("dropout", None)
+        topology["bb"] = [m for m in topology["bb"] if m[0] != "chainstay"]
+        topology["seat_cluster"] = [m for m in topology["seat_cluster"] if m[0] != "seatstay"]
+
     nodes = []
     for name, members in topology.items():
         nx, ny = P[name]

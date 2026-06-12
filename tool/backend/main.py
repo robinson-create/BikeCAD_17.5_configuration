@@ -513,6 +513,23 @@ def knowledge_reindex():
     return knowledge.reindex()
 
 
+@app.get("/api/knowledge/remote/stats")
+def knowledge_remote_stats():
+    """État de la base vélo DISTANTE (QDRANT latelier) : configurée ? collection ? points."""
+    from . import knowledge
+    return knowledge.remote_stats()
+
+
+@app.post("/api/knowledge/remote/search")
+def knowledge_remote_search(req: KnowledgeQuery):
+    """Recherche sémantique dans la base vélo distante (QDRANT latelier + embeddings Voyage)."""
+    from . import knowledge
+    if not knowledge.remote_available():
+        raise HTTPException(status_code=503,
+                            detail="Base distante non configurée (LATELIER_QDRANT_URL + VOYAGE_API_KEY).")
+    return {"hits": knowledge.remote_search(req.query, req.k)}
+
+
 @app.get("/api/health")
 def health():
     return {"status": "ok", "tool": "DOM Engineering Bike Tool v1.0"}

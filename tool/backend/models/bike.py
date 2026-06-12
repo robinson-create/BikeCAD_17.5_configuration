@@ -333,18 +333,24 @@ class SuspensionConfig(BaseModel):
         description="Topologie : four_bar_horst | high_pivot_idler | four_bar_generic (solveur par contraintes)",
     )
 
-    # Pivots (coordonnées monde)
-    main_pivot:        Pivot = Field(default_factory=lambda: Pivot(x=-10.0, y=18.0))
-    horst_pivot:       Pivot = Field(default_factory=lambda: Pivot(x=-383.0, y=-23.0))
-    upper_frame_pivot: Pivot = Field(default_factory=lambda: Pivot(x=18.0, y=295.0))
-    upper_ss_pivot:    Pivot = Field(default_factory=lambda: Pivot(x=-62.0, y=250.0))
+    # Pivots (coordonnées monde). Géométrie Horst INDICATIVE assainie : bras
+    # oscillant (main_pivot→axe), hauban→biellette (rocker), amortisseur ~vertical
+    # dans le triangle avant. À VALIDER/affiner dans Linkage (bureau d'études).
+    main_pivot:        Pivot = Field(default_factory=lambda: Pivot(x=6.0, y=40.0))
+    horst_pivot:       Pivot = Field(default_factory=lambda: Pivot(x=-402.0, y=8.0))
+    upper_frame_pivot: Pivot = Field(default_factory=lambda: Pivot(x=34.0, y=250.0))
+    upper_ss_pivot:    Pivot = Field(default_factory=lambda: Pivot(x=-120.0, y=218.0))
 
-    # Amortisseur
-    shock_lower:       Pivot = Field(default_factory=lambda: Pivot(x=-200.0, y=-12.0))
-    shock_upper:       Pivot = Field(default_factory=lambda: Pivot(x=-8.0, y=185.0))
-    shock_eye_to_eye:  float = Field(205.0, description="Entraxe amortisseur (mm)")
+    # Amortisseur (œillet bas sur le bras oscillant, haut sur le triangle avant)
+    shock_lower:       Pivot = Field(default_factory=lambda: Pivot(x=-140.0, y=22.0))
+    shock_upper:       Pivot = Field(default_factory=lambda: Pivot(x=-86.0, y=250.0))
+    shock_eye_to_eye:  float = Field(230.0, description="Entraxe amortisseur (mm)")
     shock_stroke:      float = Field(60.0,  description="Course amortisseur (mm)")
-    shock_on_chainstay:bool  = Field(True,  description="Montage bas sur les bases (sinon rocker)")
+    shock_on_chainstay:bool  = Field(True,  description="(hérité) montage bas sur les bases")
+    shock_mount:       Literal["auto", "chainstay", "coupler", "rocker"] = Field(
+                       "auto", description="Membre portant l'œillet bas d'amortisseur : "
+                       "chainstay (bras) | coupler (hauban) | rocker (biellette, cas le plus "
+                       "courant sur les vélos modernes) | auto = d'après shock_on_chainstay")
     rear_travel:       float = Field(160.0, description="Course roue arrière cible (mm)")
 
     # Galet de renvoi courroie (sur les bases)
