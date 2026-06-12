@@ -52,6 +52,10 @@ cd tool && ./start.sh          # backend :8000 (uvicorn) + frontend :5173 (vite)
   param `wheel_radius`). La tangente de chaîne est la **tangente commune externe** des 2 poulies.
   `SuspensionConfig.shock_mount` (rocker | chainstay | coupler | auto) : membre portant l'œillet bas
   d'amortisseur — **rocker = cas standard des enduros modernes** (géré dans `four_bar.py`).
+- **Cross-validation MULTI-SYSTÈMES** (`tests/crossval_suspension_systems.py`) : le four-bar GÉNÉRAL
+  reproduit, vs la vraie librairie, **Horst Link / Split-Pivot / DW-Link** (twin-link, AS NON-monotone)
+  à **±0.11 % AS / ±0.07 mm axe** chacun, + **Single-Pivot** (high_pivot) solvable/plausible. Les
+  systèmes ne diffèrent que par la POSITION des pivots (même solveur prouvé).
 - **Tests E2E « parcours interface »** (HTTP, backend en route) : `.venv/bin/python tests/e2e_interface.py`
   — construit le vélo aux specs projet via les mêmes endpoints que le frontend, vérifie
   fonctionnel + graphique (13 composants, rien hors-canvas, pas de NaN, cotes).
@@ -163,7 +167,11 @@ cd tool && ./start.sh          # backend :8000 (uvicorn) + frontend :5173 (vite)
   - **Pour brancher une vraie base vectorielle** locale (embeddings) plus tard : remplacer l'index BM25 par
     un index ANN ; l'API `search()` ne change pas. NB : caches `lru_cache` → après ajout d'un JSON
     curé, relancer le backend ; après ajout d'un **document**, `reindex()` suffit (détecte le mtime).
-- `presets.py` — presets `SuspensionConfig` (ex. `high_pivot_m620`, dégage le carter).
+- `presets.py` — presets `SuspensionConfig` : `high_pivot_m620` (dégage le carter) ;
+  `high_pivot_emtb_tuned` (accordé belt+M620 : levier 3.3→2.7, AS sag ~97 %, kickback 3.8°,
+  belt growth ~4.2 mm) ; `kavenz_vhp_style` (façon Kavenz VHP : galet AU pivot haut → axe reculé
+  ~20 mm, **kickback ~1.7°, belt growth ~1.8 mm**, AS sag ~90 %). Boutons dans le panneau
+  Suspension ; sélectionnables via `/api/suspension/preset/{name}`.
 - `lugs/` — mode lug-and-bond : `joint_model.build_joints()` (graphe cadre → 5 nœuds-lugs
   avec douilles {axe, alésage, profondeur, out_of_plane}), `miter.py`, `export_cad.py` (JSON /
   CSV table de conception SolidWorks / résumé).
@@ -234,7 +242,11 @@ cd tool && ./start.sh          # backend :8000 (uvicorn) + frontend :5173 (vite)
 - `App.svelte` — toolbar + **6 onglets groupés** (`GROUPS` dans store.js : Cadre · Suspension ·
   Motorisation · Roues & freins · Pilotage · Pilote ; chaque groupe EMPILE ses panneaux) +
   bascule de vue (Vélo 2D / Cinématique / Comparaison / **🅑 Rendu BikeCAD** / Réglages / 🤖 Assistant).
-  Toggles d'affichage : Cotes / Suspension / Animer / Lugs / **Pivots**.
+  Toggles d'affichage : Cotes / Suspension / Animer / Lugs / **Pivots** / **Visserie**.
+  **Badge nom de modèle** (`.model-name`, lié à `$bike.name`) dans le header → le titre change
+  quand on charge un modèle. Le sélecteur `🚲 Modèle` (CatalogSelect category="bike") GARDE la
+  sélection visible (vélo complet) ; les sélecteurs de composant se ré-arment. Câblage validé
+  en headless (titre + specs + preview changent à la sélection).
 - `lib/store.js` — stores (dont `transmission`, `pivots`, `showPivots`), refresh debouncé 180 ms.
 - `lib/api.js` — REST (+ `fetchTransmission`, `listIgh`, `fetchPivots`, `listBearings`, `exportPivots`).
 - `lib/Diagram.svelte` — schéma de cotes + **légende lettre→sens** ; `lib/CatalogSelect.svelte`.

@@ -148,7 +148,9 @@
 <div class="app">
   <!-- Top bar -->
   <header class="topbar">
-    <div class="brand">DOM Engineering · BikeCAD Tool</div>
+    <div class="brand">DOM Engineering · BikeCAD Tool
+      {#if $bike?.name}<span class="model-name" title="Modèle chargé">{$bike.name}</span>{/if}
+    </div>
     <div class="toolbar">
       <!-- Groupe : design / fichiers -->
       <div class="tgroup">
@@ -308,6 +310,15 @@
     color: var(--brand);
     letter-spacing: .02em;
     white-space: nowrap;
+  }
+  .model-name {
+    margin-left: 8px;
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: var(--brand);
+    color: #fff;
+    font-size: .8rem;
+    font-weight: 700;
   }
   .toolbar {
     display: flex;

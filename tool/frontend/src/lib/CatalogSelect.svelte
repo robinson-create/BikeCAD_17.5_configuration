@@ -16,17 +16,20 @@
     const file = e.target.value
     if (!file) return
     busy = true
+    const isFull = category === 'bike'
     try {
       const patch = await loadCatalogPart(category, file)
       if (patch.__full__) {
-        // preset de vélo complet → on conserve le nom courant
-        scheduleRefresh({ ...patch.__full__, name: patch.__full__.name })
+        // preset de vélo COMPLET → on charge tout (nom inclus → titre + specs + preview)
+        scheduleRefresh({ ...patch.__full__ })
       } else {
         for (const [section, vals] of Object.entries(patch)) updateSection(section, vals)
       }
     } finally {
       busy = false
-      e.target.selectedIndex = 0
+      // composant ponctuel → on ré-arme le sélecteur ; vélo complet → on GARDE
+      // la sélection visible pour montrer le modèle chargé.
+      if (!isFull) e.target.selectedIndex = 0
     }
   }
 </script>

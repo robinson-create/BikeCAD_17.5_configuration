@@ -57,6 +57,12 @@
     <button class="preset" on:click={() => applySuspensionPreset('high_pivot_m620')}>
       ⤓ Charger preset high-pivot M620
     </button>
+    <button class="preset" on:click={() => applySuspensionPreset('high_pivot_emtb_tuned')}>
+      ⤓ Charger preset eMTB ACCORDÉ (levier 3.3→2.7, AS 97%, kickback 3.8°)
+    </button>
+    <button class="preset" on:click={() => applySuspensionPreset('kavenz_vhp_style')}>
+      ⤓ Charger preset façon KAVENZ VHP (axe reculé 20mm, kickback 1.7°, belt growth 1.8mm)
+    </button>
   </fieldset>
 
   <fieldset>
