@@ -252,6 +252,12 @@ cd tool && ./start.sh          # backend :8000 (uvicorn) + frontend :5173 (vite)
   axes de pivot via `_draw_susp_links_static` (l'overlay
   `show_suspension` n'ajoute que bielles colorées + animation). **Fixation moteur** visible
   (`_draw_motor_mount` : 3 bossages + boulons M8 + brides vers les tubes).
+  ⚠ **Triangle arrière = topologie EXACTE du solveur** (sinon rendu « faux ») : pour un FOUR-BAR
+  (Horst) les `rear_tubes` sont **chainstay A→B (horst), coupler B→C (upper_ss), patte dropout
+  B→axe** (l'axe est rigide au coupler, en retrait de B). NE PAS dessiner base A→axe + hauban
+  axe→C : ça ignore le pivot horst B (→ pivot flottant + tubes décalés de la biellette/cinématique).
+  Pour un SINGLE-PIVOT (high_pivot) : bras A→axe + hauban axe→œillet bas. Cf. `four_bar.py` (AB=bases,
+  BC=coupler porte l'axe, CD=rocker).
 - `io/dxf_export.py` — `export_dxf()` DXF R12 ASCII pour SolidWorks (calques GEOMETRY/TUBES/WHEELS/PIVOTS/DIMS_TEXT).
 - `io/pivot_export.py` — export hardware pivots (JSON/CSV table SolidWorks/résumé).
 - `io/fastener_export.py` — export visserie (JSON/CSV nomenclature d'assemblage/résumé).

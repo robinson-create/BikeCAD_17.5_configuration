@@ -1507,15 +1507,31 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
         # bas d'amortisseur (la base porte l'amorto) → le hauban va à shock_lower, et
         # l'œillet est SUR le tube. FOUR-BAR : le hauban va au pivot biellette (upper_ss).
         is_hp = str(su.linkage_type) == "high_pivot_idler"
-        top_pt = ((su.shock_lower.x, su.shock_lower.y) if is_hp
-                  else (su.upper_ss_pivot.x, su.upper_ss_pivot.y))
         # Bras oscillant MASSIF (pièce moulée) : base plus épaisse + hauban renforcé.
         cs_d = max(46.0, f.chainstay_d * 1.4)
         ss_d = max(32.0, f.seatstay_d * 1.5)
-        rear_tubes = [
-            (A_piv[0], A_piv[1], ra.x, ra.y, cs_d),       # base (bras oscillant massif)
-            (ra.x, ra.y, top_pt[0], top_pt[1], ss_d),     # hauban → biellette / mont. amorto
-        ]
+        if is_hp:
+            # SINGLE-PIVOT haut : le bras oscillant est RIGIDE (A→axe) et remonte vers
+            # l'œillet bas d'amortisseur (la base porte l'amorto).
+            top_pt = (su.shock_lower.x, su.shock_lower.y)
+            rear_tubes = [
+                (A_piv[0], A_piv[1], ra.x, ra.y, cs_d),       # bras oscillant
+                (ra.x, ra.y, top_pt[0], top_pt[1], ss_d),     # hauban → mont. amorto
+            ]
+        else:
+            # FOUR-BAR (Horst) — suivre EXACTEMENT la topologie du solveur (four_bar.py) :
+            # chainstay A→B (horst), coupler/hauban B→C (upper_ss). L'axe AR est rigide
+            # avec le coupler BC, en retrait de B → patte dropout B→axe qui PORTE la roue.
+            # (Avant : base A→axe + hauban axe→C ignoraient le pivot horst B → B flottait
+            #  et les tubes ne coïncidaient pas avec la cinématique.)
+            B_piv = (su.horst_pivot.x, su.horst_pivot.y)
+            C_piv = (su.upper_ss_pivot.x, su.upper_ss_pivot.y)
+            drop_d = max(30.0, ss_d * 0.8)
+            rear_tubes = [
+                (A_piv[0], A_piv[1], B_piv[0], B_piv[1], cs_d),   # chainstay (base)
+                (B_piv[0], B_piv[1], C_piv[0], C_piv[1], ss_d),   # coupler (hauban)
+                (B_piv[0], B_piv[1], ra.x, ra.y, drop_d),         # patte dropout → axe
+            ]
     else:
         rear_tubes = [
             (bb.x, bb.y, ra.x, ra.y, f.chainstay_d),
