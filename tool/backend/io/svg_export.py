@@ -560,11 +560,17 @@ def _draw_motor_mount(bike, calc, sx, sy, ox, oy, scale) -> str:
     return "".join(out)
 
 
-def _draw_drivetrain(bike, calc, sx, sy, ox, oy, scale) -> str:
-    """Plateau, pignon AR, courroie/chaîne (+ galet), moteur central, manivelle."""
+def _draw_drivetrain(bike, calc, sx, sy, ox, oy, scale, split=False):
+    """Plateau, pignon AR, courroie/chaîne (+ galet), manivelle.
+
+    `split=True` → renvoie (statique, mobile) : le PIGNON AR et le brin de courroie
+    CÔTÉ PIGNON sont solidaires de la roue (tournent avec le bras autour du pivot en
+    animation) ; le reste (plateau, manivelle, pédale, galet, brin amont) est fixe.
+    Sinon → une seule chaîne SVG (comportement d'origine)."""
     dt = bike.drivetrain
     su = bike.suspension
-    parts = []
+    parts = []        # éléments FIXES (cadre)
+    rear = []         # éléments SOLIDAIRES de la roue AR (pignon + brin côté pignon)
 
     bb = (calc.bb.x, calc.bb.y)
     axle = (calc.rear_axle.x, calc.rear_axle.y)
@@ -578,11 +584,11 @@ def _draw_drivetrain(bike, calc, sx, sy, ox, oy, scale) -> str:
     # les tubes) via _draw_motor(), pour que les tubes se rejoignent visiblement au
     # BB (le moteur EST la jonction sur un mid-drive). Voir render_svg.
 
-    # Plateau (chainring denté) au BB + pignon AR — dessinés AVANT la manivelle
+    # Plateau (chainring denté) au BB = FIXE ; pignon AR = SOLIDAIRE de la roue (rear)
     parts.append(_sprocket(bb[0], bb[1], r_cr, su.chainring_teeth, sx, sy, ox, oy,
                            fill=PALETTE["cog"], edge=PALETTE["cog_dark"]))
-    parts.append(_sprocket(axle[0], axle[1], r_cog, su.cog_teeth, sx, sy, ox, oy,
-                           fill=PALETTE["cog"], edge=PALETTE["cog_dark"], spider=False))
+    rear.append(_sprocket(axle[0], axle[1], r_cog, su.cog_teeth, sx, sy, ox, oy,
+                          fill=PALETTE["cog"], edge=PALETTE["cog_dark"], spider=False))
 
     # Manivelle profilée (polygone effilé BB→pédale) + axe + pédale
     crank_len = bike.cranks.crank_length
@@ -619,17 +625,18 @@ def _draw_drivetrain(bike, calc, sx, sy, ox, oy, scale) -> str:
     # Le galet de renvoi n'a de sens (et ne dévie le brin) que pour un single-pivot
     # HAUT (high_pivot_idler). Sur un four-bar classique, on route en direct
     # BB→pignon (sinon le galet crée un coude parasite sous le pédalier).
-    segs = []
+    static_segs = []   # brin amont (plateau→galet) = fixe
+    rear_segs = []     # brin côté pignon (→pignon) = solidaire de la roue
     use_idler = su.use_idler and dt.drive_type == "belt" and su.linkage_type == "high_pivot_idler"
     if use_idler:
         idler = (su.idler.x, su.idler.y); r_id = su.idler_dia / 2
-        segs += tangents(bb, r_cr, idler, r_id)
-        segs += tangents(idler, r_id, axle, r_cog)
+        static_segs += tangents(bb, r_cr, idler, r_id)     # plateau→galet (fixe)
+        rear_segs += tangents(idler, r_id, axle, r_cog)    # galet→pignon (suit la roue)
         icx, icy, isr = _circle(idler[0], idler[1], r_id, sx, sy, ox, oy)
         parts.append(f'<circle cx="{icx:.1f}" cy="{icy:.1f}" r="{isr:.1f}" '
                      f'fill="{PALETTE["cog"]}" stroke="{PALETTE["cog_dark"]}" stroke-width="1"/>')
     else:
-        segs += tangents(bb, r_cr, axle, r_cog)
+        rear_segs += tangents(bb, r_cr, axle, r_cog)       # plateau→pignon (pignon mobile)
 
     # Brin = BANDE épaisse texturée (jamais un fil) : courroie noire crantée (Gates)
     # ou chaîne grise à rouleaux. Couleur/texture selon dt.drive_type.
@@ -637,39 +644,42 @@ def _draw_drivetrain(bike, calc, sx, sy, ox, oy, scale) -> str:
     strand_col = PALETTE["belt"] if is_belt else PALETTE["chain"]
     w_mm = (dt.belt_width if is_belt else 7.5)
     w_px = max(3.0, w_mm * abs(sx))
-    for a, b in segs:
-        ax, ay = _pt(*a, sx, sy, ox, oy); bx2, by2 = _pt(*b, sx, sy, ox, oy)
-        seg_len = math.hypot(bx2 - ax, by2 - ay)
-        if seg_len < 1:
-            continue
-        ux, uy = (bx2 - ax) / seg_len, (by2 - ay) / seg_len
-        px, py = -uy, ux
-        # bande principale
-        parts.append(f'<line x1="{ax:.1f}" y1="{ay:.1f}" x2="{bx2:.1f}" y2="{by2:.1f}" '
-                     f'stroke="{strand_col}" stroke-width="{w_px:.1f}" stroke-linecap="butt"/>')
-        step = max(4.0, pitch * abs(sx))
-        n = int(seg_len / step)
-        if is_belt:
-            # dents Gates : stries transversales fines plus claires
-            for k in range(n + 1):
-                t = k * step
-                mxk, myk = ax + ux * t, ay + uy * t
-                parts.append(f'<line x1="{mxk-px*w_px*0.46:.1f}" y1="{myk-py*w_px*0.46:.1f}" '
-                             f'x2="{mxk+px*w_px*0.46:.1f}" y2="{myk+py*w_px*0.46:.1f}" '
-                             f'stroke="#3a4048" stroke-width="1.0"/>')
-        else:
-            # chaîne : 2 plaques sombres + rouleaux clairs
-            for s in (+1, -1):
-                parts.append(f'<line x1="{ax+px*s*w_px*0.42:.1f}" y1="{ay+py*s*w_px*0.42:.1f}" '
-                             f'x2="{bx2+px*s*w_px*0.42:.1f}" y2="{by2+py*s*w_px*0.42:.1f}" '
-                             f'stroke="#333333" stroke-width="0.6"/>')
-            for k in range(n + 1):
-                t = k * step
-                mxk, myk = ax + ux * t, ay + uy * t
-                parts.append(f'<circle cx="{mxk:.1f}" cy="{myk:.1f}" r="{w_px*0.26:.1f}" '
-                             f'fill="#aab0b8" stroke="#333333" stroke-width="0.4"/>')
+    step = max(4.0, pitch * abs(sx))
 
-    return '<g class="drivetrain">' + "".join(parts) + '</g>'
+    def _band(seg_list, out):
+        for a, b in seg_list:
+            ax, ay = _pt(*a, sx, sy, ox, oy); bx2, by2 = _pt(*b, sx, sy, ox, oy)
+            seg_len = math.hypot(bx2 - ax, by2 - ay)
+            if seg_len < 1:
+                continue
+            ux, uy = (bx2 - ax) / seg_len, (by2 - ay) / seg_len
+            px, py = -uy, ux
+            out.append(f'<line x1="{ax:.1f}" y1="{ay:.1f}" x2="{bx2:.1f}" y2="{by2:.1f}" '
+                       f'stroke="{strand_col}" stroke-width="{w_px:.1f}" stroke-linecap="butt"/>')
+            n = int(seg_len / step)
+            if is_belt:
+                for k in range(n + 1):
+                    t = k * step; mxk, myk = ax + ux * t, ay + uy * t
+                    out.append(f'<line x1="{mxk-px*w_px*0.46:.1f}" y1="{myk-py*w_px*0.46:.1f}" '
+                               f'x2="{mxk+px*w_px*0.46:.1f}" y2="{myk+py*w_px*0.46:.1f}" '
+                               f'stroke="#3a4048" stroke-width="1.0"/>')
+            else:
+                for s in (+1, -1):
+                    out.append(f'<line x1="{ax+px*s*w_px*0.42:.1f}" y1="{ay+py*s*w_px*0.42:.1f}" '
+                               f'x2="{bx2+px*s*w_px*0.42:.1f}" y2="{by2+py*s*w_px*0.42:.1f}" '
+                               f'stroke="#333333" stroke-width="0.6"/>')
+                for k in range(n + 1):
+                    t = k * step; mxk, myk = ax + ux * t, ay + uy * t
+                    out.append(f'<circle cx="{mxk:.1f}" cy="{myk:.1f}" r="{w_px*0.26:.1f}" '
+                               f'fill="#aab0b8" stroke="#333333" stroke-width="0.4"/>')
+
+    _band(static_segs, parts)
+    _band(rear_segs, rear)
+
+    if split:
+        return ('<g class="drivetrain">' + "".join(parts) + '</g>',
+                '<g class="drivetrain-rear">' + "".join(rear) + '</g>')
+    return '<g class="drivetrain">' + "".join(parts) + "".join(rear) + '</g>'
 
 
 def _draw_battery(bike, calc, sx, sy, ox, oy) -> str:
@@ -1263,17 +1273,27 @@ def _draw_susp_links_static(bike, calc, sx, sy, ox, oy, scale) -> str:
     if math.hypot(anc[0]-up[0], anc[1]-up[1]) > 6:
         out.append(_draw_gusset(anc, up, sx, sy, ox, oy, scale, w_root=32.0, w_tip=15.0))
 
-    # ── Œillet MOBILE (lo) : NE PAS dessiner de patte redondante quand lo est DÉJÀ
-    # l'extrémité d'un membre porteur — hauban high-pivot (axe→lo, dessiné par
-    # render_svg) ou bras de biellette four-bar (D→lo ci-dessus). Sinon (amorto sur
-    # base/coupler), gousset solide vers le membre porteur le plus proche.
-    lo_carried = (not is_four_bar) or (mount == "rocker")
+    # ── Œillet MOBILE (lo) : TOUJOURS relié à son membre PORTEUR par un support
+    # solide (jamais flottant). four-bar sur biellette → déjà porté par D→lo (ci-dessus).
+    # Sinon : gousset court depuis le membre porteur réel (bras oscillant A→axe pour un
+    # single-pivot ; chainstay A→B ou coupler B→C pour un four-bar) jusqu'à l'œillet.
+    if is_four_bar:
+        lo_carried = (mount == "rocker")
+        lo_arms = [(A, B), (B, C)]                         # chainstay / coupler (cf. four_bar.py)
+    else:
+        lo_carried = False                                # single-pivot : support sur le bras
+        lo_arms = [(A, axle)]                             # bras oscillant
     if not lo_carried:
-        arms = [(A, axle), (axle, C)]                     # base / hauban
-        lo_anc = min((_proj(lo, a, b) for a, b in arms),
+        lo_anc = min((_proj(lo, a, b) for a, b in lo_arms),
                      key=lambda q: (q[0]-lo[0])**2 + (q[1]-lo[1])**2)
         if math.hypot(lo_anc[0]-lo[0], lo_anc[1]-lo[1]) > 6:
-            out.append(_draw_gusset(lo_anc, lo, sx, sy, ox, oy, scale, w_root=28.0, w_tip=14.0))
+            # Joug SOLIDE (yoke usiné) bras → œillet : tube épais couleur lug + base
+            # élargie qui « pince » le membre porteur → connexion sans ambiguïté.
+            out.append(_draw_tube(lo_anc[0], lo_anc[1], lo[0], lo[1], 24.0, PALETTE["lug"],
+                                  sx, sy, ox, oy, scale, cap_r=12.0))
+            ax0, ay0 = W(lo_anc)
+            out.append(f'<circle cx="{ax0:.1f}" cy="{ay0:.1f}" r="{15.0*scale:.1f}" '
+                       f'fill="{PALETTE["lug"]}" stroke="{PALETTE["lug_edge"]}" stroke-width="1"/>')
 
     # ── Amortisseur paramétrique (air can + tige + œillets) lo → up ─────────
     out.append(f'<g class="shock">{_draw_shock(lo, up, sx, sy, ox, oy, scale)}</g>')
@@ -1511,12 +1531,12 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
         cs_d = max(46.0, f.chainstay_d * 1.4)
         ss_d = max(32.0, f.seatstay_d * 1.5)
         if is_hp:
-            # SINGLE-PIVOT haut : le bras oscillant est RIGIDE (A→axe) et remonte vers
-            # l'œillet bas d'amortisseur (la base porte l'amorto).
-            top_pt = (su.shock_lower.x, su.shock_lower.y)
+            # SINGLE-PIVOT haut : le bras oscillant est RIGIDE (A→axe). L'œillet bas
+            # d'amortisseur est porté par un SUPPORT COURT sur le bras (gousset dessiné
+            # par `_draw_susp_links_static`, pas un long tube axe→œillet qui croisait le
+            # bras et laissait l'amorto « en l'air »).
             rear_tubes = [
                 (A_piv[0], A_piv[1], ra.x, ra.y, cs_d),       # bras oscillant
-                (ra.x, ra.y, top_pt[0], top_pt[1], ss_d),     # hauban → mont. amorto
             ]
         else:
             # FOUR-BAR (Horst) — suivre EXACTEMENT la topologie du solveur (four_bar.py) :
@@ -1775,7 +1795,14 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
         parts.extend(dim_parts)
 
     # === TRANSMISSION (plateau, courroie, moteur, manivelle) =================
-    parts.append(_draw_drivetrain(bike, calc, sx, sy, ox, oy, scale_f))
+    if rear_anim:
+        # Pignon AR + brin de courroie côté pignon SUIVENT la roue (groupe animé) ;
+        # plateau/manivelle/galet/brin amont restent fixes.
+        dt_static, dt_rear = _draw_drivetrain(bike, calc, sx, sy, ox, oy, scale_f, split=True)
+        parts.append(dt_static)
+        parts.append(_rear_group(dt_rear))
+    else:
+        parts.append(_draw_drivetrain(bike, calc, sx, sy, ox, oy, scale_f))
 
     # === DÉRAILLEUR ARRIÈRE (forme réelle BikeCAD, sous l'axe AR) =============
     # Uniquement en transmission par dérailleur (IGH/courroie = pas de dérailleur).

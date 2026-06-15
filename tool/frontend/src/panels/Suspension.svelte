@@ -64,7 +64,7 @@
       ⤓ Charger preset façon KAVENZ VHP (kickback 1.7°, belt growth 1.9mm, levier 3.2→2.6)
     </button>
     <button class="preset" on:click={() => applySuspensionPreset('scott_ransom_style')}>
-      ⤓ Charger preset façon SCOTT RANSOM (enduro 170mm, levier 2.8→2.6, AS 92%)
+      ⤓ Charger preset façon SCOTT RANSOM (enduro 170mm, levier 2.55→2.34, AS ~100%)
     </button>
   </fieldset>
 

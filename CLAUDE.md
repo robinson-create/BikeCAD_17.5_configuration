@@ -256,8 +256,20 @@ cd tool && ./start.sh          # backend :8000 (uvicorn) + frontend :5173 (vite)
   (Horst) les `rear_tubes` sont **chainstay A→B (horst), coupler B→C (upper_ss), patte dropout
   B→axe** (l'axe est rigide au coupler, en retrait de B). NE PAS dessiner base A→axe + hauban
   axe→C : ça ignore le pivot horst B (→ pivot flottant + tubes décalés de la biellette/cinématique).
-  Pour un SINGLE-PIVOT (high_pivot) : bras A→axe + hauban axe→œillet bas. Cf. `four_bar.py` (AB=bases,
+  Pour un SINGLE-PIVOT (high_pivot) : `rear_tubes` = **bras A→axe SEUL**. Cf. `four_bar.py` (AB=bases,
   BC=coupler porte l'axe, CD=rocker).
+  ⚠ **Œillet bas d'amortisseur TOUJOURS relié au membre porteur** par un JOUG solide
+  (`_draw_susp_links_static`, tube épais couleur lug + base élargie) : single-pivot → joug vers le
+  bras A→axe ; four-bar coupler/chainstay → joug vers le membre porteur réel (A→B ou B→C) ; four-bar
+  rocker → déjà porté par D→lo. Évite l'amorto « en l'air » quand l'œillet est en retrait du membre
+  (cas eMTB_DOM_complet : shock_lower à 36 mm au-dessus du bras → joug visible).
+  ⚠ **ANIMATION (`animate_suspension`)** : `_rear_group` applique une **rotation SMIL autour du pivot
+  principal** (angle = balayage de l'axe AR ; exact pour un single-pivot, approx pour un four-bar comme
+  la roue). TOUT ce qui est solidaire de la roue AR doit être DANS ce groupe, sinon ça reste figé et se
+  détache : roue AR, moyeu IGH, frein/étrier AR, bras (rear_tubes), **+ pignon AR + brin de courroie
+  côté pignon** (`_draw_drivetrain(split=True)` → `(statique, rear)` ; le plateau/manivelle/galet/brin
+  amont restent fixes). Bug corrigé : avant, pignon+courroie dessinés statiquement → figés pendant que
+  la roue tournait. Le galet (high-pivot) reste fixe près du pivot → le brin galet→pignon suit bien.
 - `io/dxf_export.py` — `export_dxf()` DXF R12 ASCII pour SolidWorks (calques GEOMETRY/TUBES/WHEELS/PIVOTS/DIMS_TEXT).
 - `io/pivot_export.py` — export hardware pivots (JSON/CSV table SolidWorks/résumé).
 - `io/fastener_export.py` — export visserie (JSON/CSV nomenclature d'assemblage/résumé).
