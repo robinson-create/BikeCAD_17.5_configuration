@@ -3,9 +3,8 @@
   import { activeTab, GROUPS, bike, scheduleRefresh, viewMode, showDims,
            showSuspension, animateSuspension, showLugs, showPivots, showFasteners } from './lib/store.js'
   import { fetchDefault, loadBcad, exportBcad, exportDxf, exportLugs, exportDrawing, listBikes,
-           saveBikeLibrary, listLibrary, loadLibrary } from './lib/api.js'
+           saveBikeLibrary, listLibrary, loadLibrary, deleteLibrary } from './lib/api.js'
   import BikeRenderer from './BikeRenderer.svelte'
-  import CatalogSelect from './lib/CatalogSelect.svelte'
   import Kinematics from './Kinematics.svelte'
   import Compare from './Compare.svelte'
   import Settings from './Settings.svelte'
@@ -48,8 +47,11 @@
 
   let bikes = []
   let library = []
+  let currentFile = ''     // fichier du modèle bibliothèque actif ('' = non sauvegardé / importé)
   let bcadPath = ''
   let status = ''
+
+  function flash(msg, ms = 2000) { status = msg; setTimeout(() => status = '', ms) }
 
   onMount(async () => {
     const defaultBike = await fetchDefault()
@@ -58,30 +60,96 @@
     library = await listLibrary()
   })
 
-  async function handleSaveLibrary() {
-    if (!$bike) return
-    const name = prompt('Nom du vélo à sauvegarder :', $bike.name || 'Mon vélo')
-    if (!name) return
-    try {
-      await saveBikeLibrary({ ...$bike, name }, name)
-      library = await listLibrary()
-      status = 'Vélo sauvegardé ✓'
-    } catch {
-      status = 'Erreur sauvegarde'
-    }
-    setTimeout(() => status = '', 2000)
-  }
-
-  async function handleLibrarySelect(e) {
+  // ── Modèle (bibliothèque = source unique de vérité, cinématique comprise) ────
+  async function handleModelSelect(e) {
     const file = e.target.value
     if (!file) return
     try {
       const result = await loadLibrary(file)
-      if (result) { scheduleRefresh(result); status = 'Vélo chargé ✓' }
+      if (result) { scheduleRefresh(result); currentFile = file; flash('Modèle chargé ✓') }
     } catch {
-      status = 'Erreur chargement'
+      flash('Erreur chargement')
     }
-    setTimeout(() => status = '', 2000)
+  }
+
+  // Sauver / écraser le modèle courant sous son nom (création si nouveau).
+  async function handleSave() {
+    if (!$bike) return
+    try {
+      const res = await saveBikeLibrary({ ...$bike }, $bike.name)
+      library = await listLibrary()
+      currentFile = res.file ?? currentFile
+      flash('Modèle sauvegardé ✓')
+    } catch {
+      flash('Erreur sauvegarde')
+    }
+  }
+
+  // Nouveau modèle vierge (à partir du défaut), non sauvegardé tant qu'on ne « Sauve » pas.
+  async function handleNew() {
+    const base = await fetchDefault()
+    if (!base) return
+    const name = prompt('Nom du nouveau modèle :', 'Nouveau modèle')
+    if (!name) return
+    scheduleRefresh({ ...base, name })
+    currentFile = ''
+    flash('Nouveau modèle — pense à Sauver')
+  }
+
+  // Dupliquer le modèle courant sous un nouveau nom (et le charger).
+  async function handleDuplicate() {
+    if (!$bike) return
+    const name = prompt('Nom de la copie :', `${$bike.name || 'Modèle'} copie`)
+    if (!name) return
+    try {
+      const res = await saveBikeLibrary({ ...$bike, name }, name)
+      scheduleRefresh({ ...$bike, name })
+      library = await listLibrary()
+      currentFile = res.file ?? ''
+      flash('Modèle dupliqué ✓')
+    } catch {
+      flash('Erreur duplication')
+    }
+  }
+
+  // Renommer = sauver sous le nouveau nom + supprimer l'ancien fichier.
+  async function handleRename() {
+    if (!$bike) return
+    const name = prompt('Nouveau nom du modèle :', $bike.name || 'Modèle')
+    if (!name || name === $bike.name) return
+    const old = currentFile
+    try {
+      const res = await saveBikeLibrary({ ...$bike, name }, name)
+      if (old && res.file && old !== res.file) await deleteLibrary(old)
+      scheduleRefresh({ ...$bike, name })
+      library = await listLibrary()
+      currentFile = res.file ?? ''
+      flash('Modèle renommé ✓')
+    } catch {
+      flash('Erreur renommage')
+    }
+  }
+
+  // Supprimer le modèle courant (puis charger le 1er restant, ou le défaut).
+  async function handleDelete() {
+    if (!currentFile) { flash('Modèle non sauvegardé'); return }
+    const cur = library.find(b => b.file === currentFile)
+    if (!confirm(`Supprimer définitivement « ${cur?.name ?? currentFile} » ?`)) return
+    try {
+      await deleteLibrary(currentFile)
+      library = await listLibrary()
+      currentFile = ''
+      if (library.length) { await handleModelSelectFile(library[0].file) }
+      else { const d = await fetchDefault(); if (d) scheduleRefresh(d) }
+      flash('Modèle supprimé ✓')
+    } catch {
+      flash('Erreur suppression')
+    }
+  }
+
+  async function handleModelSelectFile(file) {
+    const result = await loadLibrary(file)
+    if (result) { scheduleRefresh(result); currentFile = file }
   }
 
   async function handleLoadBcad() {
@@ -143,7 +211,8 @@
     const path = e.target.value
     if (!path) return
     const result = await loadBcad(path)
-    if (result) scheduleRefresh(result)
+    if (result) { scheduleRefresh(result); currentFile = ''; flash('Importé — pense à Sauver') }
+    e.target.selectedIndex = 0
   }
 </script>
 
@@ -154,16 +223,21 @@
       {#if $bike?.name}<span class="model-name" title="Modèle chargé">{$bike.name}</span>{/if}
     </div>
     <div class="toolbar">
-      <!-- Groupe : design / fichiers -->
+      <!-- Groupe : modèle (source unique = bibliothèque, cinématique comprise) + CRUD -->
       <div class="tgroup">
-        <div class="model-select"><CatalogSelect category="bike" label="🚲 Modèle" /></div>
-        <select class="tb-select" on:change={handleLibrarySelect} title="Bibliothèque (vélos complets)">
-          <option value="">📁 Bibliothèque…</option>
+        <span class="tlabel">🚲 Modèle</span>
+        <select class="tb-select model-sel" value={currentFile} on:change={handleModelSelect}
+                title="Modèle (design complet avec cinématique)">
+          <option value="">— non sauvegardé —</option>
           {#each library as b}<option value={b.file}>{b.name}</option>{/each}
         </select>
-        <button class="btn" on:click={handleSaveLibrary} title="Sauvegarde complète JSON (tous composants)">💾 Sauver</button>
+        <button class="btn" on:click={handleNew}       title="Nouveau modèle (à partir du défaut)">＋ Nouveau</button>
+        <button class="btn" on:click={handleDuplicate} title="Dupliquer le modèle courant">⧉ Dupliquer</button>
+        <button class="btn" on:click={handleRename}    title="Renommer le modèle courant" disabled={!currentFile}>✎ Renommer</button>
+        <button class="btn danger" on:click={handleDelete} title="Supprimer le modèle courant" disabled={!currentFile}>🗑 Supprimer</button>
+        <button class="btn" on:click={handleSave}      title="Sauver / écraser le modèle (JSON complet, tous composants)">💾 Sauver</button>
         {#if bikes.length > 0}
-          <select class="tb-select" on:change={handleBikeSelect} title="Importer un .bcad BikeCAD">
+          <select class="tb-select" on:change={handleBikeSelect} title="Importer un .bcad BikeCAD (crée un modèle)">
             <option value="">📥 Importer .bcad…</option>
             {#each bikes as b}<option value={b.path}>{b.name}</option>{/each}
           </select>
@@ -355,11 +429,15 @@
     transition: background .12s, border-color .12s, box-shadow .12s;
   }
   .btn:hover { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .btn:disabled:hover { background: #fff; border-color: var(--border-strong); color: var(--text); }
+  .btn.danger:hover:not(:disabled) { background: #fdecea; border-color: #e74c3c; color: #c0392b; }
   .tb-select {
     padding: 5px 8px; border-radius: var(--radius); border: 1px solid var(--border-strong);
     background: #fff; color: var(--text); font-size: .78rem; cursor: pointer;
     max-width: 170px;
   }
+  .model-sel { font-weight: 600; max-width: 220px; border-color: var(--accent); }
   /* toggles segmentés */
   .toggles { display: inline-flex; border: 1px solid var(--border-strong); border-radius: var(--radius); overflow: hidden; }
   .tg {

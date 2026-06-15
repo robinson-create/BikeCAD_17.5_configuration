@@ -50,6 +50,16 @@ def load_bike(name_or_path: str) -> BikeDesign:
     return BikeDesign.model_validate_json(path.read_text(encoding="utf-8"))
 
 
+def delete_bike(name_or_path: str) -> bool:
+    """Supprime un vélo de la bibliothèque. Retourne True si un fichier a été retiré.
+    Anti path-traversal (résolution DANS la bibliothèque uniquement)."""
+    path = _safe_path(name_or_path)
+    if path.exists():
+        path.unlink()
+        return True
+    return False
+
+
 def list_bikes() -> list:
     """Liste les vélos de la bibliothèque : [{name, path, file}]."""
     LIBRARY_DIR.mkdir(parents=True, exist_ok=True)

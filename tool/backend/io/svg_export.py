@@ -1188,10 +1188,34 @@ def _draw_shock(lo, up, sx, sy, ox, oy, scale) -> str:
     return "".join(out)
 
 
+def _draw_gusset(root, tip, sx, sy, ox, oy, scale,
+                 w_root=30.0, w_tip=13.0, fill=None, edge=None) -> str:
+    """Gousset/clevis SOLIDE (bracket coulé) d'un membre (root, large) vers un
+    œillet (tip, étroit) : polygone effilé → lecture « patte boulonnée », jamais
+    un fil flottant. Utilisé pour ancrer un œillet d'amortisseur hors-membre."""
+    fill = fill or PALETTE["lug"]
+    edge = edge or PALETTE["lug_edge"]
+    dx, dy = tip[0] - root[0], tip[1] - root[1]
+    L = math.hypot(dx, dy) or 1.0
+    px, py = -dy / L, dx / L          # perpendiculaire (monde)
+    quad = [(root[0] + px * w_root / 2, root[1] + py * w_root / 2),
+            (tip[0]  + px * w_tip  / 2, tip[1]  + py * w_tip  / 2),
+            (tip[0]  - px * w_tip  / 2, tip[1]  - py * w_tip  / 2),
+            (root[0] - px * w_root / 2, root[1] - py * w_root / 2)]
+    pts = " ".join(f"{x*sx+ox:.1f},{y*sy+oy:.1f}" for x, y in quad)
+    return (f'<polygon points="{pts}" fill="{fill}" stroke="{edge}" '
+            f'stroke-width="1" stroke-linejoin="round"/>')
+
+
 def _draw_susp_links_static(bike, calc, sx, sy, ox, oy, scale) -> str:
     """Rendu RÉALISTE (non-debug) de l'arrière suspendu en position topout :
     biellette (rocker) en plaque métal + amortisseur paramétrique + axes de pivot.
-    Les bras (base/hauban) sont dessinés comme tubes de cadre dans render_svg."""
+    Les bras (base/hauban) sont dessinés comme tubes de cadre dans render_svg.
+
+    ROBUSTESSE : l'amortisseur et ses œillets sont TOUJOURS reliés à un membre
+    porteur par un gousset solide (jamais flottant), et on ne dessine pas de patte
+    REDONDANTE quand l'œillet est déjà l'extrémité d'un membre (hauban high-pivot,
+    bras de biellette four-bar)."""
     su = bike.suspension
     topo = su.linkage_type
     A  = (su.main_pivot.x, su.main_pivot.y)
@@ -1210,10 +1234,12 @@ def _draw_susp_links_static(bike, calc, sx, sy, ox, oy, scale) -> str:
     # vers le pivot hauban (C) [+ vers l'œillet d'amorto si montage sur biellette].
     # (PAS un grand triangle vers l'ancrage fixe d'amorto — c'était le « slab ».)
     is_four_bar = str(topo).startswith("four_bar")
+    mount = getattr(su, "shock_mount", "auto")
+    if mount == "auto":
+        mount = "chainstay" if su.shock_on_chainstay else "coupler"
     if is_four_bar:
-        mount = getattr(su, "shock_mount", "auto")
-        if mount == "auto":
-            mount = "chainstay" if su.shock_on_chainstay else "coupler"
+        # Biellette (rocker) : bras du pivot cadre (D) vers le pivot hauban (C) et,
+        # si l'amorto est sur la biellette, vers l'œillet bas (lo) → lo PORTÉ.
         rocker_ends = [C] + ([lo] if mount == "rocker" else [])
         for e in rocker_ends:
             out.append(_draw_tube(D[0], D[1], e[0], e[1], 20.0, PALETTE["lug"],
@@ -1222,30 +1248,32 @@ def _draw_susp_links_static(bike, calc, sx, sy, ox, oy, scale) -> str:
         out.append(f'<circle cx="{dcx:.1f}" cy="{dcy:.1f}" r="{13.0*scale:.1f}" '
                    f'fill="{PALETTE["lug"]}" stroke="{PALETTE["lug_edge"]}" stroke-width="1"/>')
 
-    # ── Patte d'ancrage de l'œillet FIXE (up) au tube le plus proche (tube de
-    # selle ou diagonal) → l'amorto est visiblement BOULONNÉ au cadre, pas en l'air.
     def _proj(p, a, b):
         dx, dy = b[0]-a[0], b[1]-a[1]; L2 = dx*dx + dy*dy or 1.0
         t = max(0.0, min(1.0, ((p[0]-a[0])*dx + (p[1]-a[1])*dy) / L2))
         return (a[0]+t*dx, a[1]+t*dy)
     bb = (calc.bb.x, calc.bb.y)
     axle = (calc.rear_axle.x, calc.rear_axle.y)
+
+    # ── Œillet FIXE (up) : gousset SOLIDE vers le tube le plus proche (selle/diagonal)
+    # → amorto boulonné au cadre, jamais en l'air.
     cands = [_proj(up, bb, (calc.seat_tube_top.x, calc.seat_tube_top.y)),
              _proj(up, bb, (calc.crown.x, calc.crown.y))]
     anc = min(cands, key=lambda q: (q[0]-up[0])**2 + (q[1]-up[1])**2)
     if math.hypot(anc[0]-up[0], anc[1]-up[1]) > 6:
-        out.append(_draw_tube(up[0], up[1], anc[0], anc[1], 24.0, PALETTE["lug"],
-                              sx, sy, ox, oy, scale, cap_r=12.0))
-    # ── Patte/yoke de l'œillet MOBILE (lo) au membre qui le porte (bras
-    # oscillant : A→axe, ou hauban axe→C en four-bar) → boulonné, pas flottant.
-    arms = [(A, axle)]
-    if is_four_bar:
-        arms.append((axle, C))
-    lo_anc = min((_proj(lo, a, b) for a, b in arms),
-                 key=lambda q: (q[0]-lo[0])**2 + (q[1]-lo[1])**2)
-    if math.hypot(lo_anc[0]-lo[0], lo_anc[1]-lo[1]) > 6:
-        out.append(_draw_tube(lo[0], lo[1], lo_anc[0], lo_anc[1], 22.0, PALETTE["lug"],
-                              sx, sy, ox, oy, scale, cap_r=11.0))
+        out.append(_draw_gusset(anc, up, sx, sy, ox, oy, scale, w_root=32.0, w_tip=15.0))
+
+    # ── Œillet MOBILE (lo) : NE PAS dessiner de patte redondante quand lo est DÉJÀ
+    # l'extrémité d'un membre porteur — hauban high-pivot (axe→lo, dessiné par
+    # render_svg) ou bras de biellette four-bar (D→lo ci-dessus). Sinon (amorto sur
+    # base/coupler), gousset solide vers le membre porteur le plus proche.
+    lo_carried = (not is_four_bar) or (mount == "rocker")
+    if not lo_carried:
+        arms = [(A, axle), (axle, C)]                     # base / hauban
+        lo_anc = min((_proj(lo, a, b) for a, b in arms),
+                     key=lambda q: (q[0]-lo[0])**2 + (q[1]-lo[1])**2)
+        if math.hypot(lo_anc[0]-lo[0], lo_anc[1]-lo[1]) > 6:
+            out.append(_draw_gusset(lo_anc, lo, sx, sy, ox, oy, scale, w_root=28.0, w_tip=14.0))
 
     # ── Amortisseur paramétrique (air can + tige + œillets) lo → up ─────────
     out.append(f'<g class="shock">{_draw_shock(lo, up, sx, sy, ox, oy, scale)}</g>')

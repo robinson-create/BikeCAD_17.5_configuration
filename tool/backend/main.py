@@ -456,6 +456,20 @@ def library_load(req: LibraryLoadRequest) -> BikeDesign:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
+@app.post("/api/library/delete")
+def library_delete(req: LibraryLoadRequest):
+    """Supprime un modèle de la bibliothèque (par nom de fichier)."""
+    try:
+        removed = library.delete_bike(req.name)
+        if not removed:
+            raise HTTPException(status_code=404, detail="Modèle introuvable.")
+        return {"ok": True, "file": req.name}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
 @app.get("/api/suspension/preset/{name}")
 def suspension_preset(name: str) -> SuspensionConfig:
     """Retourne un preset de configuration suspension (ex. high_pivot_m620)."""

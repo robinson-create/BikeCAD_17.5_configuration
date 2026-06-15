@@ -69,22 +69,25 @@ def kavenz_vhp_style() -> SuspensionConfig:
 
 def scott_ransom_style() -> SuspensionConfig:
     """Façon SCOTT RANSOM (enduro 170 mm, single-pivot à biellette + amorto NUDE/TwinLoc) :
-    biellette compacte, amorto bas dans le triangle avant. Métriques (solveur cross-validé,
-    SANS galet → vélo à chaîne) : course 170 mm, levier 2.77→2.62, AS sag ~92 %, kickback ~21°
-    (élevé car pas de galet — normal sur un enduro à chaîne). INDICATIVE — affiner / bureau d'études.
-    ⚠ Sur un vélo à COURROIE, ce kickback tirerait sur la courroie → préférer un high-pivot+galet."""
+    biellette compacte, amortisseur incliné DANS le triangle avant. Métriques (solveur
+    cross-validé, SANS galet → vélo à chaîne) : course 170 mm, levier 2.76→2.53 (PROGRESSIF
+    ~8 %), AS sag ~100 %, kickback ~22° (élevé car pas de galet — normal sur un enduro à chaîne).
+    INDICATIVE — affiner / bureau d'études.
+    ⚠ Sur un vélo à COURROIE, ce kickback tirerait sur la courroie → préférer un high-pivot+galet.
+    Ancrages d'amortisseur RETUNÉS (juin 2026) : l'œillet bas (-155,75) DÉGAGE le carter moteur /
+    plateau (l'ancien (-150,25) plaquait l'amorto dans les manivelles → rendu illisible)."""
     return SuspensionConfig(
         linkage_type="four_bar_horst",
         main_pivot=Pivot(x=6.0, y=45.0),
         horst_pivot=Pivot(x=-405.0, y=5.0),
         upper_ss_pivot=Pivot(x=-115.0, y=222.0),
         upper_frame_pivot=Pivot(x=34.0, y=252.0),
-        shock_lower=Pivot(x=-150.0, y=25.0),
-        shock_upper=Pivot(x=-88.0, y=252.0),
+        shock_lower=Pivot(x=-155.0, y=75.0),
+        shock_upper=Pivot(x=-30.0, y=240.0),
         shock_mount="auto",
         use_idler=False,
         rear_travel=170.0,
-        shock_stroke=62.5,
+        shock_stroke=65.0,
         shock_eye_to_eye=210.0,
     )
 

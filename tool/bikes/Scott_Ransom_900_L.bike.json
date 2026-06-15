@@ -3,6 +3,7 @@
   "frame": {
     "head_angle": 63.8,
     "seat_angle": 77.4,
+    "color": "#2f7dc4",
     "cs": 440.0,
     "bb_drop": 20.0,
     "fcd": 829.7674418087252,
@@ -16,6 +17,14 @@
     "head_tube_d": 44.0,
     "chainstay_d": 32.0,
     "seatstay_d": 20.0,
+    "top_tube_wall": 1.6,
+    "down_tube_wall": 1.8,
+    "seat_tube_wall": 1.6,
+    "head_tube_wall": 2.0,
+    "chainstay_wall": 1.6,
+    "seatstay_wall": 1.4,
+    "frame_material": "alu_6061_t6",
+    "lug_material": "alu_7075_t6",
     "bb_width": 68.0,
     "bb_shell_d": 34.8,
     "wheel_f": 740.0,
@@ -226,15 +235,15 @@
       "y": 222.0
     },
     "shock_lower": {
-      "x": -150.0,
-      "y": 25.0
+      "x": -155.0,
+      "y": 75.0
     },
     "shock_upper": {
-      "x": -88.0,
-      "y": 252.0
+      "x": -30.0,
+      "y": 240.0
     },
     "shock_eye_to_eye": 210.0,
-    "shock_stroke": 62.5,
+    "shock_stroke": 65.0,
     "shock_on_chainstay": true,
     "shock_mount": "auto",
     "rear_travel": 170.0,

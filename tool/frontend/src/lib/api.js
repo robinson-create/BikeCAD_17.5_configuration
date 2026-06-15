@@ -296,6 +296,16 @@ export async function loadLibrary(name) {
   return r.json()
 }
 
+export async function deleteLibrary(name) {
+  const r = await fetch(`${BASE}/library/delete`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  })
+  if (!r.ok) throw new Error(await r.text())
+  return r.json()
+}
+
 // ── Assistant (Claude pilote l'outil) ───────────────────────────────────────
 export async function assistantAvailable() {
   try {
