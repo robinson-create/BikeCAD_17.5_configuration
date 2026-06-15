@@ -66,7 +66,11 @@ def get_default() -> BikeDesign:
     sa suspension (géométrie four-bar par défaut) sur le vélo de projet uniquement."""
     if DEFAULT_BCAD.exists():
         bike = load_bcad(DEFAULT_BCAD)
-        bike.suspension.enabled = True          # projet eMTB = tout-suspendu
+        # projet eMTB = tout-suspendu. On applique la géométrie ACCORDÉE high-pivot+galet
+        # (amorto = UN seul élément bras→cadre, œillets en face des trous, pas de
+        # biellette qui se désaligne) plutôt que le placeholder four-bar.
+        bike.suspension = PRESETS["high_pivot_emtb_tuned"]()
+        bike.suspension.enabled = True
         return bike
     return BikeDesign()
 

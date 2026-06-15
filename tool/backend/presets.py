@@ -25,22 +25,22 @@ def high_pivot_m620() -> SuspensionConfig:
 
 
 def high_pivot_emtb_tuned() -> SuspensionConfig:
-    """Géométrie high-pivot+galet ACCORDÉE pour l'eMTB DOM (belt + M620, 160 mm),
-    issue d'une recherche sur le solveur cross-validé. Cibles atteintes : levier
-    3.29→2.70 (prog ~18 %), anti-squat sag ~95 %, pedal kickback ~3.8°, belt growth
-    ~4.2 mm (vs 16 mm du placeholder), axe reculé ~6 mm. INDICATIVE — à affiner dans
-    l'outil (glisser les pivots, lire les courbes) / valider en bureau d'études."""
+    """Géométrie high-pivot+galet ACCORDÉE pour l'eMTB DOM (belt + M620, 160 mm).
+    Amortisseur posé DROIT SUR LES TUBES (œillet bas sur la base, œillet haut sur le
+    tube de selle) → eyelets EN FACE des trous, pas de patte flottante. Cibles
+    (solveur cross-validé) : levier 2.85→2.51 (prog ~12 %), AS sag ~84 %, kickback
+    ~2.5°, belt growth ~2.7 mm. INDICATIVE — affiner dans l'outil / bureau d'études."""
     return SuspensionConfig(
         linkage_type="high_pivot_idler",
         main_pivot=Pivot(x=5.0, y=100.0),       # pivot haut (dégage le carter M620)
-        idler=Pivot(x=13.0, y=88.0),            # galet juste sous le pivot → belt growth mini
-        shock_lower=Pivot(x=-200.0, y=120.0),   # œillet bas sur le bras (bras de levier tangentiel)
-        shock_upper=Pivot(x=90.0, y=320.0),     # œillet haut sur le triangle avant
+        idler=Pivot(x=17.0, y=92.0),            # galet juste sous le pivot → belt growth mini
+        shock_lower=Pivot(x=-179.0, y=71.0),    # œillet bas SUR la base (bras oscillant)
+        shock_upper=Pivot(x=-66.0, y=310.0),    # œillet haut SUR le tube de selle (cadre)
         use_idler=True,
-        idler_dia=32.0,
+        idler_dia=34.0,
         rear_travel=160.0,
         shock_stroke=60.0,
-        shock_eye_to_eye=230.0,
+        shock_eye_to_eye=250.0,
     )
 
 

@@ -223,7 +223,11 @@ cd tool && ./start.sh          # backend :8000 (uvicorn) + frontend :5173 (vite)
   noirs longs en bas — proportions réelles ; le sprite `fork_norm` rendait un long plongeur blanc
   inversé → abandonné). **Amorto ancré** : `_draw_susp_links_static` dessine une **patte d'ancrage**
   de l'œillet fixe au tube le plus proche (selle/diagonal) → l'amorto est boulonné au cadre, pas dans
-  le vide. `_draw_fasteners` (têtes de vis colorées par
+  le vide. **Œillets d'amorto posés SUR les tubes** (bas sur la base, haut sur le tube de selle) +
+  **pattes d'ancrage auto** des 2 œillets au membre le plus proche (cadre / bras) si écart → l'amorto
+  est toujours « en face des trous », jamais flottant. Pivots dessinés **selon la topologie** (pas de
+  dots C/D parasites en single-pivot). `/api/default` applique le preset **high_pivot_emtb_tuned**
+  (amorto sur tubes, levier 2.85→2.51, kickback 2.5°) au projet eMTB. `_draw_fasteners` (têtes de vis colorées par
   catégorie + empreinte Torx/hex + légende). Flags : `show_dims/rider/suspension/lugs/ground/pivots/fasteners`.
   PALETTE = thème clair. `_xform_path` place les sprites (M/L/Q/C/Z).
   **Contours RÉELS** (`_OUTLINE_*` + `_norm_path` : recherche web de profils de pièces) pour la

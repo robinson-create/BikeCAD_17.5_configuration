@@ -1149,24 +1149,24 @@ def _draw_shock(lo, up, sx, sy, ox, oy, scale) -> str:
     def at(t, off=0.0):
         return (lo[0] + ux * L * t + px * off, lo[1] + uy * L * t + py * off)
     out = []
-    # tige (damper shaft) : fin, argent, de l'œillet bas vers le corps
-    s0, s1 = at(0.08), at(0.46)
+    # tige (damper shaft) : fine, argent, depuis l'œillet bas (t=0) jusque dans le corps.
+    s0, s1 = at(0.0), at(0.45)
     out.append(_draw_tube(s0[0], s0[1], s1[0], s1[1], 12.0, "#c7ccd3",
-                          sx, sy, ox, oy, scale, cap_r=5.0))
-    # corps / bonbonne air (air can) : gros cylindre, ~42 % à ~90 % de l'entraxe
-    b0, b1 = at(0.40), at(0.90)
+                          sx, sy, ox, oy, scale, cap_r=6.0))
+    # corps / bonbonne air (air can) : gros cylindre jusqu'à l'œillet haut (t=1).
+    b0, b1 = at(0.38), at(1.0)
     out.append(_draw_tube(b0[0], b0[1], b1[0], b1[1], 40.0, "#3b4047",
                           sx, sy, ox, oy, scale, cap_r=20.0))
     # reflet sur la bonbonne
-    h0, h1 = at(0.46, 9.0), at(0.86, 9.0)
+    h0, h1 = at(0.46, 9.0), at(0.94, 9.0)
     out.append(_draw_tube(h0[0], h0[1], h1[0], h1[1], 6.0, "#5b626b",
                           sx, sy, ox, oy, scale, cap_r=3.0))
-    # bague de sag (o-ring) sur la tige
-    rcx, rcy = _pt(*at(0.40), sx, sy, ox, oy)
+    # bague de sag (o-ring) sur la tige exposée
+    rcx, rcy = _pt(*at(0.28), sx, sy, ox, oy)
     out.append(f'<circle cx="{rcx:.1f}" cy="{rcy:.1f}" r="{8.5*scale:.1f}" fill="none" '
                f'stroke="#e74c3c" stroke-width="{2.4*scale:.1f}"/>')
     # molette de réglage (détente) en tête, décalée
-    kcx, kcy = _pt(*at(0.93, 13.0), sx, sy, ox, oy)
+    kcx, kcy = _pt(*at(0.88, 13.0), sx, sy, ox, oy)
     out.append(f'<circle cx="{kcx:.1f}" cy="{kcy:.1f}" r="{6.0*scale:.1f}" fill="#1d6fa5" '
                f'stroke="#10324a" stroke-width="0.8"/>')
     # œillets bas/haut (anneaux DU)
@@ -1219,20 +1219,33 @@ def _draw_susp_links_static(bike, calc, sx, sy, ox, oy, scale) -> str:
         t = max(0.0, min(1.0, ((p[0]-a[0])*dx + (p[1]-a[1])*dy) / L2))
         return (a[0]+t*dx, a[1]+t*dy)
     bb = (calc.bb.x, calc.bb.y)
+    axle = (calc.rear_axle.x, calc.rear_axle.y)
     cands = [_proj(up, bb, (calc.seat_tube_top.x, calc.seat_tube_top.y)),
              _proj(up, bb, (calc.crown.x, calc.crown.y))]
     anc = min(cands, key=lambda q: (q[0]-up[0])**2 + (q[1]-up[1])**2)
     if math.hypot(anc[0]-up[0], anc[1]-up[1]) > 6:
         out.append(_draw_tube(up[0], up[1], anc[0], anc[1], 24.0, PALETTE["lug"],
                               sx, sy, ox, oy, scale, cap_r=12.0))
+    # ── Patte/yoke de l'œillet MOBILE (lo) au membre qui le porte (bras
+    # oscillant : A→axe, ou hauban axe→C en four-bar) → boulonné, pas flottant.
+    arms = [(A, axle)]
+    if is_four_bar:
+        arms.append((axle, C))
+    lo_anc = min((_proj(lo, a, b) for a, b in arms),
+                 key=lambda q: (q[0]-lo[0])**2 + (q[1]-lo[1])**2)
+    if math.hypot(lo_anc[0]-lo[0], lo_anc[1]-lo[1]) > 6:
+        out.append(_draw_tube(lo[0], lo[1], lo_anc[0], lo_anc[1], 22.0, PALETTE["lug"],
+                              sx, sy, ox, oy, scale, cap_r=11.0))
 
     # ── Amortisseur paramétrique (air can + tige + œillets) lo → up ─────────
     out.append(f'<g class="shock">{_draw_shock(lo, up, sx, sy, ox, oy, scale)}</g>')
 
-    # ── Axes de pivot (hardware propre : alésage sombre cerclé acier) ───────
-    pivots = [A, C, D]
+    # ── Axes de pivot (alésage sombre cerclé acier) — UNIQUEMENT les pivots de la
+    # topologie active (sinon dots parasites C/D non utilisés sur un single-pivot).
     if is_four_bar:
-        pivots.append(B)
+        pivots = [A, B, C, D]
+    else:                                   # high_pivot single-pivot : pivot + galet
+        pivots = [A] + ([(su.idler.x, su.idler.y)] if getattr(su, "use_idler", False) else [])
     for p in pivots:
         cx, cy = W(p)
         out.append(f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="6.5" fill="#8b9099" '
@@ -1390,14 +1403,18 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
         "four_bar_horst", "high_pivot_idler", "four_bar_generic")
     if full_susp:
         A_piv = (su.main_pivot.x, su.main_pivot.y)        # pivot principal (cadre)
-        C_piv = (su.upper_ss_pivot.x, su.upper_ss_pivot.y)  # hauban ↔ biellette
-        # Bras oscillant MASSIF (pièce moulée) : base nettement plus épaisse que les
-        # tubes du triangle avant + hauban renforcé → look enduro (et non tubes fins).
+        # SINGLE-PIVOT haut : le bras oscillant est RIGIDE et remonte jusqu'à l'œillet
+        # bas d'amortisseur (la base porte l'amorto) → le hauban va à shock_lower, et
+        # l'œillet est SUR le tube. FOUR-BAR : le hauban va au pivot biellette (upper_ss).
+        is_hp = str(su.linkage_type) == "high_pivot_idler"
+        top_pt = ((su.shock_lower.x, su.shock_lower.y) if is_hp
+                  else (su.upper_ss_pivot.x, su.upper_ss_pivot.y))
+        # Bras oscillant MASSIF (pièce moulée) : base plus épaisse + hauban renforcé.
         cs_d = max(46.0, f.chainstay_d * 1.4)
         ss_d = max(32.0, f.seatstay_d * 1.5)
         rear_tubes = [
-            (A_piv[0], A_piv[1], ra.x, ra.y, cs_d),   # base (bras oscillant massif)
-            (ra.x, ra.y, C_piv[0], C_piv[1], ss_d),   # hauban → biellette
+            (A_piv[0], A_piv[1], ra.x, ra.y, cs_d),       # base (bras oscillant massif)
+            (ra.x, ra.y, top_pt[0], top_pt[1], ss_d),     # hauban → biellette / mont. amorto
         ]
     else:
         rear_tubes = [
