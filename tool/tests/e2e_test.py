@@ -196,7 +196,8 @@ for lt, setup in [
         setattr(s.shock_lower, "x", -120.0), setattr(s.shock_lower, "y", 20.0),
         setattr(s.shock_upper, "x", -10.0), setattr(s.shock_upper, "y", 200.0))),
 ]:
-    bk = load_bcad(SRC); bk.suspension.linkage_type = lt; setup(bk.suspension)
+    bk = load_bcad(SRC); bk.suspension.enabled = True   # .bcad charge en hardtail → on active
+    bk.suspension.linkage_type = lt; setup(bk.suspension)
     cc = calculate(bk); kk = solve_kinematics(bk)
     check(kk.ok and len(kk.frames) >= 10, f"{lt}: frames d'animation produites ({len(kk.frames)})")
     svg_st = render_svg(bk, cc, 1400, 750, True, None, suspension=kk.frames, animate_suspension=False)
@@ -215,6 +216,7 @@ print("\n=== 4. CINÉMATIQUE — TOPOLOGIES ===")
 
 # 4a. Four-bar (défaut) résolu + verdicts cohérents
 b = load_bcad(SRC)
+b.suspension.enabled = True
 b.suspension.linkage_type = "four_bar_horst"
 r = solve_kinematics(b)
 check(r.ok, f"four-bar résolu ({r.message})")
@@ -231,6 +233,7 @@ for smp in r.samples:
 # 4b. High-pivot single-idler résolu
 b = load_bcad(SRC)
 s = b.suspension
+s.enabled = True
 s.linkage_type = "high_pivot_idler"
 s.main_pivot.x, s.main_pivot.y = -20.0, 110.0     # pivot haut
 s.idler.x, s.idler.y = -10.0, 90.0                # galet proche du pivot
@@ -325,6 +328,7 @@ check('class="dropout"' in svg, "patte coulissante dessinée dans le SVG")
 # ─── 6. SOLVEUR GÉNÉRIQUE PAR CONTRAINTES ───────────────────────────────────
 print("\n=== 6. SOLVEUR GÉNÉRIQUE (Newton-Raphson) ===")
 b = load_bcad(SRC)
+b.suspension.enabled = True
 b.suspension.linkage_type = "four_bar_horst"
 rh = solve_kinematics(b)
 b.suspension.linkage_type = "four_bar_generic"
@@ -356,7 +360,7 @@ from backend.lugs.joint_model import build_joints
 from backend.lugs import export_cad as lx
 from backend.lugs.miter import miter_angle, saddle_depth
 
-b = load_bcad(SRC)
+b = load_bcad(SRC); b.suspension.enabled = True   # cas TOUT-SUSPENDU pour les lugs
 calc = calculate(b)
 
 # HARDTAIL (suspension OFF) : cadre entièrement bondé → 5 nœuds dont le triangle AR.
@@ -540,7 +544,7 @@ print("\n=== 10. ANALYSE + KNOWLEDGE ===")
 from backend.calculations import analysis as AN
 from backend import knowledge as KN
 
-b = load_bcad(SRC)
+b = load_bcad(SRC); b.suspension.enabled = True   # analyses suspension → activer
 # 10a. compute_sag : raideur → sag, et cible → raideur requise (cohérence inverse)
 s1 = AN.compute_sag(b, spring_rate_n_per_mm=500)
 check(s1["ok"] and s1["wheel_sag_mm"] > 0 and 0 < s1["sag_pct"] < 100, f"sag depuis raideur ({s1.get('sag_pct')}%)")

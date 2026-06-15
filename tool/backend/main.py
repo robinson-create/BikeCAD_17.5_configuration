@@ -61,9 +61,13 @@ def _repo_path(p):
 
 @app.get("/api/default")
 def get_default() -> BikeDesign:
-    """Retourne le design eMTB DOM Engineering par défaut."""
+    """Retourne le design eMTB DOM Engineering par défaut. Le .bcad charge un cadre
+    hardtail (suspension off) ; le projet eMTB ÉTANT un tout-suspendu, on réactive
+    sa suspension (géométrie four-bar par défaut) sur le vélo de projet uniquement."""
     if DEFAULT_BCAD.exists():
-        return load_bcad(DEFAULT_BCAD)
+        bike = load_bcad(DEFAULT_BCAD)
+        bike.suspension.enabled = True          # projet eMTB = tout-suspendu
+        return bike
     return BikeDesign()
 
 

@@ -1212,6 +1212,20 @@ def _draw_susp_links_static(bike, calc, sx, sy, ox, oy, scale) -> str:
         out.append(f'<circle cx="{dcx:.1f}" cy="{dcy:.1f}" r="{13.0*scale:.1f}" '
                    f'fill="{PALETTE["lug"]}" stroke="{PALETTE["lug_edge"]}" stroke-width="1"/>')
 
+    # ── Patte d'ancrage de l'œillet FIXE (up) au tube le plus proche (tube de
+    # selle ou diagonal) → l'amorto est visiblement BOULONNÉ au cadre, pas en l'air.
+    def _proj(p, a, b):
+        dx, dy = b[0]-a[0], b[1]-a[1]; L2 = dx*dx + dy*dy or 1.0
+        t = max(0.0, min(1.0, ((p[0]-a[0])*dx + (p[1]-a[1])*dy) / L2))
+        return (a[0]+t*dx, a[1]+t*dy)
+    bb = (calc.bb.x, calc.bb.y)
+    cands = [_proj(up, bb, (calc.seat_tube_top.x, calc.seat_tube_top.y)),
+             _proj(up, bb, (calc.crown.x, calc.crown.y))]
+    anc = min(cands, key=lambda q: (q[0]-up[0])**2 + (q[1]-up[1])**2)
+    if math.hypot(anc[0]-up[0], anc[1]-up[1]) > 6:
+        out.append(_draw_tube(up[0], up[1], anc[0], anc[1], 24.0, PALETTE["lug"],
+                              sx, sy, ox, oy, scale, cap_r=12.0))
+
     # ── Amortisseur paramétrique (air can + tige + œillets) lo → up ─────────
     out.append(f'<g class="shock">{_draw_shock(lo, up, sx, sy, ox, oy, scale)}</g>')
 
@@ -1315,7 +1329,8 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
     frame_h = max(1.0, top_y - bot_frame)
     gx1, gy1 = _pt(cx_g - 0.12 * frame_h, top_y, sx, sy, ox, oy)              # haut-arrière
     gx2, gy2 = _pt(cx_g + 0.42 * frame_h, bot_frame - frame_h, sx, sy, ox, oy)  # bas-avant, prolongé
-    paint = PALETTE["frame"]
+    # Peinture du cadre : couleur LUE du .bcad si présente (fidélité BikeCAD), sinon le bleu DOM.
+    paint = getattr(bike.frame, "color", None) or PALETTE["frame"]
     parts.append(
         f'<linearGradient id="frameGrad" gradientUnits="userSpaceOnUse" '
         f'x1="{gx1:.1f}" y1="{gy1:.1f}" x2="{gx2:.1f}" y2="{gy2:.1f}">'
@@ -1434,37 +1449,28 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
                                 c.x + perp_x * cw / 2, c.y + perp_y * cw / 2, 24.0,
                                 PALETTE["crown"], sx, sy, ox, oy, scale_f, cap_r=12.0))
 
-    # Fourche SUSPENDUE ssi débattement > 0 (signal fiable du .bcad) ou double
-    # couronne (sinon un BMX, travel=0, héritait d'une fourche télescopique).
+    # Fourche SUSPENDUE ssi débattement > 0 ou double couronne. Rendu PARAMÉTRIQUE
+    # aux BONNES proportions (plongeur argent COURT en haut ~32 %, fourreaux noirs
+    # LONGS en bas ~68 % — comme une vraie fourche), pas le sprite (qui rendait un
+    # long plongeur blanc inversé).
     is_susp = (getattr(fk, "travel", 0.0) or 0.0) > 5.0 or getattr(fk, "dual_crown", False)
-    fork_part = _PARTS.get("fork_norm")
     if not is_susp:
         # FOURCHE RIGIDE : lame unique (légèrement effilée) de la couronne à l'axe
         parts.append(_draw_tube(cr.x, cr.y, fa.x, fa.y, blade,
                                 PALETTE["fork_low"], sx, sy, ox, oy, scale_f, cap_r=blade/2))
         _crown_block(cr)
-    elif fork_part and fork_part.get("paths"):
-        # SUSPENDUE : forme réelle BikeCAD (sprite normalisé)
-        dir_ang = math.degrees(math.atan2(cr.y - fa.y, cr.x - fa.x))
-        a2c = math.hypot(cr.x - fa.x, cr.y - fa.y)
-        axis_len = fork_part.get("axis_len", 683.0) or 683.0
-        fscale = (a2c / (axis_len * 0.74)) if axis_len else 1.0
-        parts.append(_draw_sprite("fork_norm", fa.x, fa.y, sx, sy, ox, oy,
-                                  scale=fscale, angle_deg=dir_ang - 90.0,
-                                  empty_fill=PALETTE["stanchion"], klass="fork"))
-    elif fk.dual_crown:
-        parts.append(_draw_tube(ht.x, ht.y, cr.x, cr.y, stan,
-                                PALETTE["stanchion"], sx, sy, ox, oy, scale_f))
-        parts.append(_draw_tube(cr.x, cr.y, fa.x, fa.y, blade,
-                                PALETTE["fork_low"], sx, sy, ox, oy, scale_f, cap_r=blade/2))
-        _crown_block(ht); _crown_block(cr)
     else:
-        mfx = cr.x + (fa.x - cr.x) * 0.42
-        mfy = cr.y + (fa.y - cr.y) * 0.42
-        parts.append(_draw_tube(cr.x, cr.y, mfx, mfy, stan,
-                                PALETTE["stanchion"], sx, sy, ox, oy, scale_f))
-        parts.append(_draw_tube(mfx, mfy, fa.x, fa.y, blade,
-                                PALETTE["fork_low"], sx, sy, ox, oy, scale_f, cap_r=blade/2))
+        # plongeur (stanchion) argent : du haut (couronne, ou couronne sup. si dual)
+        # vers ~32 % de l'A2C ; fourreaux (lowers) noirs : de 32 % à l'axe (plus gros).
+        top = ht if fk.dual_crown else cr
+        mfx = cr.x + (fa.x - cr.x) * 0.34
+        mfy = cr.y + (fa.y - cr.y) * 0.34
+        parts.append(_draw_tube(top.x, top.y, mfx, mfy, stan,
+                                PALETTE["stanchion"], sx, sy, ox, oy, scale_f, cap_r=stan/2))
+        parts.append(_draw_tube(mfx, mfy, fa.x, fa.y, blade * 1.12,
+                                PALETTE["fork_low"], sx, sy, ox, oy, scale_f, cap_r=blade*0.56))
+        if fk.dual_crown:
+            _crown_block(ht)
         _crown_block(cr)
 
     # === BB shell =============================================================

@@ -205,9 +205,12 @@ cd tool && ./start.sh          # backend :8000 (uvicorn) + frontend :5173 (vite)
   `save_bike`/`load_bike`/`list_library`. L'assistant cite les sources ; il interroge la distante « si
   besoin » quand la locale ne suffit pas. Garde-fou structurel dans le system prompt.
 - `io/bcad_io.py` — `load_bcad()` / `save_bcad()`. **Voir section .bcad ci-dessous.**
-  `load_bcad` charge un vélo **GÉNÉRIQUE** : batterie **OFF** (concept DOM), `transmission`
-  déduite de l'entraînement (courroie→igh, chaîne→dérailleur), roues lues du fichier — sinon
-  un BMX/route héritait de la batterie/IGH/roues eMTB par défaut.
+  `load_bcad` charge un vélo **GÉNÉRIQUE** : batterie **OFF** (concept DOM), **suspension arrière
+  OFF** (un .bcad = géométrie de cadre HARDTAIL ; la suspension est une couche de l'outil → sinon
+  un Road/BMX héritait d'un amortisseur four-bar dans le vide), `transmission` déduite de
+  l'entraînement (courroie→igh, chaîne→dérailleur), roues lues du fichier. ⚠ Le **projet eMTB**
+  étant tout-suspendu, `/api/default` réactive `suspension.enabled=True` ; toggle « Suspension
+  active » dans le panneau pour les autres vélos.
 - `io/svg_export.py` — `render_svg()` vue de côté **style BikeCAD** : fond gris, cadrage plein
   cadre + recentré, **dégradé global de cadre 2-stops + liseré #333 + cercles de fillet aux nœuds**
   (jonctions fondues), roues détaillées **pilotées par WheelConfig** (BSD+profil, croisement,
@@ -216,7 +219,11 @@ cd tool && ./start.sh          # backend :8000 (uvicorn) + frontend :5173 (vite)
   se rejoignent au BB ; `_draw_motor`, **sans flip Y** — sinon carter à l'envers), formes RÉELLES
   des pièces (sprites `_PARTS` : fork/rear_shock/battery normalisés, derailleur), **courroie noire
   crantée / chaîne grise à rouleaux** (jamais un fil), `_draw_pivots` (coupe roulement), fourche
-  **rigide si travel=0 sinon sprite suspendu**. `_draw_fasteners` (têtes de vis colorées par
+  **rigide si travel=0 sinon fourche PARAMÉTRIQUE** (plongeur argent court ~34 % en haut + fourreaux
+  noirs longs en bas — proportions réelles ; le sprite `fork_norm` rendait un long plongeur blanc
+  inversé → abandonné). **Amorto ancré** : `_draw_susp_links_static` dessine une **patte d'ancrage**
+  de l'œillet fixe au tube le plus proche (selle/diagonal) → l'amorto est boulonné au cadre, pas dans
+  le vide. `_draw_fasteners` (têtes de vis colorées par
   catégorie + empreinte Torx/hex + légende). Flags : `show_dims/rider/suspension/lugs/ground/pivots/fasteners`.
   PALETTE = thème clair. `_xform_path` place les sprites (M/L/Q/C/Z).
   **Contours RÉELS** (`_OUTLINE_*` + `_norm_path` : recherche web de profils de pièces) pour la

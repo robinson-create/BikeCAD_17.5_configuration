@@ -15,6 +15,7 @@ class FrameGeometry(BaseModel):
     # Angles
     head_angle: float = Field(64.0, description="Angle de direction (° / horizontale)")
     seat_angle: float = Field(78.0, description="Angle de tube de selle (° / horizontale)")
+    color:      str   = Field("#2f7dc4", description="Couleur de peinture du cadre (lue du .bcad si dispo)")
 
     # Longueurs principales (mm)
     cs:         float = Field(435.0, description="Longueur bases (BB → axe AR, mm)")

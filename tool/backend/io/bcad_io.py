@@ -147,12 +147,38 @@ def _s(props: dict, key: str, default: str = "") -> str:
     return props.get(key, default)
 
 
+def _frame_color(props: dict, default: str = "#2f7dc4") -> str:
+    """Couleur de peinture principale du cadre lue du .bcad (entier sRGB Java signé).
+    BikeCAD peint chaque tube en couches ; on prend le 1er tube majeur dont la
+    couleur n'est ni blanc pur ni noir pur (sinon ces extrêmes), pour coller à la
+    teinte dominante. Renvoie '#rrggbb'."""
+    order = ["OUTLINEDOWNTUBE1 color sRGB", "OUTLINETOPTUBE1 color sRGB",
+             "OUTLINESEATTUBE1 color sRGB", "OUTLINEHEADTUBE1 color sRGB"]
+    fallback = None
+    for k in order:
+        v = props.get(k)
+        if v is None:
+            continue
+        try:
+            n = int(v) & 0xFFFFFFFF
+        except ValueError:
+            continue
+        hexc = f"#{(n >> 16) & 255:02x}{(n >> 8) & 255:02x}{n & 255:02x}"
+        if hexc not in ("#000000", "#ffffff"):
+            return hexc                      # teinte franche → c'est la peinture
+        fallback = fallback or hexc          # garde blanc/noir si rien d'autre
+    return fallback or default
+
+
 def load_bcad(path: str | Path) -> BikeDesign:
     """Charge un fichier .bcad et retourne un BikeDesign."""
     p = Path(path)
     props = _parse_props(p)
 
     frame = FrameGeometry(
+        # NB : la peinture BikeCAD est multi-couches par tube (outline/lower/décals) →
+        # pas de couleur unique fiable à lire ; on garde le bleu DOM. `_frame_color`
+        # reste dispo si on veut tenter une teinte dominante plus tard.
         head_angle          = _f(props, "Head angle",                  64.0),
         seat_angle          = _f(props, "Seat angle",                  78.0),
         cs                  = _f(props, "CS textfield",                435.0),
@@ -306,9 +332,14 @@ def load_bcad(path: str | Path) -> BikeDesign:
         drivetrain  = drivetrain,
         # Le .bcad ne contient PAS notre pack batterie (concept propre à l'outil
         # DOM) → on ne le force pas sur un vélo chargé (sinon batterie eMTB
-        # 380 mm hors-cadre sur un BMX). La suspension reste au défaut : l'overlay
-        # cinématique est opt-in (bouton), il n'encombre pas la vue 2D.
+        # 380 mm hors-cadre sur un BMX).
         battery     = BatteryConfig(enabled=False),
+        # Le .bcad est une géométrie de CADRE (hardtail/rigide) : la suspension
+        # arrière est une couche propre à l'outil → désactivée par défaut au
+        # chargement (sinon un Road/BMX hérite d'un amortisseur four-bar dans le
+        # vide). Le projet eMTB la réactive explicitement (cf. main.py /api/default),
+        # ou l'utilisateur via le toggle « Suspension active ».
+        suspension  = SuspensionConfig(enabled=False),
     )
 
 
