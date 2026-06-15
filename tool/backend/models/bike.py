@@ -27,12 +27,23 @@ class FrameGeometry(BaseModel):
     head_tube_lower_ext: float = Field(0.0,  description="Extension HT bas (mm)")
 
     # Diamètres tubes (mm)
-    top_tube_d:    float = Field(38.0, description="Ø tube horizontal (mm)")
-    down_tube_d:   float = Field(44.0, description="Ø tube diagonal (mm)")
-    seat_tube_fd:  float = Field(35.0, description="Ø tube de selle avant (mm)")
-    head_tube_d:   float = Field(44.0, description="Ø tube de direction (mm)")
-    chainstay_d:   float = Field(32.0, description="Ø bases (mm, approx rendu)")
-    seatstay_d:    float = Field(20.0, description="Ø haubans (mm, approx rendu)")
+    top_tube_d:    float = Field(38.0, description="Ø EXTÉRIEUR tube horizontal (mm)")
+    down_tube_d:   float = Field(44.0, description="Ø EXTÉRIEUR tube diagonal (mm)")
+    seat_tube_fd:  float = Field(35.0, description="Ø EXTÉRIEUR tube de selle avant (mm)")
+    head_tube_d:   float = Field(44.0, description="Ø EXTÉRIEUR tube de direction (mm)")
+    chainstay_d:   float = Field(32.0, description="Ø EXTÉRIEUR bases (mm)")
+    seatstay_d:    float = Field(20.0, description="Ø EXTÉRIEUR haubans (mm)")
+
+    # Épaisseurs de paroi (mm) → Ø intérieur = Ø ext − 2·paroi (mode lug & calcul section)
+    top_tube_wall:  float = Field(1.6, description="Paroi tube horizontal (mm)")
+    down_tube_wall: float = Field(1.8, description="Paroi tube diagonal (mm)")
+    seat_tube_wall: float = Field(1.6, description="Paroi tube de selle (mm)")
+    head_tube_wall: float = Field(2.0, description="Paroi tube de direction (mm)")
+    chainstay_wall: float = Field(1.6, description="Paroi bases (mm)")
+    seatstay_wall:  float = Field(1.4, description="Paroi haubans (mm)")
+    # Matériaux (clés de MATERIALS) : tubes + manchons (lugs)
+    frame_material: str = Field("alu_6061_t6", description="Matériau des tubes (voir MATERIALS)")
+    lug_material:   str = Field("alu_7075_t6", description="Matériau des manchons/lugs CNC (voir MATERIALS)")
 
     # BB
     bb_width:    float = Field(68.0,  description="Largeur boîtier de pédalier (mm)")
@@ -292,6 +303,66 @@ BEARING_CATALOG = {
     "MR2437-2RS":  {"bore": 24.0, "od": 37.0, "width": 7.0, "type": "radial gros alésage"},
     "bushing-DU":  {"bore": 8.0,  "od": 15.0, "width": 12.0, "type": "bague DU / rotule"},
 }
+
+
+# Matériaux (tubes + manchons/lugs). re = limite élastique (MPa), rm = résistance
+# (MPa), E = module Young (GPa), rho = masse volumique (kg/m³). Valeurs de RÉFÉRENCE
+# (ordres de grandeur ingénierie) — à confirmer sur la fiche du tube/lot réel.
+# ⚠ Le carbone est ANISOTROPE : pas de `re` scalaire fiable (dépend du drapage) → None.
+MATERIALS = {
+    "acier_4130":     {"label": "Acier CrMo 4130",        "re": 435.0, "rm": 670.0, "E": 205.0, "rho": 7850.0},
+    "alu_6061_t6":    {"label": "Alu 6061-T6",            "re": 276.0, "rm": 310.0, "E": 69.0,  "rho": 2700.0},
+    "alu_7075_t6":    {"label": "Alu 7075-T6",            "re": 503.0, "rm": 572.0, "E": 71.7, "rho": 2810.0},
+    "titane_3al25v":  {"label": "Titane 3Al-2.5V (gr.9)", "re": 483.0, "rm": 620.0, "E": 107.0, "rho": 4480.0},
+    "titane_6al4v":   {"label": "Titane 6Al-4V (gr.5)",   "re": 880.0, "rm": 950.0, "E": 114.0, "rho": 4430.0},
+    # Carbone UD : ANISOTROPE (Rm long. ≈2100 / transv. ≈55 MPa) → pas de re/rm scalaire fiable.
+    "carbone_ud":     {"label": "Carbone UD (anisotrope)", "re": None, "rm": None, "E": 130.0, "rho": 1600.0},
+}
+
+# Adhésifs époxy structuraux (lug-and-bond) : τ = cisaillement à recouvrement (lap shear,
+# ISO 4587) sur ALU décapé ; τ_adm = valeur de CALCUL réduite (bords/fatigue/vieillissement
+# humide) recommandée pour le pré-dimensionnement. Source : fiches 3M / Henkel Loctite.
+ADHESIVES = {
+    "dp460":   {"label": "3M Scotch-Weld DP460 ET", "tau_test": 31.0, "tau_adm": 15.0},
+    "ea9466":  {"label": "Loctite EA 9466",         "tau_test": 26.0, "tau_adm": 13.0},
+    "e120hp":  {"label": "Loctite EA E-120HP",      "tau_test": 13.7, "tau_adm": 8.0},
+}
+
+
+class TubeSpec(BaseModel):
+    member:    str            # top_tube / down_tube / seat_tube / head_tube / chainstay / seatstay
+    label:     str
+    od:        float          # Ø extérieur (mm)
+    id:        float          # Ø intérieur (mm)
+    wall:      float          # épaisseur de paroi (mm)
+    length:    float          # longueur du tube (mm)
+    material:  str            # clé MATERIALS
+    area_mm2:  float          # aire de section (mm²)
+    inertia_mm4: float        # moment quadratique I (mm⁴)
+    modulus_mm3: float        # module de section Z (mm³)
+    mass_g:    float          # masse du tube (g)
+    moment_yield_nm: float    # moment de flexion à la limite élastique = Z·Re (N·m) — INDICATIF
+    axial_yield_n:   float    # effort axial à la limite élastique = A·Re (N) — INDICATIF
+    # Jonction collée (lug-and-bond) — INDICATIVE
+    bond_length_mm: float = 0.0   # longueur d'insertion conseillée L = Re·paroi / τ_adm
+    bond_area_mm2:  float = 0.0   # surface collée cylindrique = π·OD·L
+    bond_shear_n:   float = 0.0   # effort de cisaillement admissible du joint = τ_adm·π·OD·L
+    note:      str = ""
+
+
+class TubeResult(BaseModel):
+    ok:         bool = True
+    tubes:      list[TubeSpec] = []
+    total_mass_g: float = 0.0
+    frame_material: str = ""
+    lug_material:   str = ""
+    lug_material_props: dict = {}
+    # Jonction collée
+    adhesive:   str = "dp460"      # clé ADHESIVES
+    bond_tau_adm: float = 0.0      # cisaillement admissible de calcul (MPa)
+    # Test de résistance INDICATIF sous un cas de charge de référence (optionnel)
+    load_case:  dict = {}     # {name, force_n, tube, sigma_mpa, margin, ok}
+    notes:      list[str] = []
 
 
 class DrivetrainConfig(BaseModel):

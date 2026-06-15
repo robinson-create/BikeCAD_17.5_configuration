@@ -110,6 +110,17 @@ cd tool && ./start.sh          # backend :8000 (uvicorn) + frontend :5173 (vite)
   (tête colorée par catégorie + empreinte + légende), export `io/fastener_export.py` (JSON/CSV/résumé).
   Connaissance : `knowledge/fastener_torques.json` (3 entrées). Endpoints `/api/fasteners`,
   `/api/export/fasteners` ; flag render `show_fasteners` ; panneau frontend `Visserie`.
+- `calculations/tubes.py` — `compute_tubes(bike, calc, test_moment_nm, test_tube, adhesive)` :
+  **par tube** (Ø ext donné + paroi → Ø INTÉRIEUR = OD−2·paroi) → propriétés de SECTION
+  (A=π/4(OD²−ID²), I=π/64(OD⁴−ID⁴), Z=I/(OD/2)), masse (A·L·ρ), capacité **INDICATIVE** à la
+  limite élastique (M_y=Z·Re, F_y=A·Re) + **jonction lug-and-bond** (insertion L=Re·paroi/τ_adm,
+  surface π·OD·L, cisaillement adm. τ·π·OD·L). Test de résistance optionnel : σ=M/Z, FS=Re/σ
+  (cible ≥2, von Mises ductile). Matériaux dans `MATERIALS` (acier 4130, alu 6061/7075-T6, titane
+  Gr9/Gr5, carbone UD anisotrope→pas de Re scalaire), adhésifs dans `ADHESIVES` (DP460/EA9466/E-120HP,
+  τ_adm de calcul réduit). Champs `FrameGeometry` : `*_wall` (6 parois) + `frame_material`/`lug_material`.
+  Export `io/tube_export.py` (JSON/CSV/résumé). Connaissance `knowledge/tube_materials.json` (3 entrées).
+  Endpoints `/api/materials`, `/api/tubes`, `/api/export/tubes` ; panneau frontend `Tubes & Lugs`
+  (groupe Cadre). ⚠ Pré-dimensionnement / comparaison matériaux — fatigue/impact = bureau d'études.
 - `calculations/geometry.py` — `calculate()` géométrie exacte (reach, stack, trail, WB…).
 - `calculations/kinematics.py` — **DISPATCHER** `solve_kinematics()` : route par
   `suspension.linkage_type` vers `calculations/layouts/`. Piloté **par la course roue**.
@@ -244,9 +255,11 @@ cd tool && ./start.sh          # backend :8000 (uvicorn) + frontend :5173 (vite)
 - `io/dxf_export.py` — `export_dxf()` DXF R12 ASCII pour SolidWorks (calques GEOMETRY/TUBES/WHEELS/PIVOTS/DIMS_TEXT).
 - `io/pivot_export.py` — export hardware pivots (JSON/CSV table SolidWorks/résumé).
 - `io/fastener_export.py` — export visserie (JSON/CSV nomenclature d'assemblage/résumé).
+- `io/tube_export.py` — export tubes & lugs (JSON/CSV nomenclature + section/masse/collage/résumé).
 - `main.py` — FastAPI. Endpoints : `/api/default`, `/api/calc`, `/api/render/svg`,
   `/api/kinematics`, `/api/fit`, `/api/battery`, `/api/transmission`, `/api/igh`,
-  `/api/pivots`, `/api/bearings`, `/api/fasteners`, `/api/export/dxf`, `/api/export/bcad`,
+  `/api/pivots`, `/api/bearings`, `/api/fasteners`, `/api/materials`, `/api/tubes`,
+  `/api/export/tubes`, `/api/export/dxf`, `/api/export/bcad`,
   `/api/export/lugs`, `/api/export/pivots`, `/api/export/fasteners`,
   `/api/export/drawing`, `/api/load/bcad`, `/api/library` (+`/save`,`/load`),
   `/api/catalog…`, `/api/suspension/preset/{name}`, `/api/assistant` (+`/available`),

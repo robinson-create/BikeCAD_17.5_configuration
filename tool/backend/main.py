@@ -71,6 +71,7 @@ def get_default() -> BikeDesign:
         # biellette qui se désaligne) plutôt que le placeholder four-bar.
         bike.suspension = PRESETS["high_pivot_emtb_tuned"]()
         bike.suspension.enabled = True
+        bike.battery.enabled = True             # projet eMTB = pack batterie (960 Wh) présent
         return bike
     return BikeDesign()
 
@@ -106,7 +107,7 @@ def render(req: RenderRequest):
         if req.show_rider and req.bike.rider is not None:
             fit = compute_fit(req.bike, calc)
         frames = None
-        if req.show_suspension and req.bike.suspension.enabled:
+        if (req.show_suspension or req.animate_suspension) and req.bike.suspension.enabled:
             kin = solve_kinematics(req.bike)
             if kin.ok:
                 frames = kin.frames
@@ -232,6 +233,57 @@ def export_fasteners(req: FastenersExportRequest):
         if req.fmt == "summary":
             return PlainTextResponse(fastener_export.to_summary(fres), media_type="text/plain")
         return PlainTextResponse(fastener_export.to_csv(fres), media_type="text/csv")
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+class TubesRequest(BaseModel):
+    bike: BikeDesign
+    test_moment_nm: float = 0.0
+    test_tube: str = "down_tube"
+    adhesive: str = "dp460"
+
+
+@app.get("/api/materials")
+def materials_endpoint():
+    """Catalogue matériaux (tubes/lugs) + adhésifs de collage."""
+    from .models.bike import MATERIALS, ADHESIVES
+    return {"materials": [{"key": k, **v} for k, v in MATERIALS.items()],
+            "adhesives": [{"key": k, **v} for k, v in ADHESIVES.items()]}
+
+
+@app.post("/api/tubes")
+def tubes_endpoint(req: TubesRequest):
+    """Tubes & lugs : Ø ext/int, paroi, matériau, section, masse, capacité INDICATIVE + collage."""
+    from .calculations.tubes import compute_tubes
+    try:
+        calc = calculate(req.bike)
+        return compute_tubes(req.bike, calc, req.test_moment_nm, req.test_tube, req.adhesive)
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+class TubesExportRequest(BaseModel):
+    bike: BikeDesign
+    fmt: str = "csv"   # csv | json | summary
+    test_moment_nm: float = 0.0
+    test_tube: str = "down_tube"
+    adhesive: str = "dp460"
+
+
+@app.post("/api/export/tubes")
+def export_tubes(req: TubesExportRequest):
+    """Exporte la nomenclature des tubes & lugs en CSV/JSON/résumé."""
+    from .calculations.tubes import compute_tubes
+    from .io import tube_export
+    try:
+        calc = calculate(req.bike)
+        tres = compute_tubes(req.bike, calc, req.test_moment_nm, req.test_tube, req.adhesive)
+        if req.fmt == "json":
+            return PlainTextResponse(tube_export.to_json(tres), media_type="application/json")
+        if req.fmt == "summary":
+            return PlainTextResponse(tube_export.to_summary(tres), media_type="text/plain")
+        return PlainTextResponse(tube_export.to_csv(tres), media_type="text/csv")
     except Exception as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 

@@ -904,14 +904,19 @@ def _draw_lugs(nodes, sx, sy, ox, oy, scale) -> str:
     return "".join(parts)
 
 
-def _draw_brakes(bike, calc, sx, sy, ox, oy) -> str:
+def _draw_brakes(bike, calc, sx, sy, ox, oy, which="both") -> str:
     """Disques de frein (rotors) aux deux axes. Les étriers sont dessinés
-    séparément (_draw_calipers), PAR-DESSUS la fourche/le cadre, pour rester visibles."""
+    séparément (_draw_calipers), PAR-DESSUS la fourche/le cadre, pour rester visibles.
+    `which` (both|front|rear) → ne dessine qu'un disque (utile pour grouper l'AR sous
+    l'animation de suspension et l'AV sous la compression de fourche)."""
     bk = bike.brakes
     if not str(bk.style).startswith("disc"):
         return ""
+    rotors = {"front": (calc.front_axle, bk.rotor_front),
+              "rear":  (calc.rear_axle,  bk.rotor_rear)}
+    sel = (["front", "rear"] if which == "both" else [which])
     parts = []
-    for axle, rotor in ((calc.front_axle, bk.rotor_front), (calc.rear_axle, bk.rotor_rear)):
+    for axle, rotor in (rotors[k] for k in sel):
         scx, scy, sr = _circle(axle.x, axle.y, rotor / 2, sx, sy, ox, oy)
         # disque plein argent (piste de freinage) + anneau intérieur (zone ajourée)
         parts.append(f'<circle cx="{scx:.1f}" cy="{scy:.1f}" r="{sr:.1f}" '
@@ -932,18 +937,23 @@ def _draw_brakes(bike, calc, sx, sy, ox, oy) -> str:
     return '<g class="brakes">' + "".join(parts) + '</g>'
 
 
-def _draw_calipers(bike, calc, sx, sy, ox, oy) -> str:
+def _draw_calipers(bike, calc, sx, sy, ox, oy, which="both") -> str:
     """Étriers 4-pistons (CONTOUR RÉEL) enjambant la périphérie du disque, dessinés
     PAR-DESSUS la fourche/le cadre. AV = posé au bord arrière du fourreau (visible) ;
-    AR = près du hauban/de la base. Oreilles post-mount + 2 vis M6."""
+    AR = près du hauban/de la base. Oreilles post-mount + 2 vis M6.
+    `which` (both|front|rear) → un seul étrier (l'AR suit la rotation du bras,
+    l'AV suit la compression de fourche)."""
     bk = bike.brakes
     if not str(bk.style).startswith("disc"):
         return ""
     # angle (math, repère monde y-haut) sur la périphérie du disque.
     caliper_phi = {"front": math.radians(158.0), "rear": math.radians(48.0)}
+    calipers = {"front": (calc.front_axle, bk.rotor_front),
+                "rear":  (calc.rear_axle,  bk.rotor_rear)}
+    sel = (["front", "rear"] if which == "both" else [which])
     parts = []
-    for which, axle, rotor in (("front", calc.front_axle, bk.rotor_front),
-                               ("rear", calc.rear_axle, bk.rotor_rear)):
+    for which in sel:
+        axle, rotor = calipers[which]
         phi = caliper_phi[which]
         cw_box, ch_box = 60.0, 66.0          # mm (tangentiel × radial)
         rr = rotor / 2.0
@@ -1368,27 +1378,91 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
                 f'rx="{sr * 0.6:.0f}" ry="6" fill="#2d3436" opacity="0.12" />'
             )
 
+    # === ANIMATION FOURCHE : si on anime, la fourche se COMPRIME (l'axe AV + les
+    # fourreaux + la roue AV remontent le long de l'axe de direction, synchronisé
+    # avec l'arrière sur la même période 4 s). On l'applique via un animateTransform
+    # injecté dans les groupes roue AV + fourreaux (z-order préservé).
+    fork_anim = ""
+    if animate_suspension and (getattr(fk, "travel", 0.0) or 0.0) > 5.0:
+        dux, duy = cr.x - fa.x, cr.y - fa.y
+        dl = math.hypot(dux, duy) or 1.0
+        comp = min((fk.travel or 60.0), 60.0)          # compression visible (mm)
+        fx0, fy0 = _pt(fa.x, fa.y, sx, sy, ox, oy)
+        fx1, fy1 = _pt(fa.x + dux/dl*comp, fa.y + duy/dl*comp, sx, sy, ox, oy)
+        fork_anim = (f'<animateTransform attributeName="transform" type="translate" '
+                     f'values="0 0;{fx1-fx0:.1f} {fy1-fy0:.1f};0 0" keyTimes="0;0.5;1" '
+                     f'dur="4s" repeatCount="indefinite"/>')
+
+    # === ANIMATION TRAIN ARRIÈRE : le bras oscillant + la roue AR + le disque/étrier
+    # AR + le moyeu pivotent RIGIDEMENT autour du pivot principal (exact pour un
+    # single-pivot ; très proche pour un four-bar). L'angle par image est lu sur la
+    # position RÉELLE de l'axe AR (frames) → la roue suit sa vraie trajectoire. On
+    # l'injecte (animateTransform rotate) dans chaque groupe arrière, même période
+    # 4 s que la fourche → tout bouge en phase.
+    su = bike.suspension
+    full_susp = su.enabled and str(su.linkage_type) in (
+        "four_bar_horst", "high_pivot_idler", "four_bar_generic")
+    susp_frames = None
+    if suspension:
+        susp_frames = suspension if isinstance(suspension, list) else getattr(suspension, "frames", None)
+    rear_anim = ""
+    if animate_suspension and full_susp and susp_frames and len(susp_frames) > 1:
+        Mx, My = su.main_pivot.x, su.main_pivot.y
+        msx, msy = _pt(Mx, My, sx, sy, ox, oy)
+        # Angle (monde) de l'axe AR p/r au pivot, DÉROULÉ (unwrap) pour éviter le saut
+        # de ±360° quand atan2 traverse ±180° (sinon la roue ferait un tour complet).
+        raw = []
+        prev = None
+        for fr in susp_frames:
+            axp = fr["axle"]
+            ang = math.degrees(math.atan2(axp[1] - My, axp[0] - Mx))
+            if prev is not None:
+                while ang - prev > 180.0:  ang -= 360.0
+                while ang - prev < -180.0: ang += 360.0
+            prev = ang
+            raw.append(ang)
+        base_ang = raw[0]
+        seq = [-(a - base_ang) for a in raw]             # SVG : Y inversé → angle opposé
+        full = seq + list(reversed(seq[:-1]))            # aller-retour (boucle fluide)
+        vstr = ";".join(f"{d:.2f} {msx:.1f} {msy:.1f}" for d in full)
+        rear_anim = (f'<animateTransform attributeName="transform" type="rotate" '
+                     f'values="{vstr}" dur="4s" repeatCount="indefinite"/>')
+
+    def _rear_group(svg: str) -> str:
+        """Enveloppe un fragment dans le groupe animé du train arrière (no-op hors anim)."""
+        return f'<g class="rear-anim">{rear_anim}{svg}</g>' if rear_anim else svg
+
     # === ROUES ===============================================================
     # Dessinées en premier (derrière le cadre). Cassette seulement si dérailleur.
+    # La roue AR est groupée sous l'animation du train arrière (rotation pivot).
     is_igh = bike.drivetrain.transmission == "igh"
-    parts.append(_draw_wheel(ra.x, ra.y, wheel_r_r, sx, sy, ox, oy,
-                             cassette=not is_igh, wcfg=bike.wheel_r))
-    parts.append(_draw_wheel(fa.x, fa.y, wheel_r_f, sx, sy, ox, oy, wcfg=bike.wheel_f))
+    rw_svg = _draw_wheel(ra.x, ra.y, wheel_r_r, sx, sy, ox, oy,
+                         cassette=not is_igh, wcfg=bike.wheel_r)
+    parts.append(_rear_group(rw_svg))
+    fw_svg = _draw_wheel(fa.x, fa.y, wheel_r_f, sx, sy, ox, oy, wcfg=bike.wheel_f)
+    parts.append(f'<g class="fork-anim">{fork_anim}{fw_svg}</g>' if fork_anim else fw_svg)
 
     # === MOYEU À VITESSES (IGH : Rohloff / 3X3) — gros corps de moyeu ==========
     if is_igh:
         hcx, hcy, hr = _circle(ra.x, ra.y, 56.0, sx, sy, ox, oy)
-        parts.append(f'<circle cx="{hcx:.1f}" cy="{hcy:.1f}" r="{hr:.1f}" fill="{PALETTE["hub"]}" '
-                     f'stroke="#222" stroke-width="1.2"/>')
+        hub_parts = [f'<circle cx="{hcx:.1f}" cy="{hcy:.1f}" r="{hr:.1f}" fill="{PALETTE["hub"]}" '
+                     f'stroke="#222" stroke-width="1.2"/>']
         _, _, hr2 = _circle(ra.x, ra.y, 44.0, sx, sy, ox, oy)
-        parts.append(f'<circle cx="{hcx:.1f}" cy="{hcy:.1f}" r="{hr2:.1f}" fill="none" '
-                     f'stroke="{_shade(PALETTE["hub"],0.8)}" stroke-width="1.5"/>')
+        hub_parts.append(f'<circle cx="{hcx:.1f}" cy="{hcy:.1f}" r="{hr2:.1f}" fill="none" '
+                         f'stroke="{_shade(PALETTE["hub"],0.8)}" stroke-width="1.5"/>')
         _, _, hr3 = _circle(ra.x, ra.y, 30.0, sx, sy, ox, oy)
-        parts.append(f'<circle cx="{hcx:.1f}" cy="{hcy:.1f}" r="{hr3:.1f}" fill="{_shade(PALETTE["hub"],1.15)}" '
-                     f'stroke="#333" stroke-width="0.8"/>')
+        hub_parts.append(f'<circle cx="{hcx:.1f}" cy="{hcy:.1f}" r="{hr3:.1f}" fill="{_shade(PALETTE["hub"],1.15)}" '
+                         f'stroke="#333" stroke-width="0.8"/>')
+        parts.append(_rear_group("".join(hub_parts)))
 
     # === FREINS (disques) ====================================================
-    parts.append(_draw_brakes(bike, calc, sx, sy, ox, oy))
+    # AR groupé sous l'animation du bras ; AV sous la compression de fourche.
+    if rear_anim or fork_anim:
+        parts.append(_rear_group(_draw_brakes(bike, calc, sx, sy, ox, oy, which="rear")))
+        fb = _draw_brakes(bike, calc, sx, sy, ox, oy, which="front")
+        parts.append(f'<g class="fork-anim">{fork_anim}{fb}</g>' if fork_anim else fb)
+    else:
+        parts.append(_draw_brakes(bike, calc, sx, sy, ox, oy))
 
     # === MOTEUR (DERRIÈRE le cadre : les tubes se rejoignent par-dessus au BB) =
     parts.append(_draw_motor(bike, calc, sx, sy, ox, oy, scale_f))
@@ -1398,9 +1472,7 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
     # bases, haubans, tube de selle, top tube, down tube, tube de direction.
     # TOUT-SUSPENDU : l'arrière devient un bras oscillant (pivote au main_pivot) +
     # hauban → biellette, au lieu du triangle arrière rigide d'un hardtail.
-    su = bike.suspension
-    full_susp = su.enabled and str(su.linkage_type) in (
-        "four_bar_horst", "high_pivot_idler", "four_bar_generic")
+    # (su / full_susp déjà calculés plus haut pour l'animation du train arrière)
     if full_susp:
         A_piv = (su.main_pivot.x, su.main_pivot.y)        # pivot principal (cadre)
         # SINGLE-PIVOT haut : le bras oscillant est RIGIDE et remonte jusqu'à l'œillet
@@ -1421,21 +1493,39 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
             (bb.x, bb.y, ra.x, ra.y, f.chainstay_d),
             (ra.x, ra.y, stt.x, stt.y, f.seatstay_d),
         ]
-    frame_tubes = rear_tubes + [
+    front_tubes = [
         (bb.x, bb.y, stt.x, stt.y, f.seat_tube_fd),
         (stt.x, stt.y, ht.x, ht.y, f.top_tube_d),
         (bb.x, bb.y, cr.x, cr.y, f.down_tube_d),
         (cr.x, cr.y, ht.x, ht.y, f.head_tube_d),
     ]
-    # Pass 1 : remplissages (dégradé global, pas de stroke) + caps ronds
-    for (ax_, ay_, bx_, by_, dia_) in frame_tubes:
-        parts.append(_draw_tube(ax_, ay_, bx_, by_, dia_, PALETTE["frame"],
-                                sx, sy, ox, oy, scale_f, cap_r=dia_ / 2, fill=FRAME_FILL))
-    # Pass 2 : liseré #333 (uniquement les grands côtés)
-    for (ax_, ay_, bx_, by_, dia_) in frame_tubes:
-        parts.append(_draw_tube(ax_, ay_, bx_, by_, dia_, PALETTE["frame"],
-                                sx, sy, ox, oy, scale_f, fill=FRAME_FILL,
-                                edge="#333333", outline_only=True))
+
+    def _tube_passes(tubes):
+        """Remplissage (dégradé) puis liseré #333 sur une liste de tubes → fragment SVG."""
+        seg = []
+        for (ax_, ay_, bx_, by_, dia_) in tubes:
+            seg.append(_draw_tube(ax_, ay_, bx_, by_, dia_, PALETTE["frame"],
+                                  sx, sy, ox, oy, scale_f, cap_r=dia_ / 2, fill=FRAME_FILL))
+        for (ax_, ay_, bx_, by_, dia_) in tubes:
+            seg.append(_draw_tube(ax_, ay_, bx_, by_, dia_, PALETTE["frame"],
+                                  sx, sy, ox, oy, scale_f, fill=FRAME_FILL,
+                                  edge="#333333", outline_only=True))
+        return "".join(seg)
+
+    if rear_anim:
+        # Bras oscillant DANS le groupe animé (pivote) ; triangle avant statique.
+        parts.append(_rear_group(_tube_passes(rear_tubes)))
+        parts.append(_tube_passes(front_tubes))
+    else:
+        # Comportement d'origine : passes entrelacées rear+front (z-order historique).
+        frame_tubes = rear_tubes + front_tubes
+        for (ax_, ay_, bx_, by_, dia_) in frame_tubes:
+            parts.append(_draw_tube(ax_, ay_, bx_, by_, dia_, PALETTE["frame"],
+                                    sx, sy, ox, oy, scale_f, cap_r=dia_ / 2, fill=FRAME_FILL))
+        for (ax_, ay_, bx_, by_, dia_) in frame_tubes:
+            parts.append(_draw_tube(ax_, ay_, bx_, by_, dia_, PALETTE["frame"],
+                                    sx, sy, ox, oy, scale_f, fill=FRAME_FILL,
+                                    edge="#333333", outline_only=True))
     # Pass 3 : cercles de fillet aux nœuds EN DERNIER (même fill, sans stroke) →
     # masque les croisements de liseré internes et fond les jonctions (façon BikeCAD)
     for (nx_, ny_), dd in [((bb.x, bb.y), f.down_tube_d), ((stt.x, stt.y), f.top_tube_d),
@@ -1477,15 +1567,17 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
                                 PALETTE["fork_low"], sx, sy, ox, oy, scale_f, cap_r=blade/2))
         _crown_block(cr)
     else:
-        # plongeur (stanchion) argent : du haut (couronne, ou couronne sup. si dual)
-        # vers ~32 % de l'A2C ; fourreaux (lowers) noirs : de 32 % à l'axe (plus gros).
+        # plongeur (stanchion) argent COURT : du haut vers ~22 % de l'A2C (le reste
+        # est couvert par les fourreaux) ; fourreaux (lowers) noirs : 22 %→axe (plus gros).
         top = ht if fk.dual_crown else cr
-        mfx = cr.x + (fa.x - cr.x) * 0.34
-        mfy = cr.y + (fa.y - cr.y) * 0.34
+        mfx = cr.x + (fa.x - cr.x) * 0.22
+        mfy = cr.y + (fa.y - cr.y) * 0.22
         parts.append(_draw_tube(top.x, top.y, mfx, mfy, stan,
                                 PALETTE["stanchion"], sx, sy, ox, oy, scale_f, cap_r=stan/2))
-        parts.append(_draw_tube(mfx, mfy, fa.x, fa.y, blade * 1.12,
-                                PALETTE["fork_low"], sx, sy, ox, oy, scale_f, cap_r=blade*0.56))
+        # fourreaux + axe : COMPRESSIBLES (remontent avec la roue AV en animation)
+        lowers = _draw_tube(mfx, mfy, fa.x, fa.y, blade * 1.12,
+                            PALETTE["fork_low"], sx, sy, ox, oy, scale_f, cap_r=blade*0.56)
+        parts.append(f'<g class="fork-anim">{fork_anim}{lowers}</g>' if fork_anim else lowers)
         if fk.dual_crown:
             _crown_block(ht)
         _crown_block(cr)
@@ -1581,7 +1673,13 @@ def render_svg(bike: BikeDesign, calc: CalcResult,
                             sx, sy, ox, oy, scale_f, cap_r=gw/2))
 
     # === ÉTRIERS DE FREIN (par-dessus la fourche/le cadre, donc visibles) ====
-    parts.append(_draw_calipers(bike, calc, sx, sy, ox, oy))
+    # AR sur le bras (groupe animé) ; AV sur le fourreau (compression de fourche).
+    if rear_anim or fork_anim:
+        parts.append(_rear_group(_draw_calipers(bike, calc, sx, sy, ox, oy, which="rear")))
+        fc = _draw_calipers(bike, calc, sx, sy, ox, oy, which="front")
+        parts.append(f'<g class="fork-anim">{fork_anim}{fc}</g>' if fork_anim else fc)
+    else:
+        parts.append(_draw_calipers(bike, calc, sx, sy, ox, oy))
 
     # === COTES (dimensions) ==================================================
     if show_dims:

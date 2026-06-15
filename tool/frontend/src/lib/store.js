@@ -105,7 +105,7 @@ export async function applySuspensionPreset(name) {
 // Onglets regroupés (UX) : 6 groupes au lieu de 13 onglets, AUCUN champ perdu —
 // chaque groupe empile ses panneaux (chacun garde son titre/section).
 export const GROUPS = [
-  { id: 'frame',      label: 'Cadre',          icon: '⬡', panels: ['frame'] },
+  { id: 'frame',      label: 'Cadre',          icon: '⬡', panels: ['frame', 'tubes'] },
   { id: 'suspension', label: 'Suspension',     icon: '◇', panels: ['suspension'] },
   { id: 'drive',      label: 'Motorisation',   icon: '⚙', panels: ['drivetrain', 'cranks', 'battery'] },
   { id: 'wheels',     label: 'Roues & freins', icon: '◯', panels: ['wheels', 'brakes'] },

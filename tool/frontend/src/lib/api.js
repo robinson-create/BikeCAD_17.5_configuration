@@ -47,6 +47,35 @@ export async function exportFasteners(bike, fmt = 'csv') {
   URL.revokeObjectURL(url)
 }
 
+export async function fetchMaterials() {
+  const r = await fetch(`${BASE}/materials`)
+  if (!r.ok) return { materials: [], adhesives: [] }
+  return r.json()  // { materials:[{key,label,re,rm,E,rho}], adhesives:[{key,label,tau_test,tau_adm}] }
+}
+
+export async function fetchTubes(bike, testMomentNm = 0, testTube = 'down_tube', adhesive = 'dp460') {
+  const r = await fetch(`${BASE}/tubes`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ bike, test_moment_nm: testMomentNm, test_tube: testTube, adhesive }),
+  })
+  if (!r.ok) return null
+  return r.json()  // TubeResult
+}
+
+export async function exportTubes(bike, fmt = 'csv', testMomentNm = 0, testTube = 'down_tube', adhesive = 'dp460') {
+  const r = await fetch(`${BASE}/export/tubes`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ bike, fmt, test_moment_nm: testMomentNm, test_tube: testTube, adhesive }),
+  })
+  if (!r.ok) throw new Error(await r.text())
+  const text = await r.text()
+  const blob = new Blob([text], { type: fmt === 'json' ? 'application/json' : 'text/plain' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url; a.download = `tubes_lugs.${fmt === 'summary' ? 'txt' : fmt}`; a.click()
+  URL.revokeObjectURL(url)
+}
+
 export async function fetchPivots(bike) {
   const r = await fetch(`${BASE}/pivots`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },

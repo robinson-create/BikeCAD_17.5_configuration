@@ -26,9 +26,11 @@
   import Battery    from './panels/Battery.svelte'
   import Rider      from './panels/Rider.svelte'
   import Fasteners  from './panels/Fasteners.svelte'
+  import TubesLugs  from './panels/TubesLugs.svelte'
 
   const PANELS = {
     frame:      Frame,
+    tubes:      TubesLugs,
     fork:       Fork,
     stem:       Stem,
     handlebar:  Handlebar,

@@ -1,0 +1,20 @@
+[
+ {
+  "id": "frame-materials-props",
+  "title": "Matériaux de cadre vélo — propriétés mécaniques (tubes & lugs)",
+  "tags": ["matériau", "material", "tube", "lug", "manchon", "acier", "4130", "alu", "6061", "7075", "titane", "carbone", "Re", "Rm", "module", "densité", "résistance"],
+  "text": "Propriétés mécaniques de référence (Re = limite élastique 0,2% MPa ; Rm = résistance à rupture MPa ; E = module GPa ; ρ = densité kg/m³) — ordres de grandeur matériau de base (MatWeb/ASM), à confirmer sur la fiche du tube/lot réel. ACIER CrMo 4130 normalisé : Re 435-460, Rm 670, E 205, ρ 7850 (a une vraie limite d'endurance ≈0,5·Rm). ALU 6061-T6 : Re 276, Rm 310, E 69, ρ 2700 (soudable, bon compromis). ALU 7075-T6 : Re 503 (T651 ; plage 430-505), Rm 572, E 71.7, ρ 2810 (très résistant, PEU soudable → idéal usiné/collé/boulonné = cohérent lug-and-bond). TITANE Gr9 3Al-2.5V : Re 483 (min ; typ 500-585), Rm 620, E 107, ρ 4480 (le plus utilisé en tube cadre Ti). TITANE Gr5 6Al-4V : Re 880, Rm 950, E 114, ρ 4430 (meilleur rapport résistance/poids). CARBONE UD : ANISOTROPE — pas de Re scalaire ; Rm longitudinal ≈2100, transverse ≈55 MPa ; E1 130, ρ 1600 ; rupture fragile, dimensionnement par stratifié (CLT). NB : alu 7075/6061 et titane n'ont PAS de limite d'endurance franche → fatigue par courbe S-N. Sélection : rigidité spécifique E/ρ, résistance spécifique Re/ρ. Tubes étirés/butted (Reynolds 853/525, Columbus, Dedacciai) souvent air-hardening → Rm bien supérieur (853 jusqu'à ~1250-1400 après soudage)."
+ },
+ {
+  "id": "tube-section-method",
+  "title": "Pré-dimensionnement d'un tube de cadre — section, contrainte, marge (méthode)",
+  "tags": ["tube", "section", "inertie", "module", "flexion", "contrainte", "von mises", "facteur de sécurité", "FS", "paroi", "diamètre", "résistance", "méthode"],
+  "text": "Tube creux Ø ext OD, Ø int ID = OD−2·paroi (mm). Aire A = π/4·(OD²−ID²) [mm²]. Inertie I = π/64·(OD⁴−ID⁴) [mm⁴]. Module de flexion Z = I/(OD/2) [mm³]. Rigidité flexion = E·I, axiale = E·A. Contrainte de flexion σ = M/Z (M en N·mm, Z en mm³ → σ en MPa) ; axiale σ = N/A ; combinée σ = N/A + M/Z. Critère ductile (acier/alu/Ti) = von Mises σ_vm = √(σ²+3τ²) ≤ Re/FS ; facteur de sécurité FS = Re/σ, viser FS ≥ 2 en statique pour un organe roulant (indicatif). Carbone (anisotrope, fragile) : NE PAS utiliser von Mises isotrope → critère ply-level (max-stress/Tsai-Wu) par axe. Capacités INDICATIVES : moment à la limite élastique M_y = Z·Re, axial F_y = A·Re. Masse = A·L·ρ. ⚠ Pré-conception / comparaison matériaux uniquement — la tenue FATIGUE (100 000 cycles ISO 4210-6) et IMPACT (masse tombante) relève du bureau d'études."
+ },
+ {
+  "id": "lug-bond-method",
+  "title": "Jonction lug-and-bond (manchon collé) — adhésifs et dimensionnement du joint",
+  "tags": ["lug", "manchon", "collage", "bond", "adhésif", "époxy", "DP460", "EA9466", "cisaillement", "recouvrement", "insertion", "alésage", "jeu de collage"],
+  "text": "Construction lug-and-bond : tubes insérés dans des manchons (lugs) CNC et collés à l'époxy structural. Jeu de collage radial (bondline) cible 0.10 mm/côté (plage 0.05-0.15 ; général 0.025-0.18) — joint mince préféré. Longueur d'insertion/recouvrement L : règle L = Re_tube·paroi / τ_adhésif (équilibre pleine plastification du tube ↔ cisaillement adhésif) ; en pratique τ de calcul réduit pour la marge. Surface collée cylindrique = π·OD·L ; effort de cisaillement admissible du joint = τ_adm·π·OD·L (la circonférence collée prime souvent sur la longueur). Adhésifs époxy 2-parts (lap shear ISO 4587 sur alu décapé) : 3M Scotch-Weld DP460 τ≈31 MPa, Loctite EA 9466 ≈26 MPa (alu), EA E-120HP ≈13.7 MPa. VALEUR DE CALCUL prudente recommandée τ_adm ≈ 15 MPa (réduction pour décollement aux bords, fatigue, vieillissement humide ; EA9466 garde ~80-90% à 1000 h en salt-fog). Le 7075 peu soudable → lugs usinés + collage = solution naturelle. ⚠ La tenue réelle du JOINT (adhésif, état de surface, recouvrement, fatigue) gouverne souvent avant le tube → bureau d'études."
+ }
+]

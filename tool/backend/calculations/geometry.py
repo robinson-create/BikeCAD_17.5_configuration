@@ -116,11 +116,14 @@ def calculate(bike: BikeDesign) -> CalcResult:
     stem_base_x = ht_top_x + headset_height * ht_dir_x
     stem_base_y = ht_top_y + headset_height * ht_dir_y
 
-    # Direction de la potence (dans le plan du vélo) :
-    # angle de potence = positif = relevé par rapport au prolongement du HT
-    # axe potence = prolongement du steerer ± stem_angle
-    stem_ax = math.cos(hta + stem_angle_rad + math.pi / 2)
-    stem_ay = math.sin(hta + stem_angle_rad + math.pi / 2)
+    # Direction de la potence (plan du vélo) : PERPENDICULAIRE au steerer, vers
+    # l'AVANT (la potence avance vers la roue avant), ± stem_angle (positif = relevé).
+    # steerer pointe haut-arrière à l'angle (π − hta) ; la potence est à
+    # (π − hta) − π/2 + stem_angle = π/2 − hta + stem_angle.  (Avant l'erreur
+    # « + π/2 » envoyait la potence VERS L'ARRIÈRE — cintre mal positionné.)
+    stem_dir = math.pi / 2 - hta + stem_angle_rad
+    stem_ax = math.cos(stem_dir)
+    stem_ay = math.sin(stem_dir)
     stem_tip_x = stem_base_x + st.length * stem_ax
     stem_tip_y = stem_base_y + st.length * stem_ay
 

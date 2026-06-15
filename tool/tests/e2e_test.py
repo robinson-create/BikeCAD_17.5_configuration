@@ -438,6 +438,46 @@ check(free.get("BELTorCHAIN") == "1", "export Free-safe : BELTorCHAIN=1 (chaîne
 check(set(free) == orig_keys, "export Free-safe : 0 clé perdue/ajoutée")
 check(_kv(SRC).get("BELTorCHAIN") == "2", "fichier principal inchangé (=2)")
 
+# 7c. TUBES & LUGS : section, masse, capacité INDICATIVE + jonction collée ───
+print("  -- tubes & lugs --")
+from backend.calculations.tubes import compute_tubes, _section
+from backend.io import tube_export
+from backend.models.bike import MATERIALS, ADHESIVES
+import math as _m
+
+b = load_bcad(SRC); calc = calculate(b)
+tr = compute_tubes(b, calc, test_moment_nm=300.0, test_tube="down_tube", adhesive="dp460")
+check(len(tr.tubes) == 6, "6 membres calculés (tubes triangle + bases/haubans)")
+dt = next(t for t in tr.tubes if t.member == "down_tube")
+# Ø intérieur = OD − 2·paroi ; section A=π/4(OD²−ID²), Z=I/(OD/2) — vérif analytique
+id_ref, a_ref, i_ref, z_ref = _section(dt.od, dt.wall)
+check(abs(dt.id - (dt.od - 2 * dt.wall)) < 1e-6, "Ø intérieur = OD − 2·paroi")
+check(abs(dt.area_mm2 - round(a_ref, 1)) < 0.2 and abs(dt.modulus_mm3 - round(z_ref, 1)) < 0.2,
+      "section A/Z = formules canoniques")
+# M_yield = Z·Re/1000 (N·m) ; F_yield = A·Re (N)
+re = MATERIALS[b.frame.frame_material]["re"]
+check(abs(dt.moment_yield_nm - round(z_ref * re / 1000.0, 1)) < 0.2, "M_y = Z·Re — INDICATIF")
+check(abs(dt.axial_yield_n - round(a_ref * re, 0)) < 1, "F_y = A·Re — INDICATIF")
+check(tr.total_mass_g > 500 and all(t.mass_g > 0 for t in tr.tubes), "masses tubes > 0, total plausible")
+# Jonction collée : L = Re·paroi/τ_adm ; surface = π·OD·L ; cisaillement = τ·surface
+tau = ADHESIVES["dp460"]["tau_adm"]
+check(abs(dt.bond_length_mm - round(re * dt.wall / tau, 1)) < 0.2, "collage : L = Re·paroi/τ_adm")
+check(abs(dt.bond_area_mm2 - _m.pi * dt.od * (re * dt.wall / tau)) < 3, "collage : surface = π·OD·L")
+# Test de résistance : FS = Re/σ, σ = M/Z
+lc = tr.load_case
+check(lc and abs(lc["sigma_mpa"] - round(300.0 * 1000 / dt.modulus_mm3, 1)) < 0.2, "test : σ = M/Z")
+check(abs(lc["fs"] - round(re / lc["sigma_mpa"], 2)) < 0.02, "test : FS = Re/σ")
+# Matériau anisotrope (carbone) : pas de capacité scalaire, pas de load_case
+b2 = load_bcad(SRC); b2.frame.frame_material = "carbone_ud"
+tr2 = compute_tubes(b2, calculate(b2), test_moment_nm=300.0)
+check(all(t.moment_yield_nm == 0 for t in tr2.tubes) and not tr2.load_case,
+      "carbone anisotrope : capacité scalaire N/D, pas de test von Mises")
+# Exports
+csv_t = tube_export.to_csv(tr)
+check(csv_t.startswith("Membre,Label,OD_mm") and "Collage_L_mm" in csv_t, "export CSV tubes")
+check("TUBES & LUGS" in tube_export.to_summary(tr), "export résumé tubes")
+check(_json.loads(tube_export.to_json(tr))["tubes"], "export JSON tubes parseable")
+
 # ─── 8. BIBLIOTHÈQUE — SAUVE/IMPORT/EXPORT TOUS COMPOSANTS ──────────────────
 print("\n=== 8. BIBLIOTHÈQUE (round-trip tous composants) ===")
 from backend import library as lib
