@@ -799,19 +799,40 @@ def _draw_fasteners(fres, sx, sy, ox, oy) -> str:
     Torx/hex, quantité × N). `fres` = FastenerResult (compute_fasteners)."""
     if not fres or not getattr(fres, "ok", False):
         return ""
-    # Regrouper les glyphes au même point (BB, axe…) pour les décaler en étoile.
-    groups: dict = {}
-    for it in fres.items:
-        groups.setdefault((round(it.x), round(it.y)), []).append(it)
+    # Regrouper les glyphes PROCHES À L'ÉCRAN (BB = plateau+manivelle+moteur, moyeu =
+    # disque+axe…) pour les décaler en étoile : sinon ils s'empilent et la cote « ×N »
+    # se chevauche → on dirait que la visserie est posée n'importe où.
+    pts = [(it, *_pt(it.x, it.y, sx, sy, ox, oy)) for it in fres.items]
+    THRESH = 26.0                              # px : rayon d'agrégation des glyphes voisins
+    clusters: list = []                        # [{cx, cy, items:[(it, sxp, syp)]}]
+    for tup in pts:
+        _it, pxp, pyp = tup
+        best = None
+        for cl in clusters:
+            if (cl["cx"] - pxp) ** 2 + (cl["cy"] - pyp) ** 2 <= THRESH ** 2:
+                best = cl
+                break
+        if best is None:
+            clusters.append({"cx": pxp, "cy": pyp, "items": [tup]})
+        else:
+            best["items"].append(tup)
+            k = len(best["items"])             # recentre la grappe (moyenne mobile)
+            best["cx"] += (pxp - best["cx"]) / k
+            best["cy"] += (pyp - best["cy"]) / k
     out = ['<g class="fasteners">']
-    for (_gx, _gy), its in groups.items():
+    for cl in clusters:
+        its = cl["items"]
         n = len(its)
-        for i, it in enumerate(its):
-            cx, cy = _pt(it.x, it.y, sx, sy, ox, oy)
-            if n > 1:
-                a = 2 * math.pi * i / n
-                cx += 12 * math.cos(a)
-                cy += 12 * math.sin(a)
+        # rayon d'éventail : assez grand pour que les têtes (r≈6) + labels ne se touchent pas
+        ring = 0.0 if n == 1 else max(14.0, 2.7 * n + 7.0)
+        # angle de départ orienté vers le haut (labels plus lisibles)
+        for i, (it, pxp, pyp) in enumerate(its):
+            if n == 1:
+                cx, cy = pxp, pyp
+            else:
+                a = -math.pi / 2 + 2 * math.pi * i / n
+                cx = cl["cx"] + ring * math.cos(a)
+                cy = cl["cy"] + ring * math.sin(a)
             col = _FAST_CAT_COL.get(it.category, "#7f8c8d")
             out.append(_bolt_glyph(cx, cy, 6.0, col, it.drive))
             if it.qty > 1:
