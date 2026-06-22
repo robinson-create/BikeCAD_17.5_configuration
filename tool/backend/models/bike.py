@@ -360,6 +360,10 @@ class TubeResult(BaseModel):
     # Jonction collée
     adhesive:   str = "dp460"      # clé ADHESIVES
     bond_tau_adm: float = 0.0      # cisaillement admissible de calcul (MPa)
+    # Nomenclature d'ACHAT agrégée par spec (matériau + Ø ext + paroi)
+    # [{material, label, od, wall, members, count, total_length_mm, total_mass_g,
+    #   stock_length_mm, stock_label}] — « savoir exactement quoi commander ».
+    bom:        list = []
     # Test de résistance INDICATIF sous un cas de charge de référence (optionnel)
     load_case:  dict = {}     # {name, force_n, tube, sigma_mpa, margin, ok}
     notes:      list[str] = []

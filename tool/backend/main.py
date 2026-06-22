@@ -265,7 +265,7 @@ def tubes_endpoint(req: TubesRequest):
 
 class TubesExportRequest(BaseModel):
     bike: BikeDesign
-    fmt: str = "csv"   # csv | json | summary
+    fmt: str = "csv"   # csv | json | summary | fab_csv | fab_summary
     test_moment_nm: float = 0.0
     test_tube: str = "down_tube"
     adhesive: str = "dp460"
@@ -273,12 +273,18 @@ class TubesExportRequest(BaseModel):
 
 @app.post("/api/export/tubes")
 def export_tubes(req: TubesExportRequest):
-    """Exporte la nomenclature des tubes & lugs en CSV/JSON/résumé."""
+    """Exporte la nomenclature des tubes & lugs (CSV/JSON/résumé) ou la fiche de
+    FABRICATION (tubes ↔ jonctions de lugs : emmanchements, alésages, angles)."""
     from .calculations.tubes import compute_tubes
     from .io import tube_export
     try:
         calc = calculate(req.bike)
         tres = compute_tubes(req.bike, calc, req.test_moment_nm, req.test_tube, req.adhesive)
+        if req.fmt in ("fab_csv", "fab_summary"):
+            nodes = build_joints(req.bike, calc)
+            if req.fmt == "fab_csv":
+                return PlainTextResponse(tube_export.to_fabrication_csv(tres, nodes), media_type="text/csv")
+            return PlainTextResponse(tube_export.to_fabrication_summary(tres, nodes), media_type="text/plain")
         if req.fmt == "json":
             return PlainTextResponse(tube_export.to_json(tres), media_type="application/json")
         if req.fmt == "summary":
@@ -416,6 +422,34 @@ def export_drawing_route(req: DrawingRequest):
             p.write_text(svg, encoding="utf-8")
             return {"path": str(p), "ok": True, "bytes": len(svg)}
         return PlainTextResponse(content=svg, media_type="image/svg+xml")
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+class ReportRequest(BaseModel):
+    bike: BikeDesign
+    designer: str = "Robinson Joubert"
+    company: str = "DOM Engineering"
+    revision: str = "A"
+    path: Optional[str] = None   # si fourni : écrit le fichier HTML sur disque
+
+
+@app.post("/api/export/report")
+def export_report(req: ReportRequest):
+    """Dossier de conception complet (HTML auto-suffisant, imprimable → PDF) :
+    agrège géométrie, cinématique, tubes & masses, lugs, pivots, visserie,
+    motorisation/batterie/transmission, fit et rappels normatifs."""
+    from datetime import date as _date
+    from .io.report_export import build_report_html
+    try:
+        h = build_report_html(req.bike, designer=req.designer, date_iso=_date.today().isoformat(),
+                              company=req.company, revision=req.revision)
+        if req.path:
+            p = Path(_repo_path(req.path))
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(h, encoding="utf-8")
+            return {"path": str(p), "ok": True, "bytes": len(h)}
+        return PlainTextResponse(content=h, media_type="text/html")
     except Exception as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 

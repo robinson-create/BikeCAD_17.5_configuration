@@ -106,6 +106,35 @@ def compute_tubes(bike, calc, test_moment_nm: float = 0.0, test_tube: str = "dow
                 "bond_length_mm": t.bond_length_mm,
             }
 
+    # ── Nomenclature d'ACHAT : regroupe les tubes par spec identique ──────────
+    # (matériau + Ø ext + paroi) → métrage total à commander, avec 12 % de marge
+    # de chute (coupe/onglet/insertion) arrondi aux 50 mm supérieurs.
+    groups = {}
+    for t in tubes:
+        gkey = (t.material, t.od, t.wall)
+        g = groups.setdefault(gkey, {"members": [], "count": 0,
+                                     "total_length_mm": 0.0, "total_mass_g": 0.0})
+        g["members"].append(t.label)
+        g["count"] += 1
+        g["total_length_mm"] += t.length
+        g["total_mass_g"] += t.mass_g
+    bom = []
+    for (gmat, god, gwall), g in groups.items():
+        stock = math.ceil(g["total_length_mm"] * 1.12 / 50.0) * 50.0
+        bom.append({
+            "material": gmat,
+            "label": _mat(gmat)["label"],
+            "od": god,
+            "wall": gwall,
+            "members": g["members"],
+            "count": g["count"],
+            "total_length_mm": round(g["total_length_mm"], 1),
+            "total_mass_g": round(g["total_mass_g"], 1),
+            "stock_length_mm": stock,
+            "stock_label": f"Ø{god:g} × {gwall:g} mm  {_mat(gmat)['label']}",
+        })
+    bom.sort(key=lambda b: (b["material"], -b["od"]))
+
     lug = _mat(f.lug_material)
     notes = [
         "Ø intérieur = Ø extérieur − 2·paroi. Section : A=π/4(OD²−ID²), I=π/64(OD⁴−ID⁴), Z=I/(OD/2).",
@@ -125,6 +154,6 @@ def compute_tubes(bike, calc, test_moment_nm: float = 0.0, test_tube: str = "dow
         frame_material=f.frame_material, lug_material=f.lug_material,
         lug_material_props={"label": lug["label"], "re": lug.get("re"), "rm": lug.get("rm"),
                             "E": lug["E"], "rho": lug["rho"]},
-        adhesive=adhesive, bond_tau_adm=tau,
+        adhesive=adhesive, bond_tau_adm=tau, bom=bom,
         load_case=load_case, notes=notes,
     )

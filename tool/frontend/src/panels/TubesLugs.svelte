@@ -149,8 +149,29 @@
       {/if}
     </fieldset>
 
+    {#if res.bom?.length}
+      <fieldset>
+        <legend>Nomenclature d'achat — ce qu'il faut commander</legend>
+        <table>
+          <thead><tr><th>Spec</th><th>Nb</th><th>Long. totale</th><th>Barre conseillée</th></tr></thead>
+          <tbody>
+            {#each res.bom as b}
+              <tr title={b.members.join(', ')}>
+                <td>{b.stock_label}</td>
+                <td class="num">{b.count}</td>
+                <td class="num">{b.total_length_mm} mm</td>
+                <td class="num"><strong>{b.stock_length_mm} mm</strong></td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+        <p class="sub">Barre conseillée = longueur totale +12 % de chute, arrondie aux 50 mm.</p>
+      </fieldset>
+    {/if}
+
     <div class="exp">
       <span>Export :</span>
+      <button on:click={() => exportTubes($bike, 'fab_summary', testMoment, testTube, adhesive)}>Fabrication</button>
       <button on:click={() => exportTubes($bike, 'csv', testMoment, testTube, adhesive)}>CSV</button>
       <button on:click={() => exportTubes($bike, 'json', testMoment, testTube, adhesive)}>JSON</button>
       <button on:click={() => exportTubes($bike, 'summary', testMoment, testTube, adhesive)}>Résumé</button>

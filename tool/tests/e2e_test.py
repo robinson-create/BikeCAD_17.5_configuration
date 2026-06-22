@@ -707,6 +707,93 @@ else:
     # garde-fou path-traversal
     check(catalog.load_part("fork", "../../etc/passwd") is None, "catalogue : anti path-traversal")
 
+# ─── 12. DOSSIER DE CONCEPTION + EXPORT TUBES (fabrication & achat) ──────────
+print("\n=== 12. DOSSIER DE CONCEPTION + EXPORT TUBES ===")
+from backend.main import (get_default, export_tubes, export_report,
+                          TubesExportRequest, ReportRequest)
+from backend.io import tube_export as _tx
+from backend.io.report_export import build_report_html
+from backend.lugs.joint_model import build_joints as _bj
+import math as _mm, tempfile as _tmp, os as _os
+
+# 12a. NOMENCLATURE D'ACHAT (bom) ───────────────────────────────────────────
+print("  -- nomenclature d'achat (BOM) --")
+bk = get_default(); ck = calculate(bk)
+trk = compute_tubes(bk, ck)
+check(len(trk.bom) >= 1, "BOM : au moins un groupe de spec")
+# couverture : chaque tube est compté une fois dans la BOM
+check(sum(g["count"] for g in trk.bom) == len(trk.tubes), "BOM : tous les tubes regroupés (count)")
+# cohérence longueur : total groupe = somme des longueurs des membres du groupe
+by_spec = {}
+for t in trk.tubes:
+    by_spec.setdefault((t.material, t.od, t.wall), 0.0)
+    by_spec[(t.material, t.od, t.wall)] += t.length
+g0 = trk.bom[0]
+exp_len = round(by_spec[(g0["material"], g0["od"], g0["wall"])], 1)
+check(abs(g0["total_length_mm"] - exp_len) < 0.2, "BOM : longueur totale = somme des membres")
+# barre conseillée = ceil(total·1.12 / 50)·50, ≥ longueur totale
+exp_stock = _mm.ceil(g0["total_length_mm"] * 1.12 / 50.0) * 50.0
+check(abs(g0["stock_length_mm"] - exp_stock) < 1e-6, "BOM : barre conseillée = ceil(total·1.12/50)·50")
+check(all(g["stock_length_mm"] >= g["total_length_mm"] for g in trk.bom), "BOM : stock ≥ longueur totale")
+check("stock_label" in g0 and "Ø" in g0["stock_label"], "BOM : libellé de commande présent")
+# masse BOM cohérente avec la masse totale (somme des groupes)
+check(abs(sum(g["total_mass_g"] for g in trk.bom) - trk.total_mass_g) < 1.0,
+      "BOM : masse cumulée ≈ masse totale tubes")
+
+# 12b. FICHE DE FABRICATION (tubes ↔ jonctions de lugs) ─────────────────────
+print("  -- fiche de fabrication tubes --")
+nodes_k = _bj(bk, ck)
+fab_sum = _tx.to_fabrication_summary(trk, nodes_k)
+fab_csv = _tx.to_fabrication_csv(trk, nodes_k)
+check("FICHE DE FABRICATION" in fab_sum and "ANGLES DE LUG" in fab_sum, "fab résumé : sections présentes")
+check(fab_csv.splitlines()[0].startswith("Membre,Label,Spec,Entraxe_mm"), "fab CSV : en-tête fabrication")
+check("Bout1_emmanchement_mm" in fab_csv and "Bout2_alesage_mm" in fab_csv, "fab CSV : colonnes jonctions")
+# le triangle avant doit avoir des emmanchements de lug renseignés
+sc = load_bcad(SRC)  # hardtail → triangle complet équipé de lugs
+csc = calculate(sc); trsc = compute_tubes(sc, csc); nsc = _bj(sc, csc)
+fab_sc = _tx.to_fabrication_summary(trsc, nsc)
+check("emmanchement" in fab_sc, "fab : emmanchements de lug renseignés (triangle bondé)")
+
+# 12c. EXPORTS via endpoints (fab_csv / fab_summary + BOM dans CSV standard) ─
+print("  -- endpoints export tubes --")
+r_fabc = export_tubes(TubesExportRequest(bike=bk, fmt="fab_csv"))
+r_fabs = export_tubes(TubesExportRequest(bike=bk, fmt="fab_summary"))
+check(r_fabc.media_type == "text/csv" and len(r_fabc.body) > 100, "endpoint fab_csv → CSV non vide")
+check(r_fabs.media_type == "text/plain" and b"FABRICATION" in r_fabs.body, "endpoint fab_summary → texte")
+r_csv = export_tubes(TubesExportRequest(bike=bk, fmt="csv"))
+check(b"NOMENCLATURE D'ACHAT" in r_csv.body, "CSV standard : section nomenclature d'achat intégrée")
+check("NOMENCLATURE D'ACHAT" in _tx.to_summary(trk), "résumé standard : nomenclature d'achat intégrée")
+
+# 12d. DOSSIER DE CONCEPTION (HTML agrégé) ──────────────────────────────────
+print("  -- dossier de conception (HTML) --")
+h = build_report_html(bk, designer="Test E2E", company="DOM Engineering", revision="B")
+check(h.startswith("<!doctype html>") and "</html>" in h, "rapport : HTML auto-suffisant")
+check(len(h) > 30000, f"rapport : document substantiel ({len(h)} octets)")
+# cartouche / métadonnées
+for token in ("Dossier de conception", "Test E2E", "rév.", "DOM Engineering"):
+    check(token in h, f"rapport : cartouche contient « {token} »")
+# sections clés agrégées (titres)
+for title in ("Synthèse", "Géométrie", "Cinématique", "Tubes &amp; masses",
+              "Pivots", "Visserie", "Conformité"):
+    check(title in h, f"rapport : section « {title} »")
+# contenu agrégé réel (données + figures + garde-fou normatif)
+check(h.count("<svg") >= 2, "rapport : ≥ 2 figures SVG intégrées (profil + plan)")
+check("NOMENCLATURE D'ACHAT" not in h or "Nomenclature d'achat" in h, "rapport : table d'achat présente")
+check("Nomenclature d'achat" in h, "rapport : nomenclature d'achat rendue")
+check("EN 17404" in h and "bureau d'études" in h, "rapport : rappels normatifs + garde-fou")
+# robustesse : vélo SANS suspension ni pilote (hardtail importé) ne casse pas
+h2 = build_report_html(sc)
+check(h2.startswith("<!doctype html>") and "Suspension désactivée" in h2,
+      "rapport hardtail : dégradation gracieuse (cinématique off)")
+# endpoint sans path → HTML ; avec path → écrit le fichier
+rr = export_report(ReportRequest(bike=bk))
+check(rr.media_type == "text/html" and len(rr.body) > 30000, "endpoint report → HTML")
+with _tmp.TemporaryDirectory() as d:
+    out = _os.path.join(d, "dossier.html")
+    res = export_report(ReportRequest(bike=bk, path=out))
+    check(res["ok"] and _os.path.exists(out) and _os.path.getsize(out) > 30000,
+          "endpoint report : écriture disque OK")
+
 # ─── RÉSULTAT ────────────────────────────────────────────────────────────────
 print("\n" + "=" * 50)
 if fails:

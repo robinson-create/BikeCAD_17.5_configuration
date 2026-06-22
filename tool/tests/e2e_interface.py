@@ -184,6 +184,25 @@ check(bc.get("ok"), "export .bcad Free-safe OK")
 lugs = POST("/export/lugs", {"bike": bike, "fmt": "summary"})
 check("LUG BB" in lugs, "export lugs (résumé) OK")
 
+# ─── 9b. LIVRABLES INGÉNIERIE (dossier de conception + export tubes) ──────────
+print("\n=== 9b. Dossier de conception + export tubes ===")
+# Export tubes : nomenclature d'achat dans le CSV standard
+tcsv = POST("/export/tubes", {"bike": bike, "fmt": "csv"})
+check("NOMENCLATURE D'ACHAT" in tcsv, "export tubes CSV : nomenclature d'achat intégrée")
+# Fiche de fabrication (tubes ↔ jonctions de lugs)
+tfab = POST("/export/tubes", {"bike": bike, "fmt": "fab_summary"})
+check("FICHE DE FABRICATION" in tfab and "ANGLES DE LUG" in tfab, "export tubes : fiche de fabrication")
+tfabc = POST("/export/tubes", {"bike": bike, "fmt": "fab_csv"})
+check(tfabc.splitlines()[0].startswith("Membre,Label,Spec,Entraxe_mm"), "export tubes fab CSV : en-tête")
+# Dossier de conception (HTML agrégé)
+rep = POST("/export/report", {"bike": bike, "designer": "E2E", "revision": "B"})
+check(rep.startswith("<!doctype html>") and "Dossier de conception" in rep, "dossier : HTML auto-suffisant")
+check(rep.count("<svg") >= 2 and "Cinématique" in rep, "dossier : figures + sections agrégées")
+check("EN 17404" in rep and "bureau d'études" in rep, "dossier : rappels normatifs + garde-fou")
+# Écriture disque via path
+repf = POST("/export/report", {"bike": bike, "path": "/tmp/e2e_iface_dossier.html"})
+check(repf.get("ok") and repf.get("bytes", 0) > 30000, "dossier : écriture disque OK")
+
 # ─── 10. PRESET VÉLO COMPLET (menu Modèle) ───────────────────────────────────
 print("\n=== 10. Preset vélo complet (menu Modèle) ===")
 bikes = GET("/catalog/bike")

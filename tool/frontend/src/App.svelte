@@ -3,13 +3,17 @@
   import { activeTab, GROUPS, bike, scheduleRefresh, viewMode, showDims,
            showSuspension, animateSuspension, showLugs, showPivots, showFasteners } from './lib/store.js'
   import { fetchDefault, loadBcad, exportBcad, exportDxf, exportLugs, exportDrawing, listBikes,
-           saveBikeLibrary, listLibrary, loadLibrary, deleteLibrary } from './lib/api.js'
+           saveBikeLibrary, listLibrary, loadLibrary, deleteLibrary,
+           exportFasteners, exportPivots } from './lib/api.js'
   import BikeRenderer from './BikeRenderer.svelte'
   import Kinematics from './Kinematics.svelte'
   import Compare from './Compare.svelte'
   import Settings from './Settings.svelte'
   import Assistant from './Assistant.svelte'
   import BikeCADView from './BikeCADView.svelte'
+  import Menu from './lib/Menu.svelte'
+  import ReportWindow from './lib/ReportWindow.svelte'
+  import ExportTubesWindow from './lib/ExportTubesWindow.svelte'
 
   import Frame      from './panels/Frame.svelte'
   import Fork       from './panels/Fork.svelte'
@@ -50,8 +54,15 @@
   let currentFile = ''     // fichier du modèle bibliothèque actif ('' = non sauvegardé / importé)
   let bcadPath = ''
   let status = ''
+  let showReportWin = false   // fenêtre Dossier de conception
+  let showTubesWin = false    // fenêtre Export des tubes
 
   function flash(msg, ms = 2000) { status = msg; setTimeout(() => status = '', ms) }
+
+  async function quickExport(fn, label) {
+    try { await fn($bike); flash(`${label} ✓`) }
+    catch { flash(`Erreur ${label}`) }
+  }
 
   onMount(async () => {
     const defaultBike = await fetchDefault()
@@ -223,7 +234,7 @@
       {#if $bike?.name}<span class="model-name" title="Modèle chargé">{$bike.name}</span>{/if}
     </div>
     <div class="toolbar">
-      <!-- Groupe : modèle (source unique = bibliothèque, cinématique comprise) + CRUD -->
+      <!-- Groupe : modèle (source unique = bibliothèque) + menu Fichier -->
       <div class="tgroup">
         <span class="tlabel">🚲 Modèle</span>
         <select class="tb-select model-sel" value={currentFile} on:change={handleModelSelect}
@@ -231,26 +242,40 @@
           <option value="">— non sauvegardé —</option>
           {#each library as b}<option value={b.file}>{b.name}</option>{/each}
         </select>
-        <button class="btn" on:click={handleNew}       title="Nouveau modèle (à partir du défaut)">＋ Nouveau</button>
-        <button class="btn" on:click={handleDuplicate} title="Dupliquer le modèle courant">⧉ Dupliquer</button>
-        <button class="btn" on:click={handleRename}    title="Renommer le modèle courant" disabled={!currentFile}>✎ Renommer</button>
-        <button class="btn danger" on:click={handleDelete} title="Supprimer le modèle courant" disabled={!currentFile}>🗑 Supprimer</button>
-        <button class="btn" on:click={handleSave}      title="Sauver / écraser le modèle (JSON complet, tous composants)">💾 Sauver</button>
-        {#if bikes.length > 0}
-          <select class="tb-select" on:change={handleBikeSelect} title="Importer un .bcad BikeCAD (crée un modèle)">
-            <option value="">📥 Importer .bcad…</option>
-            {#each bikes as b}<option value={b.path}>{b.name}</option>{/each}
-          </select>
-        {/if}
+        <button class="btn" on:click={handleSave} title="Sauver / écraser le modèle">💾 Sauver</button>
+        <Menu label="Fichier" icon="🗂">
+          <button class="mi" on:click={handleNew}>＋ Nouveau modèle</button>
+          <button class="mi" on:click={handleDuplicate}>⧉ Dupliquer</button>
+          <button class="mi" on:click={handleRename} disabled={!currentFile}>✎ Renommer</button>
+          <button class="mi" on:click={handleSave}>💾 Enregistrer</button>
+          <button class="mi danger" on:click={handleDelete} disabled={!currentFile}>🗑 Supprimer</button>
+          {#if bikes.length > 0}
+            <div class="msep"></div>
+            <div class="mh">Importer un .bcad</div>
+            {#each bikes as b}
+              <button class="mi" on:click={() => handleBikeSelect({ target: { value: b.path, selectedIndex: 0 } })}>📥 {b.name}</button>
+            {/each}
+          {/if}
+        </Menu>
       </div>
 
-      <!-- Groupe : exports -->
+      <!-- Groupe : exports — un seul menu (livrables ingénierie regroupés) -->
       <div class="tgroup">
-        <span class="tlabel">Export</span>
-        <button class="btn" on:click={handleExportBcad} title="Fichier .bcad (Free-safe par défaut)">.bcad</button>
-        <button class="btn" on:click={handleExportDxf} title="DXF 2D pour SolidWorks">DXF</button>
-        <button class="btn" on:click={handleExportLugs} title="Table de conception des lugs">Lugs</button>
-        <button class="btn" on:click={handleExportDrawing} title="Plan technique coté (axes, visserie, cartouche)">📐 Plan</button>
+        <Menu label="Exporter" icon="⬇">
+          <div class="mh">Livrables ingénierie</div>
+          <button class="mi" on:click={() => showReportWin = true}>📋 Dossier de conception…<span class="k">PDF/HTML</span></button>
+          <button class="mi" on:click={() => showTubesWin = true}>▭ Export des tubes…<span class="k">fab. + achat</span></button>
+          <button class="mi" on:click={handleExportDrawing}>📐 Plan technique coté<span class="k">SVG</span></button>
+          <div class="msep"></div>
+          <div class="mh">Nomenclatures</div>
+          <button class="mi" on:click={() => quickExport(b => exportFasteners(b, 'csv'), 'Visserie')}>⊕ Visserie<span class="k">CSV</span></button>
+          <button class="mi" on:click={() => quickExport(b => exportPivots(b, 'csv'), 'Pivots')}>◉ Pivots<span class="k">CSV</span></button>
+          <button class="mi" on:click={handleExportLugs}>◇ Lugs (table SolidWorks)<span class="k">CSV</span></button>
+          <div class="msep"></div>
+          <div class="mh">Interopérabilité CAO</div>
+          <button class="mi" on:click={handleExportDxf}>▱ DXF 2D<span class="k">SolidWorks</span></button>
+          <button class="mi" on:click={handleExportBcad}>🅑 Fichier .bcad<span class="k">BikeCAD</span></button>
+        </Menu>
       </div>
 
       <!-- Groupe : affichage (toggles segmentés) -->
@@ -326,6 +351,9 @@
       </div>
     </main>
   </div>
+
+  {#if showReportWin}<ReportWindow on:close={() => showReportWin = false} />{/if}
+  {#if showTubesWin}<ExportTubesWindow on:close={() => showTubesWin = false} />{/if}
 </div>
 
 <style>
