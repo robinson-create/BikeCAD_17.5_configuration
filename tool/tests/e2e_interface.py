@@ -64,27 +64,45 @@ RIDER = {"inseam": 810, "lower_leg": 380, "upper_leg": 430, "torso_length": 580,
          "shoulder_angle": 0, "elbow_angle": 0, "shoulder_roll": 0}
 
 
+# Éléments NON rendus comme géométrie : leurs coordonnées (vecteur de dégradé,
+# motifs, masques…) peuvent légitimement dépasser le canvas → à ignorer.
+_NON_GEOM = {"defs", "lineargradient", "radialgradient", "stop", "pattern",
+             "clippath", "mask", "filter", "fegaussianblur", "feoffset", "femerge",
+             "femergenode", "feflood", "fecomposite", "symbol", "marker"}
+
+
+def _bounds_walk(el, tol, inside_defs):
+    """Compte les coords hors-canvas, en ignorant les sous-arbres non-géométriques
+    (defs, dégradés, motifs…) qui ne dessinent rien de visible hors cadre."""
+    tag = el.tag.split("}")[-1].lower()
+    if inside_defs or tag in _NON_GEOM:
+        # on n'inspecte pas ses coords, mais on descend en restant « inside_defs »
+        return sum(_bounds_walk(c, tol, True) for c in el)
+    bad = 0
+    for a in ("x", "y", "cx", "cy", "x1", "y1", "x2", "y2"):
+        v = el.get(a)
+        if v is None:
+            continue
+        try:
+            f = float(v)
+        except ValueError:
+            continue
+        lim = W if a in ("x", "cx", "x1", "x2") else H
+        if f < -tol * lim or f > (1 + tol) * lim:
+            bad += 1
+    return bad + sum(_bounds_walk(c, tol, False) for c in el)
+
+
 def svg_bounds_ok(svg, tol=0.06):
-    """Aucune coordonnée hors du canvas (tolérance), XML valide, pas de NaN/Inf."""
+    """Aucune coordonnée de GÉOMÉTRIE hors du canvas (tolérance), XML valide,
+    pas de NaN/Inf. Les définitions (defs/dégradés/motifs) sont exclues."""
     if re.search(r"\b(nan|inf|infinity)\b", svg, re.I):
         return False, "NaN/Inf dans le SVG"
     try:
         root = ET.fromstring(svg)
     except ET.ParseError as e:
         return False, f"XML invalide: {e}"
-    bad = 0
-    for el in root.iter():
-        for a in ("x", "y", "cx", "cy", "x1", "y1", "x2", "y2"):
-            v = el.get(a)
-            if v is None:
-                continue
-            try:
-                f = float(v)
-            except ValueError:
-                continue
-            lim = W if a in ("x", "cx", "x1", "x2") else H
-            if f < -tol * lim or f > (1 + tol) * lim:
-                bad += 1
+    bad = _bounds_walk(root, tol, False)
     return bad == 0, f"{bad} coords hors-canvas"
 
 
